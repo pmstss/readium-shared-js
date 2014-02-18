@@ -26,9 +26,14 @@
 
 ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe){
 
+    var self = this;
     this.getRootElement = function(){
 
         return $iframe[0].contentDocument.documentElement;
+    };
+
+    this.getRootDocument = function(){
+        return $iframe[0].contentDocument;
     };
 
     //we look for text and images
@@ -78,11 +83,126 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe){
         return {$element: $firstVisibleTextNode, percentY: percentOfElementHeight, originalTextNode: originalTextNode};
     };
 
+
+    //used for visual debug atm
+    function getRandomColor() {
+        var letters = '0123456789ABCDEF'.split('');
+        var color = '#';
+        for (var i = 0; i < 6; i++) {
+            color += letters[Math.round(Math.random() * 15)];
+        }
+        return color;
+    }
+
+    //used for visual debug atm
+
+    function addOverlayRect(rects, found, doc) {
+        var random  = getRandomColor();
+        if(!(rects instanceof Array)){
+            rects = [rects];
+        }
+        for (var i = 0; i != rects.length; i++) {
+            var rect = rects[i];
+            var tableRectDiv = doc.createElement('div');
+            tableRectDiv.style.position = 'absolute';
+            $(tableRectDiv).css('z-index', '-1');
+            $(tableRectDiv).css('opacity', '0.4');
+            tableRectDiv.style.border = '1px solid white';
+            if (!found && !random) {
+                tableRectDiv.style.background = 'purple';
+            } else if (random && !found) {
+                tableRectDiv.style.background = random;
+            } else {
+                tableRectDiv.style.border = '1px solid red';
+                tableRectDiv.style.background = 'red';
+            }
+
+
+            tableRectDiv.style.margin = tableRectDiv.style.padding = '0';
+            tableRectDiv.style.top = (rect.top ) + 'px';
+            tableRectDiv.style.left = (rect.left ) + 'px';
+            // we want rect.width to be the border width, so content width is 2px less.
+            tableRectDiv.style.width = (rect.width - 2) + 'px';
+            tableRectDiv.style.height = (rect.height - 2) + 'px';
+            doc.body.appendChild(tableRectDiv);
+        }
+    }
+
+    function getTextNodeFragments(node, contentDoc, buffer) {
+
+        buffer = buffer ? buffer : 60;
+        //create our range
+        var range = contentDoc.createRange();
+        var collection = [];
+        //go through a "buffer" of characters to create the fragments
+        for (var i = 0; i < node.length; i += buffer) {
+            var start = i;
+            var end = i + buffer;
+            //create ranges for the character buffer
+            range.setStart(node, start);
+            if (end > node.length) {
+                end = node.length;
+            }
+            range.setEnd(node, end);
+            //get the client rectangle for this character buffer
+            var rect = range.getBoundingClientRect();
+            //push the character offsets and client rectangle associated with this buffer iteration
+            collection.push({start: start, end: end, rect: rect})
+
+        }
+        return collection;
+
+    }
+
+    function getFirstVisibleTextNodeRange(leftOffset, textNode, contentDoc){
+        ////var test = $(textNode).parent()[0].getBoundingClientRect();
+        ////console.log(test);
+        ////addOverlayRect(test,true,contentDoc);
+
+        //"split" the single textnode into fragments based on client rect calculations
+        //the function used for this could be optimized further with a binary search like approach
+        var fragments = getTextNodeFragments(textNode, contentDoc);
+
+        ///console.log(fragments[0].rect);
+
+        var found = false;
+        //go through each fragment, figure out which one is visible
+        $.each(fragments, function (n,fragment) {
+            var rect = fragment.rect;
+            //addOverlayRect(rect,false,contentDoc);
+            if (!found) {
+                //if the fragment's bottom offset is greater than our top offset this means
+                //that this fragment is the one we want being the first one visible
+                if ((rect.left) >= 0) {
+                    found = fragment;
+                    console.log("visible textnode fragment found:");
+                    console.log(fragment);
+                    console.log("------------");
+                    addOverlayRect({left:rect.left+leftOffset,top:rect.top,width:rect.width,height:rect.height},true,contentDoc);
+                }
+            }
+        });
+        if(!found){
+            console.error("Error! No visible textnode fragment found!");
+        }
+        //create an optimized range to return based on the fragment results
+        var resultRangeData = {start: (found.end-1), end: found.end};
+        var resultRange = contentDoc.createRange();
+        resultRange.setStart(textNode,resultRangeData.start);
+        resultRange.setEnd(textNode,resultRangeData.end);
+        return {start:resultRangeData.start,end: resultRangeData.end,rect:resultRange.getBoundingClientRect()};
+    }
+
+    function getPaginationLeftOffset() {
+
+        var $htmlElement = $(self.getRootElement());
+        var offsetLeftPixels = $htmlElement.css("left");
+        return parseInt(offsetLeftPixels.replace("px", ""));
+    }
     this.getFirstVisibleElementCfi = function(topOffset) {
         var cfi;
         var foundElement = this.findFirstVisibleElement(topOffset);
         var $element = foundElement.$element;
-
 
         // we may get a text node or an img element here. For a text node, we can generate a complete range CFI that 
         // most specific. 
@@ -91,15 +211,17 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe){
         if (foundElement.originalTextNode) {
             var node = foundElement.originalTextNode;
             var startRange, endRange;
-            // this is a bit of a hack. If the text node is long, part of it may be on the previous/next page and
-            // won't really be visible. Instead of doing what's below, we should generate selection via 
-            // http://www.w3.org/TR/cssom-view/#dom-element-getclientrects
-            startRange = Math.floor(node.length * foundElement.percentY / 100);
-            endRange = startRange + 1;
+            //if we get a textnode we need to get an approximate range for the first visible character offsets.
+            var contentDoc = this.getRootDocument();
+            var leftOffset = -getPaginationLeftOffset();
+            var nodeRange = getFirstVisibleTextNodeRange(leftOffset, node, contentDoc);
+            startRange = nodeRange.start;
+            endRange = nodeRange.end;
+            //addOverlayRect(nodeRange.rects, true, self.getRootDocument());
             cfi = EPUBcfi.Generator.generateCharOffsetRangeComponent(node, startRange, node, endRange);
         } else if ($element){
             //noinspection JSUnresolvedVariable
-            var cfi = EPUBcfi.Generator.generateElementCFIComponent(foundElement.$element[0]);
+            cfi = EPUBcfi.Generator.generateElementCFIComponent(foundElement.$element[0]);
 
             if(cfi[0] == "!") {
                 cfi = cfi.substring(1);
@@ -129,7 +251,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe){
 
     function getElementByPartialCfi(cfi) {
 
-        var contentDoc = $iframe[0].contentDocument;
+        var contentDoc = self.getRootDocument();
 
         var wrappedCfi = "epubcfi(" + cfi + ")";
 
@@ -179,7 +301,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe){
 
     this.getElementBuyId = function(id) {
 
-        var contentDoc = $iframe[0].contentDocument;
+        var contentDoc = this.getRootDocument();
 
         var $element = $("#" + id, contentDoc);
         if($element.length == 0) {
@@ -382,7 +504,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe){
             return $(this.getRootElement()).children();
         }
         return $(selector, this.getRootElement());
-    }
+    };
 
     this.getElement = function(selector) {
 
