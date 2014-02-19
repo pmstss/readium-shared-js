@@ -525,13 +525,13 @@ ReadiumSDK.Views.FixedView = function(options){
         }
 
         return elements;
-    },
+    };
 
     this.insureElementVisibility = function(element, initiator) {
 
-        //for now we assume that for fixed layout element is always visible
+        //for now we assume that for fixed layouts, elements are always visible
 
-    }
+    };
 
     this.getVisibleElementsWithFilter = function(filterFunction, includeSpineItems) {
 
@@ -540,18 +540,18 @@ ReadiumSDK.Views.FixedView = function(options){
         var views = getDisplayingViews();
 
         for(var i = 0, count = views.length; i < count; i++) {
-            //for now we assume that for fixed layouts elements are always visible
+            //for now we assume that for fixed layouts, elements are always visible
             elements.push(views[i].getAllElementsWithFilter(filterFunction, includeSpineItems));
         }
 
         return elements;
-    }
+    };
 
     this.isElementVisible = function($element){
 
-        //for now we assume that for fixed layout element is always visible
+        //for now we assume that for fixed layouts, elements are always visible
         return true;
-    }
+    };
 
     this.getElementByCfi = function(spineIdRef, partialCfi){
 
@@ -565,5 +565,22 @@ ReadiumSDK.Views.FixedView = function(options){
             }
         }
         return undefined;
-    }
+    };
+
+    this.isNodeFromRangeCfiVisible = function(spineIdref, partialCfi){
+        if(_currentSpineItem.idref === spineIdref){
+
+            var views = getDisplayingViews();
+
+            for(var i = 0, count = views.length; i < count; i++) {
+
+                var view = views[i];
+                if(view.currentSpineItem().idref == spineIdRef) {
+                    //for now we assume that for fixed layouts, everything is always visible
+                    return true;
+                }
+            }
+        }
+        return undefined;
+    };
 };

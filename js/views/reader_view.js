@@ -939,9 +939,14 @@ ReadiumSDK.Views.ReaderView = function(options) {
                     }
                 }
             }
-            var $elementFromCfi = _currentView.getElementByCfi(spineIdRef,partialCfi);
-            if($elementFromCfi && _currentView.isElementVisible($elementFromCfi)){
-                return true;
+
+            if (EPUBcfi.Interpreter.isRangeCfi("epubcfi("+partialCfi+")")) {
+                return _currentView.isNodeFromRangeCfiVisible(spineIdRef,partialCfi);
+            } else {
+                var $elementFromCfi = _currentView.getElementByCfi(spineIdRef,partialCfi);
+                if ($elementFromCfi && _currentView.isElementVisible($elementFromCfi)) {
+                    return true;
+                }
             }
         }
         return false;

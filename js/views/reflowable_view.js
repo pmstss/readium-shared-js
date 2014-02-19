@@ -631,4 +631,11 @@ ReadiumSDK.Views.ReflowableView = function(options){
         return undefined;
     };
 
+    this.isNodeFromRangeCfiVisible = function(spineIdref, partialCfi){
+        if(_currentSpineItem.idref === spineIdref){
+            return _navigationLogic.isNodeFromRangeCfiVisible(partialCfi);
+        }
+        return undefined;
+    };
+
 };
