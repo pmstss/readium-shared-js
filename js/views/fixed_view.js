@@ -567,7 +567,8 @@ ReadiumSDK.Views.FixedView = function(options){
         return undefined;
     };
 
-    this.isNodeFromRangeCfiVisible = function(spineIdref, partialCfi){
+
+    this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
         if(_currentSpineItem.idref === spineIdref){
 
             var views = getDisplayingViews();
@@ -582,5 +583,5 @@ ReadiumSDK.Views.FixedView = function(options){
             }
         }
         return undefined;
-    };
+    }
 };

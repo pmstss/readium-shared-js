@@ -600,7 +600,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
         openPageRequest.setPageIndex(page);
 
         self.openPage(openPageRequest);
-    }
+    };
 
     this.getVisibleElementsWithFilter = function(filterFunction, includeSpineItem) {
 
@@ -616,26 +616,32 @@ ReadiumSDK.Views.ReflowableView = function(options){
 
     };
 
-    this.isElementVisible = function($element){
+    this.isElementVisible = function ($element) {
 
-        if(_navigationLogic.isElementVisible($element, getVisibleContentOffsets())) {
-            return true;
-        }
-        return false;
+        return _navigationLogic.isElementVisible($element, getVisibleContentOffsets());
+
     };
 
-    this.getElementByCfi = function(spineIdref, partialCfi){
-        if(_currentSpineItem.idref === spineIdref){
+    this.getElementByCfi = function (spineIdref, partialCfi) {
+        if (_currentSpineItem.idref === spineIdref) {
             return _navigationLogic.getElementByCfi(partialCfi);
         }
         return undefined;
     };
 
-    this.isNodeFromRangeCfiVisible = function(spineIdref, partialCfi){
-        if(_currentSpineItem.idref === spineIdref){
+    this.isNodeFromRangeCfiVisible = function (spineIdref, partialCfi) {
+        if (_currentSpineItem.idref === spineIdref) {
             return _navigationLogic.isNodeFromRangeCfiVisible(partialCfi);
         }
         return undefined;
+    };
+
+    this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
+        if (_navigationLogic.isRangeCfi(partialCfi)) {
+            return this.isNodeFromRangeCfiVisible(spineIdRef, partialCfi);
+        }
+        var $elementFromCfi = this.getElementByCfi(spineIdRef, partialCfi);
+        return ($elementFromCfi && this.isElementVisible($elementFromCfi));
     };
 
 };
