@@ -35,6 +35,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
     this.getRootDocument = function () {
         return $iframe[0].contentDocument;
     };
+
     /* <-debug
     //used for visual debug atm
     function getRandomColor() {
@@ -82,11 +83,14 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
     }
     debug -> */
 
-    function getTextNodeFragments(node, contentDoc, buffer) {
+    function createRange(){
+        return self.getRootDocument().createRange();
+    }
 
+    function getTextNodeFragments(node, buffer) {
         buffer = buffer ? buffer : 60;
         //create our range
-        var range = contentDoc.createRange();
+        var range = createRange();
         var collection = [];
         //go through a "buffer" of characters to create the fragments
         for (var i = 0; i < node.length; i += buffer) {
@@ -102,34 +106,44 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
             var rect = range.getBoundingClientRect();
             //push the character offsets and client rectangle associated with this buffer iteration
             collection.push({start: start, end: end, rect: rect})
-
         }
         return collection;
-
     }
 
-    function getNodeClientRect(node, contentDoc) {
-        var range = contentDoc.createRange();
+    function getNodeClientRect(node) {
+        var range = createRange();
         range.selectNode(node);
         return range.getBoundingClientRect();
     }
 
-    function getNodeRangeClientRect(startNode,startOffset,endNode,endOffset,contentDoc){
-        var range = contentDoc.createRange();
+    function getElementClientRect($element){
+        return $element[0].getBoundingClientRect();
+    }
+
+    function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset){
+        var range = createRange();
         range.setStart(startNode, startOffset);
         range.setEnd(endNode, endOffset);
         return range.getBoundingClientRect();
     }
 
-    function isClientRectVisible(rect,contentDoc){
-        return (rect.left >= 0 && rect.right <= contentDoc.documentElement.clientWidth);
+    function isClientRectVisible(rect){
+        return (rect.left >= 0 && rect.right <= getRootDocumentClientWidth());
     }
 
-    function getFirstVisibleTextNodeRange(textNode, contentDoc) {
+    function getRootDocumentClientWidth(){
+        return self.getRootElement().clientWidth;
+    }
+
+    function getRootDocumentClientHeight(){
+        return self.getRootElement().clientHeight;
+    }
+
+    function getFirstVisibleTextNodeRange(textNode) {
 
         //"split" the single textnode into fragments based on client rect calculations
         //the function used for this could be optimized further with a binary search like approach
-        var fragments = getTextNodeFragments(textNode, contentDoc);
+        var fragments = getTextNodeFragments(textNode);
         var found = false;
         //go through each fragment, figure out which one is visible
         $.each(fragments, function (n, fragment) {
@@ -137,7 +151,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
             if (!found) {
                 //if the fragment's left or right value is within the visible client boundaries
                 //then this is the one we want
-                if (isClientRectVisible(rect,contentDoc)) {
+                if (isClientRectVisible(rect)) {
                     found = fragment;
                     /* <- debug
                     console.log("visible textnode fragment found:");
@@ -152,15 +166,8 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
         }
         //create an optimized range to return based on the fragment results
         var resultRangeData = {start: (found.end - 1), end: found.end};
-        var resultRangeRect = getNodeRangeClientRect(textNode, resultRangeData.start,textNode, resultRangeData.end,contentDoc);
+        var resultRangeRect = getNodeRangeClientRect(textNode, resultRangeData.start, textNode, resultRangeData.end);
         return {start: resultRangeData.start, end: resultRangeData.end, rect: resultRangeRect};
-    }
-
-    function getPaginationLeftOffset() {
-
-        var $htmlElement = $(self.getRootElement());
-        var offsetLeftPixels = $htmlElement.css("left");
-        return parseInt(offsetLeftPixels.replace("px", ""));
     }
 
     //we look for text and images
@@ -211,7 +218,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
             });
             // Find (roughly) the first visible text node
             $.each($elements, function () {
-                var nodeRect = getNodeClientRect(this, contentDoc);
+                var nodeRect = getNodeClientRect(this);
                 // if the rectangle's right is a positive value, this means that part of it has to be visible
                 // from the client's perspective
                 if (nodeRect.right > 0) {
@@ -244,9 +251,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
 
             var startRange, endRange;
             //if we get a text node we need to get an approximate range for the first visible character offsets.
-            var contentDoc = this.getRootDocument();
-            window.contentDoc = contentDoc;
-            var nodeRange = getFirstVisibleTextNodeRange(node, contentDoc);
+            var nodeRange = getFirstVisibleTextNodeRange(node);
             startRange = nodeRange.start;
             endRange = nodeRange.end;
             /* <- debug
@@ -257,7 +262,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
                 top: rect.top,
                 width: rect.width,
                 height: rect.height
-            }, true, contentDoc);
+            }, true, self.getRootDocument());
              debug -> */
             cfi = EPUBcfi.Generator.generateCharOffsetRangeComponent(node, startRange, node, endRange,
                 ["cfi-marker"],
@@ -283,24 +288,55 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
         return cfi;
     };
 
-    this.getPageForElementCfi = function (cfi) {
+    function getWrappedCfi(partialCfi) {
+        return "epubcfi("+partialCfi+")";
+    }
+
+    function getWrappedCfiRelativeToContent(partialCfi) {
+        return "epubcfi(/99!"+partialCfi+")";
+    }
+
+    this.isRangeCfi = function(partialCfi){
+        return EPUBcfi.Interpreter.isRangeCfi(getWrappedCfi(partialCfi));
+    };
+
+    this.getPageForElementCfi = function (cfi, visibleColumnCount) {
 
         var cfiParts = splitCfi(cfi);
+        var partialCfi = cfiParts.cfi;
 
         var $element = getElementByPartialCfi(cfiParts.cfi);
-
         if (!$element) {
             return -1;
         }
 
-        return this.getPageForPointOnElement($element, cfiParts.x, cfiParts.y);
+        var pageIndex = this.getPageForPointOnElement($element, cfiParts.x, cfiParts.y);
+        if (this.isRangeCfi(partialCfi)) {
+            //if we get a range cfi we need to calculate the exact page index by getting node info from the range cfi
+            var nodeRangeInfoFromCfi = this.getNodeRangeInfoFromCfi(partialCfi);
+            //we need the very first node (text or not) from a parent to calculate proper page offsets
+            var parentFirstNode = $element[0].childNodes[0];
+            //the end node can just be the nodeRange start node since we only need left value offsets from parent
+            var parentEndNode = nodeRangeInfoFromCfi.startInfo.node;
+            //add the calculated page offset to final page index
+            pageIndex += this.getPageOffsetFromClientRects(
+                getNodeRangeClientRect(
+                    parentFirstNode,
+                    0,
+                    parentEndNode,
+                    parentEndNode.length),
+                nodeRangeInfoFromCfi.clientRect,
+                visibleColumnCount);
+        }
+        return pageIndex;
+
     };
 
     function getElementByPartialCfi(cfi) {
 
         var contentDoc = self.getRootDocument();
 
-        var wrappedCfi = "epubcfi(" + cfi + ")";
+        var wrappedCfi = getWrappedCfi(cfi);
 
         try {
             //noinspection JSUnresolvedVariable
@@ -320,11 +356,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
         return $element;
     }
 
-    this.isNodeFromRangeCfiVisible = function (cfi) {
-
+    this.getNodeRangeInfoFromCfi = function(cfi){
         var contentDoc = self.getRootDocument();
 
-        var wrappedCfi = "epubcfi(/99!" + cfi + ")";
+        var wrappedCfi = getWrappedCfiRelativeToContent(cfi);
 
         try {
             //noinspection JSUnresolvedVariable
@@ -333,8 +368,8 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
                 [],
                 ["MathJax_Message"]);
             /* <- debug
-            console.log(nodeResult);
-            */
+             console.log(nodeResult);
+             */
         } catch (ex) {
             //EPUBcfi.Interpreter can throw a SyntaxError
         }
@@ -346,15 +381,18 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
 
         var startRangeInfo = getRangeInfoFromNodeList(nodeResult.startNodes, nodeResult.startOffset);
         var endRangeInfo = getRangeInfoFromNodeList(nodeResult.endNodes, nodeResult.endOffset);
-        var nodeRangeClientRect = getNodeRangeClientRect(
-            startRangeInfo.node, startRangeInfo.offset,
-            endRangeInfo.node, endRangeInfo.offset,
-            contentDoc);
+        var nodeRangeClientRect = getNodeRangeClientRect(startRangeInfo.node, startRangeInfo.offset, endRangeInfo.node, endRangeInfo.offset);
         /* <- debug
-        console.log(nodeRangeClientRect);
-        addOverlayRect(nodeRangeClientRect,'purple',contentDoc);
-        */
-        return isClientRectVisible(nodeRangeClientRect,contentDoc);
+         console.log(nodeRangeClientRect);
+         addOverlayRect(nodeRangeClientRect,'purple',contentDoc);
+         */
+
+        return {startInfo: startRangeInfo, endInfo: endRangeInfo, clientRect: nodeRangeClientRect}
+    };
+
+    this.isNodeFromRangeCfiVisible = function (cfi) {
+
+        return isClientRectVisible(this.getNodeRangeInfoFromCfi(cfi).clientRect);
     };
 
     function getRangeInfoFromNodeList($textNodeList, textOffset) {
@@ -396,6 +434,20 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
     this.getPageForElement = function ($element) {
 
         return this.getPageForPointOnElement($element, 0, 0);
+    };
+
+    this.getPageOffsetFromClientRects = function(parentRect,childRect,visibleColumnCount){
+        /* <- debug
+         console.log("parentRect.left: " + parentRect.left);
+         console.log("childRect.left: " + childRect.left);
+         console.log("clientWidth: "+ getRootDocumentClientWidth());
+
+         var pageOffset = Math.floor(((childRect.left - parentRect.left) / (getRootDocumentClientWidth()) * visibleColumnCount));
+         console.log(pageOffset);
+         console.log(Math.round(((childRect.left - parentRect.left) / (getRootDocumentClientWidth()) * visibleColumnCount)));
+        */
+        return Math.floor(((childRect.left - parentRect.left) / (getRootDocumentClientWidth()) * visibleColumnCount));
+
     };
 
     this.getPageForPointOnElement = function ($element, x, y) {
@@ -496,7 +548,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
 
         return !(elementRect.bottom() <= visibleContentOffsets.top || elementRect.top >= visibleContentOffsets.bottom);
     };
-
 
     this.getAllVisibleElementsWithSelector = function (selector, visibleContentOffset) {
         var elements = $(selector, this.getRootElement()).filter(function (e) {

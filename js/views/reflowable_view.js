@@ -285,7 +285,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
             pageIndex = _navigationLogic.getPageForElementId(pageRequest.elementId);
         }
         else if(pageRequest.elementCfi) {
-            pageIndex = _navigationLogic.getPageForElementCfi(pageRequest.elementCfi);
+            pageIndex = _navigationLogic.getPageForElementCfi(pageRequest.elementCfi,_paginationInfo.visibleColumnCount);
         }
         else if(pageRequest.firstPage) {
             pageIndex = 0;
