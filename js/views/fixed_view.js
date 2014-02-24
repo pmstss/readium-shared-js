@@ -569,19 +569,18 @@ ReadiumSDK.Views.FixedView = function(options){
 
 
     this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
-        if(_currentSpineItem.idref === spineIdref){
 
-            var views = getDisplayingViews();
+        var views = getDisplayingViews();
 
-            for(var i = 0, count = views.length; i < count; i++) {
+        for(var i = 0, count = views.length; i < count; i++) {
 
-                var view = views[i];
-                if(view.currentSpineItem().idref == spineIdRef) {
-                    //for now we assume that for fixed layouts, everything is always visible
-                    return true;
-                }
+            var view = views[i];
+            if(view.currentSpineItem().idref == spineIdRef) {
+                //for now we assume that for fixed layouts, everything is always visible
+                return true;
             }
         }
+
         return undefined;
     }
 };
