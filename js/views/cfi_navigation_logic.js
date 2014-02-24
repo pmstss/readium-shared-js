@@ -128,11 +128,15 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
     }
 
     function isClientRectVisible(rect){
-        return (rect.left >= 0 && rect.right <= getRootDocumentClientWidth());
+        return (rect.left >= 0 && rect.right <= getViewportClientWidth());
     }
 
-    function getRootDocumentClientWidth(){
+    function getRootDocumentClientWidth() {
         return self.getRootElement().clientWidth;
+    }
+
+    function getViewportClientWidth() {
+        return $iframe[0].clientWidth;
     }
 
     function getRootDocumentClientHeight(){
@@ -300,7 +304,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
         return EPUBcfi.Interpreter.isRangeCfi(getWrappedCfi(partialCfi));
     };
 
-    this.getPageForElementCfi = function (cfi, visibleColumnCount) {
+    this.getPageForElementCfi = function (cfi) {
 
         var cfiParts = splitCfi(cfi);
         var partialCfi = cfiParts.cfi;
@@ -325,8 +329,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
                     0,
                     parentEndNode,
                     parentEndNode.length),
-                nodeRangeInfoFromCfi.clientRect,
-                visibleColumnCount);
+                nodeRangeInfoFromCfi.clientRect);
         }
         return pageIndex;
 
@@ -446,7 +449,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
          console.log(pageOffset);
          console.log(Math.round(((childRect.left - parentRect.left) / (getRootDocumentClientWidth()) * visibleColumnCount)));
         */
-        return Math.floor(((childRect.left - parentRect.left) / (getRootDocumentClientWidth()) * visibleColumnCount));
+        return Math.floor(((childRect.left - parentRect.left) / getViewportClientWidth()));
 
     };
 
