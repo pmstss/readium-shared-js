@@ -366,7 +366,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
 
         try {
             //noinspection JSUnresolvedVariable
-            var nodeResult = EPUBcfi.Interpreter.getRangeTextNodes(wrappedCfi, contentDoc,
+            var nodeResult = EPUBcfi.Interpreter.getRangeTargetNodes(wrappedCfi, contentDoc,
                 ["cfi-marker"],
                 [],
                 ["MathJax_Message"]);
