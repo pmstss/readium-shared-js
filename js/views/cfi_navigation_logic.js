@@ -81,14 +81,32 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
             doc.body.appendChild(tableRectDiv);
         }
     }
-    debug -> */
+
+    function getPaginationLeftOffset() {
+
+        var $htmlElement = $("html", self.getRootDocument());
+        var offsetLeftPixels = $htmlElement.css("left");
+        var offsetLeft = parseInt(offsetLeftPixels.replace("px", ""));
+        if(isNaN(offsetLeft)){
+            //for fixed layouts, $htmlElement.css("left") has no numerical value
+            offsetLeft = 0;
+        }
+        return offsetLeft;
+    }
+    //debug -> */
 
     function createRange(){
         return self.getRootDocument().createRange();
     }
 
     function getTextNodeFragments(node, buffer, startOverride, endOverride) {
-        buffer = buffer ? buffer : 60;
+
+        if (!buffer && ReadiumSDK.Overrides.TextNodeFragmentBuffer) {
+            buffer = ReadiumSDK.Overrides.TextNodeFragmentBuffer;
+        } else if (!buffer) {
+            buffer = 60;
+        }
+
         //create our range
         var range = createRange();
         var collection = [];
@@ -169,7 +187,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
                     console.log("visible textnode fragment found:");
                     console.log(fragment);
                     console.log("------------");
-                    debug -> */
+                    //debug -> */
                 }
             }
         });
@@ -283,7 +301,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
                 width: rect.width,
                 height: rect.height
             }, true, self.getRootDocument());
-             debug -> */
+            // debug -> */
             cfi = EPUBcfi.Generator.generateCharOffsetRangeComponent(node, startRange, node, endRange,
                 ["cfi-marker"],
                 [],
