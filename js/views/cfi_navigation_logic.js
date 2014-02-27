@@ -174,7 +174,15 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
             }
         });
         if (!found) {
-            console.error("Error! No visible textnode fragment found!");
+            //if we didn't find a visible textnode fragment on the clientRect iteration
+            //it might still mean that its visible, just only at the very end
+            var endFragment = getTextNodeFragments(textNode, null, textNode.length-1, textNode.length)[0];
+
+            if (endFragment && isClientRectVisible(endFragment.rect)) {
+                found = endFragment;
+            } else {
+                console.error("Error! No visible textnode fragment found!");
+            }
         }
         //create an optimized range to return based on the fragment results
         var resultRangeData = {start: (found.end - 1), end: found.end};
@@ -296,6 +304,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
             console.log("Could not generate CFI no visible element on page");
         }
 
+        //This should not happen but if it does print some output, just in case
+        if (cfi.indexOf('NaN') !== -1) {
+            console.log('Did not generate a valid CFI:' + cfi);
+        }
 
         return cfi;
     };
