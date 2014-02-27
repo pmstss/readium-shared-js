@@ -305,7 +305,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
         }
 
         //This should not happen but if it does print some output, just in case
-        if (cfi.indexOf('NaN') !== -1) {
+        if (cfi && cfi.indexOf('NaN') !== -1) {
             console.log('Did not generate a valid CFI:' + cfi);
         }
 
