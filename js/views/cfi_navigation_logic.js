@@ -87,11 +87,19 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
         return self.getRootDocument().createRange();
     }
 
-    function getTextNodeFragments(node, buffer) {
+    function getTextNodeFragments(node, buffer, startOverride, endOverride) {
         buffer = buffer ? buffer : 60;
         //create our range
         var range = createRange();
         var collection = [];
+
+        //allow the range offsets to be specified explicitly, without iteration
+        if (startOverride && endOverride) {
+            range.setStart(node, startOverride);
+            range.setEnd(node, endOverride);
+            return [{start: startOverride, end: endOverride, rect: range.getBoundingClientRect()}];
+        }
+
         //go through a "buffer" of characters to create the fragments
         for (var i = 0; i < node.length; i += buffer) {
             var start = i;
