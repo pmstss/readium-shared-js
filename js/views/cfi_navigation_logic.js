@@ -154,6 +154,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
     }
 
     function isClientRectVisible(rect){
+        //Text nodes without printable text dont have client rectangles
+        if (!rect) {
+            return false;
+        }
         return (rect.left >= 0 && rect.right <= getViewportClientWidth());
     }
 
