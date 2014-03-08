@@ -958,14 +958,15 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * Lets user to subscribe to iframe's window events
      *
      * @method addIFrameEventsListener
-     * @param {string} eventName event name.
-     * @param {string} callback callback function.
-     * @param {string} context user specified data passed to the callback function.
-     *
+     * @param {string} eventName    event name.
+     * @param {string} callback     callback function.
+     * @param {string} context      user specified data passed to the callback function.
+     * @param {bool} jqueryEvent    use a jquery event listener or a native one.
+     * 
      * @returns {undefined}
      */
-    this.addIFrameEventListener = function (eventName, callback, context) {
-        _iframeLoader.addIFrameEventListener(eventName, callback, context);
+    this.addIFrameEventListener = function (eventName, callback, context, jqueryEvent) {
+        _iframeLoader.addIFrameEventListener(eventName, callback, context, jqueryEvent);
     };
 
 };
