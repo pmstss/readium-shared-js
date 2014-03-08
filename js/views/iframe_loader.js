@@ -17,35 +17,36 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-ReadiumSDK.Views.IFrameLoader = function() {
+ReadiumSDK.Views.IFrameLoader = function () {
 
     var eventListeners = {};
 
-    this.addIFrameEventListener = function(eventName, callback, context) {
+    this.addIFrameEventListener = function (eventName, callback, context, jqueryEvent) {
 
-        if(eventListeners[eventName] == undefined) {
+        if (eventListeners[eventName] == undefined) {
             eventListeners[eventName] = [];
         }
 
-        eventListeners[eventName].push({callback: callback, context: context});
+        eventListeners[eventName].push({callback: callback, context: context, jqueryEvent: jqueryEvent});
     };
 
-    this.loadIframe = function(iframe, src, callback, context) {
+    this.loadIframe = function (iframe, src, callback, context) {
 
         $(iframe).hide();
 
-        iframe.onload = function() {
+        iframe.onload = function () {
 
-            _.each(eventListeners, function(value, key){
-                for(var i = 0, count = value.length; i< count; i++) {
-                    //$(iframe.contentWindow).on(key, value[i].callback, value[i].context);
-                    $(iframe.contentDocument.documentElement).on(key, value[i].callback, value[i].context);
-                    //$(iframe.contentDocument.body).on(key, value[i].callback, value[i].context);
+            _.each(eventListeners, function (value, key) {
+                for (var i = 0, count = value.length; i < count; i++) {
+                    if (value[i].jqueryEvent) {
+                        $(iframe.contentDocument.body).on(key, value[i].callback, value[i].context);
+                    } else {
+                        iframe.contentWindow.addEventListener(key, value[i].callback, value[i].context);
+                    }
                 }
             });
 
-            try
-            {
+            try {
                 iframe.contentWindow.navigator.epubReadingSystem = navigator.epubReadingSystem;
                 console.debug("epubReadingSystem name:"
                     + iframe.contentWindow.navigator.epubReadingSystem.name
@@ -53,15 +54,14 @@ ReadiumSDK.Views.IFrameLoader = function() {
                     + iframe.contentWindow.navigator.epubReadingSystem.version
                     + " is loaded to iframe");
             }
-            catch(ex)
-            {
+            catch (ex) {
                 console.log("epubReadingSystem INJECTION ERROR! " + ex.message);
             }
             callback.call(context, true);
             $(iframe).show();
         };
 
-        injectScripts(src, function(dom){
+        injectScripts(src, function (dom) {
             iframe.contentWindow.document.open();
             iframe.contentWindow.document.write(dom.firstChild.outerHTML);
             iframe.contentWindow.document.close();
@@ -88,9 +88,9 @@ ReadiumSDK.Views.IFrameLoader = function() {
 
     function injectScripts(src, callback) {
 
-        getFileText(src, function(contentFileData){
+        getFileText(src, function (contentFileData) {
 
-            if(!contentFileData) {
+            if (!contentFileData) {
                 callback();
                 return;
             }
@@ -98,10 +98,10 @@ ReadiumSDK.Views.IFrameLoader = function() {
             var $head = $('head', contentFileData);
             var $base = $('base', $head);
 
-            if($base.length === 0) {
+            if ($base.length === 0) {
                 var sourceParts = src.split("/");
                 sourceParts.pop(); //remove source file name
-                $base = $("<base href=\"" + sourceParts.join("/")+"/"+  "\">");
+                $base = $("<base href=\"" + sourceParts.join("/") + "/" + "\">");
                 $head.prepend($base);
             }
 
