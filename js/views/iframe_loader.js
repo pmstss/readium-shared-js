@@ -38,7 +38,9 @@ ReadiumSDK.Views.IFrameLoader = function() {
 
             _.each(eventListeners, function(value, key){
                 for(var i = 0, count = value.length; i< count; i++) {
-                    $(iframe.contentWindow).on(key, value[i].callback, value[i].context);
+                    //$(iframe.contentWindow).on(key, value[i].callback, value[i].context);
+                    $(iframe.contentDocument.documentElement).on(key, value[i].callback, value[i].context);
+                    //$(iframe.contentDocument.body).on(key, value[i].callback, value[i].context);
                 }
             });
 
