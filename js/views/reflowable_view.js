@@ -272,11 +272,10 @@ ReadiumSDK.Views.ReflowableView = function(options){
         if(pageRequest.spineItem && pageRequest.spineItem != _currentSpineItem) {
             _deferredPageRequest = pageRequest;
             loadSpineItemPageRequest(pageRequest);
-            return;
+            return true;
         }
 
         var pageIndex = undefined;
-
 
         if(pageRequest.spineItemPageIndex !== undefined) {
             pageIndex = pageRequest.spineItemPageIndex;
@@ -302,7 +301,10 @@ ReadiumSDK.Views.ReflowableView = function(options){
 
             _paginationInfo.currentSpreadIndex = Math.floor(pageIndex / _paginationInfo.visibleColumnCount) ;
             onPaginationChanged(pageRequest.initiator, pageRequest.spineItem, pageRequest.elementId);
+            return true;
         }
+
+        return false;
     };
 
     function redraw() {
@@ -383,12 +385,13 @@ ReadiumSDK.Views.ReflowableView = function(options){
     this.openPagePrev = function (initiator) {
 
         if(!_currentSpineItem) {
-            return;
+            return false;
         }
 
         if(_paginationInfo.currentSpreadIndex > 0) {
             _paginationInfo.currentSpreadIndex--;
             onPaginationChanged(initiator);
+            return true;
         }
         else {
 
@@ -397,7 +400,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
 
                 var pageRequest = new ReadiumSDK.Models.PageOpenRequest(prevSpineItem, initiator);
                 pageRequest.setLastPage();
-                self.openPage(pageRequest);
+                return self.openPage(pageRequest);
             }
         }
     };
@@ -405,12 +408,13 @@ ReadiumSDK.Views.ReflowableView = function(options){
     this.openPageNext = function (initiator) {
 
         if(!_currentSpineItem) {
-            return;
+            return false;
         }
 
         if(_paginationInfo.currentSpreadIndex < _paginationInfo.spreadCount - 1) {
             _paginationInfo.currentSpreadIndex++;
             onPaginationChanged(initiator);
+            return true;
         }
         else {
 
@@ -419,7 +423,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
 
                 var pageRequest = new ReadiumSDK.Models.PageOpenRequest(nextSpineItem, initiator);
                 pageRequest.setFirstPage();
-                self.openPage(pageRequest);
+                return self.openPage(pageRequest);
             }
         }
     };
