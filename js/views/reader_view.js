@@ -968,4 +968,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         _iframeLoader.addIFrameEventListener(eventName, callback, context, jqueryEvent);
     };
 
+    this.getPaginationInfo = function(){
+        return _currentView.getPaginationInfo();
+    };
 };
