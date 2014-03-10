@@ -971,4 +971,31 @@ ReadiumSDK.Views.ReaderView = function(options) {
     this.getPaginationInfo = function(){
         return _currentView.getPaginationInfo();
     };
+
+
+    /**
+     *
+     * Opens page index of the spine item with index provided
+     *
+     * @param {string} spineIndex Zero based index of the item in the spine
+     * @param {number} pageIndex Zero based index of the page in the spine item
+     * @param {object} initiator optional
+     */
+    this.openSpineIndexPage = function(spineIndex, pageIndex, initiator) {
+
+        var spineItem = _spine.items[spineIndex];
+        if(!spineItem) {
+            return;
+        }
+
+        var pageRequest = new ReadiumSDK.Models.PageOpenRequest(spineItem, initiator);
+
+        if (pageIndex === -1) {
+            pageRequest.setLastPage();
+        } else if(pageIndex) {
+            pageRequest.setPageIndex(pageIndex);
+        }
+
+        openPage(pageRequest);
+    };
 };
