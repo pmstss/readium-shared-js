@@ -455,7 +455,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
             var spineItems = this.getLoadedSpineItems();
             if(spineItems.length > 0) {
                 pageRequest = new ReadiumSDK.Models.PageOpenRequest(spineItems[0], initiator);
-            pageRequest.setPageIndex(pageIndex);
+                if (pageIndex === -1) {
+                    pageRequest.setLastPage();
+                } else {
+                    pageRequest.setPageIndex(pageIndex);
+                }
+
             }
         }
 
