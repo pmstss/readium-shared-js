@@ -17,36 +17,33 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-ReadiumSDK.Views.IFrameLoader = function () {
+ReadiumSDK.Views.IFrameLoader = function() {
 
     var eventListeners = {};
 
-    this.addIFrameEventListener = function (eventName, callback, context, jqueryEvent) {
+    this.addIFrameEventListener = function(eventName, callback, context) {
 
-        if (eventListeners[eventName] == undefined) {
+        if(eventListeners[eventName] == undefined) {
             eventListeners[eventName] = [];
         }
 
-        eventListeners[eventName].push({callback: callback, context: context, jqueryEvent: jqueryEvent});
+        eventListeners[eventName].push({callback: callback, context: context});
     };
 
-    this.loadIframe = function (iframe, src, callback, context) {
+    this.loadIframe = function(iframe, src, callback, context) {
 
         $(iframe).hide();
 
-        iframe.onload = function () {
+        iframe.onload = function() {
 
-            _.each(eventListeners, function (value, key) {
-                for (var i = 0, count = value.length; i < count; i++) {
-                    if (value[i].jqueryEvent) {
-                        $(iframe.contentDocument.body).on(key, value[i].callback, value[i].context);
-                    } else {
-                        iframe.contentWindow.addEventListener(key, value[i].callback, value[i].context);
-                    }
+            _.each(eventListeners, function(value, key){
+                for(var i = 0, count = value.length; i< count; i++) {
+                    $(iframe.contentWindow).on(key, value[i].callback, value[i].context);
                 }
             });
 
-            try {
+            try
+            {
                 iframe.contentWindow.navigator.epubReadingSystem = navigator.epubReadingSystem;
                 console.debug("epubReadingSystem name:"
                     + iframe.contentWindow.navigator.epubReadingSystem.name
@@ -54,68 +51,14 @@ ReadiumSDK.Views.IFrameLoader = function () {
                     + iframe.contentWindow.navigator.epubReadingSystem.version
                     + " is loaded to iframe");
             }
-            catch (ex) {
+            catch(ex)
+            {
                 console.log("epubReadingSystem INJECTION ERROR! " + ex.message);
             }
             callback.call(context, true);
             $(iframe).show();
         };
 
-        injectScripts(src, function (dom) {
-            iframe.contentWindow.document.open();
-            iframe.contentWindow.document.write(dom.firstChild.outerHTML);
-            iframe.contentWindow.document.close();
-        });
+        iframe.src = src;
     };
-
-    function getFileText(path, callback) {
-
-        $.ajax({
-            url: path,
-            dataType: 'xml',
-            async: true,
-            success: function (result) {
-                callback(result);
-            },
-            error: function (xhr, status, errorThrown) {
-                console.error('Error when AJAX fetching ' + path);
-                console.error(status);
-                console.error(errorThrown);
-                callback();
-            }
-        });
-    }
-
-    function injectScripts(src, callback) {
-
-        getFileText(src, function (contentFileData) {
-
-            if (!contentFileData) {
-                callback();
-                return;
-            }
-
-            var $head = $('head', contentFileData);
-            var $base = $('base', $head);
-
-            if ($base.length === 0) {
-                var sourceParts = src.split("/");
-                sourceParts.pop(); //remove source file name
-                $base = $("<base href=\"" + sourceParts.join("/") + "/" + "\">");
-                $head.prepend($base);
-            }
-
-            var securityScript = "<script>(" + disableParent.toString() + ")()<\/script>";
-            $('body', contentFileData).prepend(securityScript);
-
-//            var readingSystemScript = createSetReadingSystemObjectString(navigator.epubReadingSystem);
-//            $('body', contentFileData).append("<script>(" + readingSystemScript + ")()<\/script>");
-
-            callback(contentFileData);
-        });
-    }
-
-    function disableParent() {
-        window.parent = undefined;
-    }
 };
