@@ -437,8 +437,12 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe) {
     };
 
     this.isNodeFromRangeCfiVisible = function (cfi) {
-
-        return isClientRectVisible(this.getNodeRangeInfoFromCfi(cfi).clientRect);
+        var nodeRangeInfo = this.getNodeRangeInfoFromCfi(cfi);
+        if (nodeRangeInfo) {
+            return isClientRectVisible(nodeRangeInfo.clientRect);
+        } else {
+            return undefined;
+        }
     };
 
     function getRangeInfoFromNodeList($textNodeList, textOffset) {
