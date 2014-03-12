@@ -959,13 +959,18 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * @method addIFrameEventsListener
      * @param {string} eventName    event name.
      * @param {string} callback     callback function.
-     * @param {string} context      user specified data passed to the callback function.
-     * @param {bool} jqueryEvent    use a jquery event listener or a native one.
-     * 
+     * @param {string} context      user specified data passed to the callback function..
+     * @param {bool} options        specify additional options: (as a hash object)
+     *                              jqueryEvent {bool}: use a jquery or a native event binding.
+     *                              onWindow {bool}: bind the event on the window.
+     *                              onDocument {bool}: bind the event on the contentDocument.
+     *                              onBody {bool}: bind the event on the body inside the iframe.
+     *                              onSelector {string}: if specified, bind the event on a selector
+     *                                                   matching an element inside the iframe.
      * @returns {undefined}
      */
-    this.addIFrameEventListener = function (eventName, callback, context, jqueryEvent) {
-        _iframeLoader.addIFrameEventListener(eventName, callback, context, jqueryEvent);
+    this.addIFrameEventListener = function (eventName, callback, context, options) {
+        _iframeLoader.addIFrameEventListener(eventName, callback, context, options);
     };
 
     this.getPaginationInfo = function(){
