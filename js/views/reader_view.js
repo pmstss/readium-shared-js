@@ -954,13 +954,14 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
-     * Lets user to subscribe to iframe's window events
+     * Allows the subscription of events that trigger inside the epub content iframe
      *
-     * @method addIFrameEventsListener
-     * @param {string} eventName    event name.
-     * @param {string} callback     callback function.
-     * @param {string} context      user specified data passed to the callback function..
-     * @param {bool} options        specify additional options: (as a hash object)
+     * @method addIFrameEventListener
+     * @param {string} eventName    Event name.
+     * @param {function} callback   Callback function.
+     * @param {object} context      User specified data passed to the callback function.
+     * @param {object} options      Specify additional options: (as a hash object)
+     *
      *                              jqueryEvent {bool}: use a jquery or a native event binding.
      *                              onWindow {bool}: bind the event on the window.
      *                              onDocument {bool}: bind the event on the contentDocument.

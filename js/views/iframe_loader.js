@@ -52,7 +52,7 @@ ReadiumSDK.Views.IFrameLoader = function() {
                     }
 
                     if (!options) {
-                        addJqueryEvent($(iframe.contentWindow));
+                        addNativeEvent(iframe.contentWindow);
                     } else {
                         if (options.onWindow) {
                             if (options.jqueryEvent) {
