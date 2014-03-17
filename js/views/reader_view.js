@@ -944,10 +944,15 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return false;
     };
 
-    this.getElementByCfi = function (spineIdRef,partialCfi) {
-        return _currentView.getElementByCfi(spineIdRef,partialCfi);
-    };
+    this.getElements = function(spineItem, selector) {
 
+        if(_currentView) {
+            return _currentView.getElements(spineItem, selector);
+        }
+
+        return undefined;
+    };
+    
     this.isElementVisible = function (element) {
         return _currentView.isElementVisible($(element));
 

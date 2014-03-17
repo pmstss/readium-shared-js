@@ -122,13 +122,6 @@ ReadiumSDK.Views.ScrollView = function(options){
     };
 
 
-    function registerTriggers(doc) {
-        $('trigger', doc).each(function() {
-            var trigger = new ReadiumSDK.Models.Trigger(this);
-            trigger.subscribe(doc);
-
-        });
-    }
 
     function loadSpineItemPageRequest(pageRequest) {
 
@@ -188,9 +181,6 @@ ReadiumSDK.Views.ScrollView = function(options){
             resizeIFrameToContent();
             openDeferredElement();
         }, 50);
-
-        applySwitches(epubContentDocument);
-        registerTriggers(epubContentDocument);
 
     }
 
@@ -260,7 +250,7 @@ ReadiumSDK.Views.ScrollView = function(options){
         }
         else if(pageRequest.elementId) {
 
-            $element = _navigationLogic.getElementBuyId(pageRequest.elementId);
+            $element = _navigationLogic.getElementById(pageRequest.elementId);
 
             if(!$element) {
                 console.warn("Element id=" + pageRequest.elementId + " not found!");
@@ -271,7 +261,18 @@ ReadiumSDK.Views.ScrollView = function(options){
         }
         else if(pageRequest.elementCfi) {
 
-            $element = _navigationLogic.getElementByCfi(pageRequest.elementCfi);
+            try
+            {
+                $element = _navigationLogic.getElementByCfi(pageRequest.elementCfi,
+                    ["cfi-marker", "mo-cfi-highlight"],
+                    [],
+                    ["MathJax_Message"]);
+            }
+            catch (e)
+            {
+                $element = undefined;
+                console.log(e);
+            }
 
             if(!$element) {
                 console.warn("Element cfi=" + pageRequest.elementCfi + " not found!");
@@ -314,52 +315,6 @@ ReadiumSDK.Views.ScrollView = function(options){
 
         return Math.ceil(scrollHeight() / viewHeight());
     }
-
-    // Description: Parse the epub "switch" tags and hide
-    // cases that are not supported
-    function applySwitches(dom) {
-
-        // helper method, returns true if a given case node
-        // is supported, false otherwise
-        var isSupported = function(caseNode) {
-
-            var ns = caseNode.attributes["required-namespace"];
-            if(!ns) {
-                // the namespace was not specified, that should
-                // never happen, we don't support it then
-                console.log("Encountered a case statement with no required-namespace");
-                return false;
-            }
-            // all the xmlns that readium is known to support
-            // TODO this is going to require maintenance
-            var supportedNamespaces = ["http://www.w3.org/1998/Math/MathML"];
-            return _.include(supportedNamespaces, ns);
-        };
-
-        $('switch', dom).each( function() {
-
-            // keep track of whether or now we found one
-            var found = false;
-
-            $('case', this).each(function() {
-
-                if( !found && isSupported(this) ) {
-                    found = true; // we found the node, don't remove it
-                }
-                else {
-                    $(this).remove(); // remove the node from the dom
-//                    $(this).prop("hidden", true);
-                }
-            });
-
-            if(found) {
-                // if we found a supported case, remove the default
-                $('default', this).remove();
-//                $('default', this).prop("hidden", true);
-            }
-        })
-    }
-
 
     function onPaginationChanged(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
 
@@ -485,6 +440,16 @@ ReadiumSDK.Views.ScrollView = function(options){
         return [_currentSpineItem];
     };
 
+    this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
+
+        if(spineItem != _currentSpineItem) {
+            console.error("spine item is not loaded");
+            return undefined;
+        }
+
+        return _navigationLogic.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
+    };
+    
     this.getElement = function(spineItem, selector) {
 
         if(spineItem != _currentSpineItem) {
@@ -495,20 +460,9 @@ ReadiumSDK.Views.ScrollView = function(options){
         return _navigationLogic.getElement(selector);
     };
 
-    this.getElements = function(spineItem, selector) {
+    this.getFirstVisibleMediaOverlayElement = function() {
 
-        if(spineItem != _currentSpineItem) {
-            console.error("spine item is not loaded");
-            return undefined;
-        }
-
-        return _navigationLogic.getElements(selector);
-    };
-
-
-    this.getVisibleMediaOverlayElements = function() {
-
-        return _navigationLogic.getVisibleMediaOverlayElements(visibleOffsets());
+        return _navigationLogic.getFirstVisibleMediaOverlayElement(visibleOffsets());
     };
 
     function visibleOffsets() {
@@ -525,7 +479,7 @@ ReadiumSDK.Views.ScrollView = function(options){
         var $element = $(element);
 
 
-        if(_navigationLogic.isElementVisible($element, visibleOffsets())) {
+        if(_navigationLogic.getElementVisibility($element, visibleOffsets()) > 0) {
             return;
         }
 
@@ -551,11 +505,13 @@ ReadiumSDK.Views.ScrollView = function(options){
         console.warn('isElementVisible: Not implemented yet for scroll_view');
     };
 
+    /*
     this.getElementByCfi = function(spineIdref, partialCfi){
         if(_currentSpineItem.idref === spineIdref){
             return _navigationLogic.getElementByCfi(partialCfi);
         }
         return undefined;
     };
+    */
 
 };

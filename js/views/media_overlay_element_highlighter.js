@@ -18,29 +18,70 @@
 
 ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
 
+    this.includeParWhenAdjustingToSeqSyncGranularity = true;
+
     var DEFAULT_MO_ACTIVE_CLASS = "mo-active-default";
+    var DEFAULT_MO_SUB_SYNC_CLASS = "mo-sub-sync";
+    
     //var BACK_COLOR = "#99CCCC";
 
-    var _highlightedElement = undefined;
+    var _highlightedElementPar = undefined;
+    this.isElementHighlighted = function(par)
+    {
+        return _highlightedElementPar && par === _highlightedElementPar;
+    };
+    
+    var _highlightedCfiPar = undefined;
+    this.isCfiHighlighted = function(par)
+    {
+        return _highlightedCfiPar && par === _highlightedCfiPar;
+    };
 
     var _activeClass = "";
     var _playbackActiveClass = "";
 
     var _reader = reader;
-
+    
+    var USE_RANGY = true && (typeof rangy !== "undefined");
+    var _rangyCSS = undefined;
+    var _rangyRange = undefined;
+    
+    var HIGHLIGHT_ID = "MO_SPEAK";
+    
     var self = this;
 
     var $userStyle = undefined;
-    this.clearUserStyle = function()
+    
+    this.reDo = function()
     {
+        //this.reset();
+        
         if ($userStyle)
         {
             $userStyle.remove();
         }
         $userStyle = undefined;
+
+        var he = _highlightedElementPar;
+        var hc = _highlightedCfiPar;
+        var c1 = _activeClass;
+        var c2 = _playbackActiveClass;
+        
+        if (_highlightedElementPar)
+        {
+            this.reset();
+
+            this.highlightElement(he, c1, c2);
+        }
+        else if (_highlightedCfiPar)
+        {
+            this.reset();
+
+            this.highlightCfi(hc, c1, c2);
+        }
     };
 
-    function ensureUserStyle($element)
+    function ensureUserStyle($element, hasAuthorStyle, overrideWithUserStyle)
     {
         if ($userStyle)
         {
@@ -48,8 +89,6 @@ ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
             {
                 return;
             }
-
-            //self.clearUserStyle();
         }
 
 
@@ -59,9 +98,12 @@ ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
 
         $userStyle.append("." + DEFAULT_MO_ACTIVE_CLASS + " {");
         
-        var style = _reader.userStyles().findStyle("." + DEFAULT_MO_ACTIVE_CLASS);        
+        var fallbackUserStyle = "background-color: yellow !important; color: black !important; border-radius: 0.4em;";
+        
+        var style = overrideWithUserStyle; //_reader.userStyles().findStyle("." + DEFAULT_MO_ACTIVE_CLASS);
         if (style)
         {
+            var atLeastOne = false;
             for(var prop in style.declarations)
             {
                 if(!style.declarations.hasOwnProperty(prop))
@@ -69,8 +111,18 @@ ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
                     continue;
                 }
 
+                atLeastOne = true;
                 $userStyle.append(prop + ": " + style.declarations[prop] + "; ");
             }
+            
+            if (!atLeastOne && !hasAuthorStyle)
+            {
+                $userStyle.append(fallbackUserStyle);
+            }
+        }
+        else if (!hasAuthorStyle)
+        {
+            $userStyle.append(fallbackUserStyle);
         }
         
         $userStyle.append("}");
@@ -83,41 +135,51 @@ ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
         $userStyle.appendTo($head);
 
 //console.debug($userStyle[0].textContent);
-    }
+    };
     
-    this.highlightElement = function(element, activeClass, playbackActiveClass) {
+    this.highlightElement = function(par, activeClass, playbackActiveClass) {
 
-        if(!element || element === _highlightedElement) {
+        if(!par || par === _highlightedElementPar) {
             return;
         }
 
         this.reset();
 
-        _highlightedElement = element;
+        _highlightedElementPar = par;
+        _highlightedCfiPar = undefined;
+        
         _activeClass = activeClass;
         _playbackActiveClass = playbackActiveClass;
 
+        var seq = this.adjustParToSeqSyncGranularity(_highlightedElementPar);
+        var element = seq.element;
+        
         if (_playbackActiveClass && _playbackActiveClass !== "")
         {
             //console.debug("MO playbackActiveClass: " + _playbackActiveClass);
-            $(_highlightedElement.ownerDocument.documentElement).addClass(_playbackActiveClass);
-            //console.debug("MO playbackActiveClass 2: " + _highlightedElement.ownerDocument.documentElement.classList);
+            $(element.ownerDocument.documentElement).addClass(_playbackActiveClass);
+            //console.debug("MO playbackActiveClass 2: " + element.ownerDocument.documentElement.classList);
         }
 
-        var $hel = $(_highlightedElement);
+        var $hel = $(element);
 
         var hasAuthorStyle = _activeClass && _activeClass !== "";
-        var overrideWithUserStyle = _reader.userStyles().findStyle("." + DEFAULT_MO_ACTIVE_CLASS); // TODO: performance issue?
+        var overrideWithUserStyle = _reader.userStyles().findStyle("." + DEFAULT_MO_ACTIVE_CLASS);
 
-        ensureUserStyle($hel);
+        ensureUserStyle($hel, hasAuthorStyle, overrideWithUserStyle);
                 
         if (overrideWithUserStyle || !hasAuthorStyle)
         {
             //console.debug("MO active NO CLASS: " + _activeClass);
 
+            if (hasAuthorStyle)
+            {
+                $hel.addClass(_activeClass);
+            }
+            
             $hel.addClass(DEFAULT_MO_ACTIVE_CLASS);
 
-            //$(_highlightedElement).css("background", BACK_COLOR);
+            //$(element).css("background", BACK_COLOR);
         }
         else
         {
@@ -125,24 +187,27 @@ ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
             $hel.addClass(_activeClass);
         }
         
+        if (this.includeParWhenAdjustingToSeqSyncGranularity || _highlightedElementPar !== seq)
+        {
+            $(_highlightedElementPar.element).addClass(DEFAULT_MO_SUB_SYNC_CLASS);
+        }
         
 // ---- CFI
-//         removeHighlight();
 //         try
 //         {
 //             // //noinspection JSUnresolvedVariable
-//             // var cfi = EPUBcfi.Generator.generateElementCFIComponent(_highlightedElement); //$hel[0]
+//             // var cfi = EPUBcfi.Generator.generateElementCFIComponent(element); //$hel[0]
 //             // if(cfi[0] == "!") {
 //             //     cfi = cfi.substring(1);
 //             // }
 // 
-// //console.log(_highlightedElement);
+// //console.log(element);
 //         
-//             var firstTextNode = getFirstTextNode(_highlightedElement);
+//             var firstTextNode = getFirstTextNode(element);
 //             var txtFirst = firstTextNode.textContent;
 // //console.log(txtFirst);
 // 
-//             var lastTextNode = getLastTextNode(_highlightedElement);
+//             var lastTextNode = getLastTextNode(element);
 //             var txtLast = lastTextNode.textContent;
 // //console.log(txtLast);
 //         
@@ -170,8 +235,105 @@ ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
 //         }
     };
     
+    this.highlightCfi = function(par, activeClass, playbackActiveClass) {
+
+        if(!par || par === _highlightedCfiPar) {
+            return;
+        }
+
+        this.reset();
+
+        _highlightedElementPar = undefined;
+        _highlightedCfiPar = par;
+        
+        _activeClass = activeClass;
+        _playbackActiveClass = playbackActiveClass;
+
+        var $hel = $(_highlightedCfiPar.cfi.cfiTextParent);
+
+        var hasAuthorStyle = _activeClass && _activeClass !== "";
+        var overrideWithUserStyle = _reader.userStyles().findStyle("." + DEFAULT_MO_ACTIVE_CLASS); // TODO: performance issue?
+
+        ensureUserStyle($hel, hasAuthorStyle, overrideWithUserStyle);
+
+        var clazz = (overrideWithUserStyle || !hasAuthorStyle) ? ((hasAuthorStyle ? (_activeClass + " ") : "") + DEFAULT_MO_ACTIVE_CLASS) : _activeClass;
+
+        if (USE_RANGY)
+        {
+            var doc = _highlightedCfiPar.cfi.cfiTextParent.ownerDocument;
+
+            _rangyRange = rangy.createRange(doc); //createNativeRange
+
+            var startCFI = "epubcfi(" + _highlightedCfiPar.cfi.partialStartCfi + ")";
+            var infoStart = EPUBcfi.getTextTerminusInfoWithPartialCFI(startCFI, doc,
+                ["cfi-marker", "mo-cfi-highlight"],
+                [],
+                ["MathJax_Message"]);
+//console.log(infoStart);
+
+            var endCFI = "epubcfi(" + _highlightedCfiPar.cfi.partialEndCfi + ")";
+            var infoEnd = EPUBcfi.getTextTerminusInfoWithPartialCFI(endCFI, doc,
+                ["cfi-marker", "mo-cfi-highlight"],
+                [],
+                ["MathJax_Message"]);
+//console.log(infoEnd);
+            
+            _rangyRange.setStartAndEnd(
+                infoStart.textNode[0], infoStart.textOffset,
+                infoEnd.textNode[0], infoEnd.textOffset
+            );
+            
+            if (false && // we use CssClassApplier instead, because surroundContents() has no trivial undoSurroundContents() function (inc. text nodes normalisation, etc.)
+                _rangyRange.canSurroundContents())
+            {
+                _rangyRange.MO_createCssClassApplier = false;
+                
+                var span = doc.createElementNS("http://www.w3.org/1999/xhtml", 'span');
+                span.id = HIGHLIGHT_ID;
+                span.setAttribute("id", span.id);
+                span.setAttribute("class", clazz + " mo-cfi-highlight");
+            
+                _rangyRange.surroundContents(span);
+            }
+            else
+            {
+                _rangyRange.MO_createCssClassApplier = true;
+                
+                if (!_rangyCSS || _rangyCSS.cssClass !== clazz)
+                {
+                    _rangyCSS = rangy.createCssClassApplier(clazz,
+                    {
+                        elementTagName: "span",
+                        elementProperties: {className: "mo-cfi-highlight"},
+                        ignoreWhiteSpace: true,
+                        applyToEditableOnly: false,
+                        normalize: true
+                    },
+                    ["span"]);
+                }
+
+                _rangyCSS.applyToRange(_rangyRange);
+            }
+        }
+        else
+        {
+            try
+            {
+                //var id = $hel.data("mediaOverlayData").par.getSmil().spineItemId;
+                var id = par.getSmil().spineItemId;
+                _reader.addHighlight(id, par.cfi.partialRangeCfi, HIGHLIGHT_ID,
+                "highlight", //"underline"
+                undefined // styles
+                            );
+            }
+            catch(error)
+            {
+                console.error(error);
+            }
+        }
+    };
+    
 // ---- CFI
-//     var HIGHLIGHT_ID = "MO_SPEAK";
 //     
 //     function getFirstTextNode(node)
 //     {
@@ -215,62 +377,121 @@ ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
 //         return undefined;
 //     }
 //     
-//     function removeHighlight()
-//     {
-//         _reader.removeHighlight(HIGHLIGHT_ID);
-//         
-//         var toRemove = undefined;
-//         while ((toRemove = document.getElementById("start-" + HIGHLIGHT_ID)) !== null)
-//         {
-// console.log("toRemove START");
-// console.log(toRemove);
-//             toRemove.parent.removeChild(toRemove);
-//         }
-//         while ((toRemove = document.getElementById("end-" + HIGHLIGHT_ID)) !== null)
-//         {
-// console.log("toRemove END");
-// console.log(toRemove);
-//             toRemove.parent.removeChild(toRemove);
-//         }
-//     }
 
     this.reset = function() {
-
-        // ---- CFI
-        // try
-        // {
-        //     removeHighlight();
-        // }
-        // catch(error)
-        // {
-        //     console.error(error);
-        // }
+        
+        if (_highlightedCfiPar)
+        {
+            var doc = _highlightedCfiPar.cfi.cfiTextParent.ownerDocument;
+            if (USE_RANGY)
+            {
+                if (_rangyCSS && _rangyRange.MO_createCssClassApplier)
+                {
+                    _rangyCSS.undoToRange(_rangyRange);
+                }
+                else
+                {
+                    var toRemove = undefined;
+                    while ((toRemove = doc.getElementById(HIGHLIGHT_ID)) !== null)
+                    {
+                        var txt = toRemove.textContent; // TODO: innerHTML? or better: hasChildNodes loop + detach and re-attach
+                        var txtNode = doc.createTextNode(txt);
+                        
+                        toRemove.parentNode.replaceChild(txtNode, toRemove);
+                        txtNode.parentNode.normalize();
+                    }
+                }
+        
+                //_rangyCSS = undefined;
+                _rangyRange = undefined;
+            }
+            else
+            {
+                try
+                {
+                    _reader.removeHighlight(HIGHLIGHT_ID);
+        
+                    var toRemove = undefined;
+                    while ((toRemove = doc.getElementById("start-" + HIGHLIGHT_ID)) !== null)
+                    {
+            console.log("toRemove START");
+            console.log(toRemove);
+                        toRemove.parentNode.removeChild(toRemove);
+                    }
+                    while ((toRemove = doc.getElementById("end-" + HIGHLIGHT_ID)) !== null)
+                    {
+            console.log("toRemove END");
+            console.log(toRemove);
+                        toRemove.parentNode.removeChild(toRemove);
+                    }
+                }
+                catch(error)
+                {
+                    console.error(error);
+                }
+            }
+            
+            _highlightedCfiPar = undefined;
+        }
+        
+        
         
 
-        if(_highlightedElement) {
+        if(_highlightedElementPar) {
 
+            var seq = this.adjustParToSeqSyncGranularity(_highlightedElementPar);
+            var element = seq.element;
+            if (this.includeParWhenAdjustingToSeqSyncGranularity || _highlightedElementPar !== seq)
+            {
+                $(_highlightedElementPar.element).removeClass(DEFAULT_MO_SUB_SYNC_CLASS);
+            }
+            
             if (_playbackActiveClass && _playbackActiveClass !== "")
             {
                 //console.debug("MO RESET playbackActiveClass: " + _playbackActiveClass);
-                $(_highlightedElement.ownerDocument.documentElement).removeClass(_playbackActiveClass);
+                $(element.ownerDocument.documentElement).removeClass(_playbackActiveClass);
             }
 
             if (_activeClass && _activeClass !== "")
             {
                 //console.debug("MO RESET activeClass: " + _activeClass);
-                $(_highlightedElement).removeClass(_activeClass);
+                $(element).removeClass(_activeClass);
             }
             //else
             //{
                 //console.debug("MO RESET active NO CLASS: " + _activeClass);
-                $(_highlightedElement).removeClass(DEFAULT_MO_ACTIVE_CLASS);
-                //$(_highlightedElement).css("background", '');
+                $(element).removeClass(DEFAULT_MO_ACTIVE_CLASS);
+                //$(element).css("background", '');
             //}
 
-            _highlightedElement = undefined;
-            _activeClass = "";
-            _playbackActiveClass = "";
+            _highlightedElementPar = undefined;
         }
-    }
 
+        _activeClass = "";
+        _playbackActiveClass = "";
+    };
+
+    this.adjustParToSeqSyncGranularity = function(par)
+    {
+        if (!par) return undefined;
+        
+        var sync = _reader.viewerSettings().mediaOverlaysSynchronizationGranularity;
+        if (sync && sync.length > 0)
+        {
+            var element = par.element || (par.cfi ? par.cfi.cfiTextParent : undefined);
+            if (!element)
+            {
+                console.error("adjustParToSeqSyncGranularity !element ???");
+                return par; // should never happen!
+            }
+
+            var seq = par.getFirstSeqAncestorWithEpubType(sync, this.includeParWhenAdjustingToSeqSyncGranularity);
+            if (seq && seq.element)
+            {
+                return seq;
+            }
+        }
+        
+        return par;
+    };
 };

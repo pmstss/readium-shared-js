@@ -45,9 +45,6 @@ ReadiumSDK.Views.FixedView = function(options){
     var _bookMargins;
     var _contentMetaSize;
 
-        //event with namespace for clean unbinding
-    $(window).on("resize.ReadiumSDK.readerView", _.bind(onViewportResize, self));
-
     function createOnePageView(cssclass, contentAlignment) {
 
         var pageView = new ReadiumSDK.Views.OnePageView({
@@ -80,6 +77,10 @@ ReadiumSDK.Views.FixedView = function(options){
         _$viewport.append(_$el);
 
         self.applyStyles();
+
+        //event with namespace for clean unbinding
+        $(window).on("resize.ReadiumSDK.readerView", _.bind(self.onViewportResize, self));
+
 
         return this;
     };
@@ -162,7 +163,7 @@ ReadiumSDK.Views.FixedView = function(options){
         self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
     }
 
-    function onViewportResize() {
+    this.onViewportResize = function() {
 
         //because change of the viewport orientation can alter pagination behaviour we have to check if
         //visible content stays same
@@ -176,6 +177,11 @@ ReadiumSDK.Views.FixedView = function(options){
         if(_spread.orientation != newOrientation) {
 
             var newPageSpread = new ReadiumSDK.Models.Spread(_spine, newOrientation);
+
+            var visibleItems = _spread.validItems();
+            if(visibleItems.length > 0) {
+                newPageSpread.openItem(visibleItems[0]);
+            }
 
             spreadChanged = (  _spread.leftItem != newPageSpread.leftItem
                             || _spread.rightItem != newPageSpread.rightItem
@@ -194,13 +200,10 @@ ReadiumSDK.Views.FixedView = function(options){
         else {
             resizeBook();
         }
-
-    }
-
-    this.onViewportResize = function(){
-        //expose this to keep consistent with other views
-        onViewportResize();
     };
+
+    //event with namespace for clean unbinding
+    $(window).on("resize.ReadiumSDK.readerView", _.bind(self.onViewportResize, self));
 
     function isContentRendered() {
 
@@ -216,7 +219,7 @@ ReadiumSDK.Views.FixedView = function(options){
 
     function resizeBook() {
 
-        if (!isContentRendered()) {
+        if(!isContentRendered()) {
             return;
         }
 
@@ -230,12 +233,12 @@ ReadiumSDK.Views.FixedView = function(options){
         var pageMargins = getMaxPageMargins(leftPageMargins, rightPageMargins, centerPageMargins);
 
         var potentialTargetElementSize = {   width: viewportWidth - _bookMargins.width(),
-            height: viewportHeight - _bookMargins.height()};
+                                             height: viewportHeight - _bookMargins.height()};
 
         var potentialContentSize = {    width: potentialTargetElementSize.width - pageMargins.width(),
-            height: potentialTargetElementSize.height - pageMargins.height() };
+                                        height: potentialTargetElementSize.height - pageMargins.height() };
 
-        if (potentialTargetElementSize.width <= 0 || potentialTargetElementSize.height <= 0) {
+        if(potentialTargetElementSize.width <= 0 || potentialTargetElementSize.height <= 0) {
             return;
         }
 
@@ -245,20 +248,20 @@ ReadiumSDK.Views.FixedView = function(options){
         var scale = Math.min(horScale, verScale);
 
         var contentSize = { width: _contentMetaSize.width * scale,
-            height: _contentMetaSize.height * scale };
+                            height: _contentMetaSize.height * scale };
 
         var targetElementSize = {   width: contentSize.width + pageMargins.width(),
-            height: contentSize.height + pageMargins.height() };
+                                    height: contentSize.height + pageMargins.height() };
 
         var bookSize = {    width: targetElementSize.width + _bookMargins.width(),
-            height: targetElementSize.height + _bookMargins.height() };
+                            height: targetElementSize.height + _bookMargins.height() };
 
 
         var bookLeft = Math.floor((viewportWidth - bookSize.width) / 2);
         var bookTop = Math.floor((viewportHeight - bookSize.height) / 2);
 
-        if (bookLeft < 0) bookLeft = 0;
-        if (bookTop < 0) bookTop = 0;
+        if(bookLeft < 0) bookLeft = 0;
+        if(bookTop < 0) bookTop = 0;
 
         _$el.css("left", bookLeft + "px");
         _$el.css("top", bookTop + "px");
@@ -268,23 +271,23 @@ ReadiumSDK.Views.FixedView = function(options){
         var left = _bookMargins.padding.left;
         var top = _bookMargins.padding.top;
 
-        if (_leftPageView.isDisplaying()) {
+        if(_leftPageView.isDisplaying()) {
 
-            _leftPageView.transformContent(scale, left, top);
+             _leftPageView.transformContent(scale, left, top);
         }
 
-        if (_rightPageView.isDisplaying()) {
+        if(_rightPageView.isDisplaying()) {
 
             left += Math.floor(_contentMetaSize.separatorPosition * scale);
 
-            if (_leftPageView.isDisplaying()) {
+            if(_leftPageView.isDisplaying()) {
                 left += leftPageMargins.left;
             }
 
             _rightPageView.transformContent(scale, left, top);
         }
 
-        if (_centerPageView.isDisplaying()) {
+        if(_centerPageView.isDisplaying()) {
 
             _centerPageView.transformContent(scale, left, top);
         }
@@ -514,25 +517,46 @@ ReadiumSDK.Views.FixedView = function(options){
         return undefined;
     };
 
-    this.getVisibleMediaOverlayElements = function() {
-
-        var elements = [];
+    this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         var views = getDisplayingViews();
 
         for(var i = 0, count = views.length; i < count; i++) {
-            elements.push.apply(elements, views[i].getVisibleMediaOverlayElements());
+
+            var view = views[i];
+            if(view.currentSpineItem() == spineItem) {
+                return view.getElementByCfi(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist);
+            }
         }
 
-        return elements;
+        console.error("spine item is not loaded");
+        return undefined;
+    };
+    
+    this.getFirstVisibleMediaOverlayElement = function() {
+
+        var views = getDisplayingViews();
+
+        for(var i = 0, count = views.length; i < count; i++) {
+            var el = views[i].getFirstVisibleMediaOverlayElement();
+            if (el) return el;
+        }
+
+        return undefined;
     };
 
     this.insureElementVisibility = function(element, initiator) {
 
-        //for now we assume that for fixed layouts, elements are always visible
+        //for now we assume that for fixed layout element is always visible
 
     };
+    
+    this.isElementVisible = function($element){
 
+        //for now we assume that for fixed layouts, elements are always visible
+        return true;
+    };
+    
     this.getVisibleElementsWithFilter = function(filterFunction, includeSpineItems) {
 
         var elements = [];
@@ -552,22 +576,7 @@ ReadiumSDK.Views.FixedView = function(options){
         //for now we assume that for fixed layouts, elements are always visible
         return true;
     };
-
-    this.getElementByCfi = function(spineIdRef, partialCfi){
-
-        var views = getDisplayingViews();
-
-        for(var i = 0, count = views.length; i < count; i++) {
-
-            var view = views[i];
-            if(view.currentSpineItem().idref == spineIdRef) {
-                return view.getElementByCfi(spineIdRef,partialCfi);
-            }
-        }
-        return undefined;
-    };
-
-
+    
     this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
 
         var views = getDisplayingViews();
@@ -582,5 +591,5 @@ ReadiumSDK.Views.FixedView = function(options){
         }
 
         return undefined;
-    }
+    };
 };

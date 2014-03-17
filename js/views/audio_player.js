@@ -219,8 +219,8 @@
     
         function onPause()
         {
-            onStatusChanged({isPlaying: false});
             onAudioPause();
+            onStatusChanged({isPlaying: false});
         }
     
         function onEnded()
@@ -277,7 +277,7 @@
     //                    console.debug("currentTime: " + currentTime);
     //                }
     
-                    onPositionChanged(currentTime);
+                    onPositionChanged(currentTime, 1);
                 }, 20);
         }
     
@@ -341,7 +341,7 @@
     
         var _seekQueuing = 0;
         
-        this.playFile = function(smilSrc, epubSrc, seekBegin, element)
+        this.playFile = function(smilSrc, epubSrc, seekBegin) //element
         {
             _playId++;
             if (_playId > 99999)
