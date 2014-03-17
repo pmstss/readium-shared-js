@@ -27,79 +27,79 @@
  * @constructor
  */
 
-ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
+ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
     options = options || {};
 
-    this.getRootElement = function(){
+    this.getRootElement = function () {
 
         return $iframe[0].contentDocument.documentElement;
     };
-    
- this.getRootDocument = function () {
+
+    this.getRootDocument = function () {
         return $iframe[0].contentDocument;
     };
 
     /* <-debug
-    //used for visual debug atm
-    function getRandomColor() {
-        var letters = '0123456789ABCDEF'.split('');
-        var color = '#';
-        for (var i = 0; i < 6; i++) {
-            color += letters[Math.round(Math.random() * 15)];
-        }
-        return color;
-    }
+     //used for visual debug atm
+     function getRandomColor() {
+     var letters = '0123456789ABCDEF'.split('');
+     var color = '#';
+     for (var i = 0; i < 6; i++) {
+     color += letters[Math.round(Math.random() * 15)];
+     }
+     return color;
+     }
 
-    //used for visual debug atm
-    function addOverlayRect(rects, color, doc) {
-        var random = getRandomColor();
-        if (!(rects instanceof Array)) {
-            rects = [rects];
-        }
-        for (var i = 0; i != rects.length; i++) {
-            var rect = rects[i];
-            var tableRectDiv = doc.createElement('div');
-            tableRectDiv.style.position = 'absolute';
-            $(tableRectDiv).css('z-index', '-1');
-            $(tableRectDiv).css('opacity', '0.4');
-            tableRectDiv.style.border = '1px solid white';
-            if (!color && !random) {
-                tableRectDiv.style.background = 'purple';
-            } else if (random && !color) {
-                tableRectDiv.style.background = random;
-            } else {
-                if(color === true){
-                    color ='red';
-                }
-                tableRectDiv.style.border = '1px solid '+color;
-                tableRectDiv.style.background = 'red';
-            }
+     //used for visual debug atm
+     function addOverlayRect(rects, color, doc) {
+     var random = getRandomColor();
+     if (!(rects instanceof Array)) {
+     rects = [rects];
+     }
+     for (var i = 0; i != rects.length; i++) {
+     var rect = rects[i];
+     var tableRectDiv = doc.createElement('div');
+     tableRectDiv.style.position = 'absolute';
+     $(tableRectDiv).css('z-index', '-1');
+     $(tableRectDiv).css('opacity', '0.4');
+     tableRectDiv.style.border = '1px solid white';
+     if (!color && !random) {
+     tableRectDiv.style.background = 'purple';
+     } else if (random && !color) {
+     tableRectDiv.style.background = random;
+     } else {
+     if(color === true){
+     color ='red';
+     }
+     tableRectDiv.style.border = '1px solid '+color;
+     tableRectDiv.style.background = 'red';
+     }
 
-            tableRectDiv.style.margin = tableRectDiv.style.padding = '0';
-            tableRectDiv.style.top = (rect.top ) + 'px';
-            tableRectDiv.style.left = (rect.left ) + 'px';
-            // we want rect.width to be the border width, so content width is 2px less.
-            tableRectDiv.style.width = (rect.width - 2) + 'px';
-            tableRectDiv.style.height = (rect.height - 2) + 'px';
-            doc.body.appendChild(tableRectDiv);
-        }
-    }
+     tableRectDiv.style.margin = tableRectDiv.style.padding = '0';
+     tableRectDiv.style.top = (rect.top ) + 'px';
+     tableRectDiv.style.left = (rect.left ) + 'px';
+     // we want rect.width to be the border width, so content width is 2px less.
+     tableRectDiv.style.width = (rect.width - 2) + 'px';
+     tableRectDiv.style.height = (rect.height - 2) + 'px';
+     doc.body.appendChild(tableRectDiv);
+     }
+     }
 
-    function getPaginationLeftOffset() {
+     function getPaginationLeftOffset() {
 
-        var $htmlElement = $("html", self.getRootDocument());
-        var offsetLeftPixels = $htmlElement.css("left");
-        var offsetLeft = parseInt(offsetLeftPixels.replace("px", ""));
-        if(isNaN(offsetLeft)){
-            //for fixed layouts, $htmlElement.css("left") has no numerical value
-            offsetLeft = 0;
-        }
-        return offsetLeft;
-    }
-    //debug -> */
+     var $htmlElement = $("html", self.getRootDocument());
+     var offsetLeftPixels = $htmlElement.css("left");
+     var offsetLeft = parseInt(offsetLeftPixels.replace("px", ""));
+     if(isNaN(offsetLeft)){
+     //for fixed layouts, $htmlElement.css("left") has no numerical value
+     offsetLeft = 0;
+     }
+     return offsetLeft;
+     }
+     //debug -> */
 
-    function createRange(){
+    function createRange() {
         return self.getRootDocument().createRange();
     }
 
@@ -119,7 +119,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         if (startOverride && endOverride) {
             range.setStart(node, startOverride);
             range.setEnd(node, endOverride);
-            return [{start: startOverride, end: endOverride, rect: range.getBoundingClientRect()}];
+            return [
+                {start: startOverride, end: endOverride, rect: range.getBoundingClientRect()}
+            ];
         }
 
         //go through a "buffer" of characters to create the fragments
@@ -146,18 +148,18 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         return range.getBoundingClientRect();
     }
 
-    function getElementClientRect($element){
+    function getElementClientRect($element) {
         return $element[0].getBoundingClientRect();
     }
 
-    function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset){
+    function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset) {
         var range = createRange();
         range.setStart(startNode, startOffset);
         range.setEnd(endNode, endOffset);
         return range.getBoundingClientRect();
     }
 
-    function isClientRectVisible(rect){
+    function isClientRectVisible(rect) {
         //Text nodes without printable text dont have client rectangles
         if (!rect) {
             return false;
@@ -173,7 +175,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         return $iframe[0].clientWidth;
     }
 
-    function getRootDocumentClientHeight(){
+    function getRootDocumentClientHeight() {
         return self.getRootElement().clientHeight;
     }
 
@@ -192,17 +194,17 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
                 if (isClientRectVisible(rect)) {
                     found = fragment;
                     /* <- debug
-                    console.log("visible textnode fragment found:");
-                    console.log(fragment);
-                    console.log("------------");
-                    //debug -> */
+                     console.log("visible textnode fragment found:");
+                     console.log(fragment);
+                     console.log("------------");
+                     //debug -> */
                 }
             }
         });
         if (!found) {
             //if we didn't find a visible textnode fragment on the clientRect iteration
             //it might still mean that its visible, just only at the very end
-            var endFragment = getTextNodeFragments(textNode, null, textNode.length-1, textNode.length)[0];
+            var endFragment = getTextNodeFragments(textNode, null, textNode.length - 1, textNode.length)[0];
 
             if (endFragment && isClientRectVisible(endFragment.rect)) {
                 found = endFragment;
@@ -215,7 +217,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         var resultRangeRect = getNodeRangeClientRect(textNode, resultRangeData.start, textNode, resultRangeData.end);
         return {start: resultRangeData.start, end: resultRangeData.end, rect: resultRangeRect};
     }
-
 
 
     var visibilityCheckerFunc = options.rectangleBased
@@ -270,14 +271,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
     }
 
     // Old (offsetTop-based) algorithm, useful in top-to-bottom layouts
-    function checkVisibilityByVerticalOffsets(
-            $element, visibleContentOffsets, shouldCalculateVisibilityOffset) {
+    function checkVisibilityByVerticalOffsets($element, visibleContentOffsets, shouldCalculateVisibilityOffset) {
 
         var elementRect = ReadiumSDK.Helpers.Rect.fromElement($element);
         if (_.isNaN(elementRect.left)) {
             // this is actually a point element, doesnt have a bounding rectangle
             elementRect = new ReadiumSDK.Helpers.Rect(
-                    $element.position().top, $element.position().left, 0, 0);
+                $element.position().top, $element.position().left, 0, 0);
         }
         var topOffset = visibleContentOffsets.top || 0;
         var isBelowVisibleTop = elementRect.bottom() > topOffset;
@@ -323,8 +323,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
      *      0 < n <= 100 for visible elements
      *      (will just give 100, if `shouldCalculateVisibilityPercentage` => false)
      */
-    function checkVisibilityByRectangles(
-            $element, _props, shouldCalculateVisibilityPercentage) {
+    function checkVisibilityByRectangles($element, _props, shouldCalculateVisibilityPercentage) {
 
         var elementRectangles = getNormalizedRectangles($element);
         var clientRectangles = elementRectangles.clientRectangles;
@@ -340,7 +339,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
             // because of webkit inconsistency, that single rectangle should be adjusted
             // until it hits the end OR will be based on the FIRST column that is visible
             adjustRectangle(clientRectangles[0], frameDimensions, columnFullWidth,
-                    isRtl, true);
+                isRtl, true);
         }
 
         // for an element split between several CSS columns,
@@ -369,12 +368,12 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
     function findPageByRectangles($element, spatialVerticalOffset) {
         var visibleContentOffsets = getVisibleContentOffsets();
         var elementRectangles = getNormalizedRectangles($element, visibleContentOffsets);
-        var clientRectangles  = elementRectangles.clientRectangles;
+        var clientRectangles = elementRectangles.clientRectangles;
 
         var isRtl = isPageProgressionRightToLeft();
         var columnFullWidth = getColumnFullWidth();
         var frameHeight = $iframe.height();
-        var frameWidth  = $iframe.width();
+        var frameWidth = $iframe.width();
 
         if (spatialVerticalOffset) {
             trimRectanglesByVertOffset(clientRectangles, spatialVerticalOffset,
@@ -411,14 +410,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
      * @param {number} firstVisibleRectIndex
      * @returns {number} - visibility percentage (0 < n <= 100)
      */
-    function measureVisibilityPercentageByRectangles(
-            clientRectangles, firstVisibleRectIndex) {
+    function measureVisibilityPercentageByRectangles(clientRectangles, firstVisibleRectIndex) {
 
         var heightTotal = 0;
         var heightVisible = 0;
 
         if (clientRectangles.length > 1) {
-            _.each(clientRectangles, function(rect, index) {
+            _.each(clientRectangles, function (rect, index) {
                 heightTotal += rect.height;
                 if (index >= firstVisibleRectIndex) {
                     // in this case, all the rectangles after the first visible
@@ -429,9 +427,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         }
         else {
             // should already be normalized and adjusted
-            heightTotal   = clientRectangles[0].height;
+            heightTotal = clientRectangles[0].height;
             heightVisible = clientRectangles[0].height - Math.max(
-                    0, -clientRectangles[0].top);
+                0, -clientRectangles[0].top);
         }
         return heightVisible === heightTotal
             ? 100 // trivial case: element is 100% visible
@@ -450,11 +448,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
 
         visibleContentOffsets = visibleContentOffsets || {};
         var leftOffset = visibleContentOffsets.left || 0;
-        var topOffset  = visibleContentOffsets.top  || 0;
+        var topOffset = visibleContentOffsets.top || 0;
 
         // union of all rectangles wrapping the element
         var wrapperRectangle = normalizeRectangle(
-                $el[0].getBoundingClientRect(), leftOffset, topOffset);
+            $el[0].getBoundingClientRect(), leftOffset, topOffset);
 
         // all the separate rectangles (for detecting position of the element
         // split between several columns)
@@ -510,9 +508,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
      */
     function offsetRectangle(rect, leftOffset, topOffset) {
 
-        rect.left   += leftOffset;
-        rect.right  += leftOffset;
-        rect.top    += topOffset;
+        rect.left += leftOffset;
+        rect.right += leftOffset;
+        rect.top += topOffset;
         rect.bottom += topOffset;
     }
 
@@ -536,8 +534,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
      *      If set, there'll be two-phase adjustment
      *      (to align a rectangle with a viewport)
      */
-    function adjustRectangle(rect, frameDimensions, columnFullWidth, isRtl,
-            shouldLookForFirstVisibleColumn) {
+    function adjustRectangle(rect, frameDimensions, columnFullWidth, isRtl, shouldLookForFirstVisibleColumn) {
 
         if (isRtl) {
             columnFullWidth *= -1; // horizontal shifts are reverted in RTL mode
@@ -572,10 +569,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
      * @param {number} columnFullWidth
      * @param {boolean} isRtl
      */
-    function trimRectanglesByVertOffset(
-            rects, verticalOffset, frameHeight, columnFullWidth, isRtl) {
+    function trimRectanglesByVertOffset(rects, verticalOffset, frameHeight, columnFullWidth, isRtl) {
 
-        var totalHeight = _.reduce(rects, function(prev, cur) {
+        var totalHeight = _.reduce(rects, function (prev, cur) {
             return prev + cur.height;
         }, 0);
 
@@ -606,9 +602,14 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
     }
 
     //we look for text and images
-    this.findFirstVisibleElement = function (topOffset) {
+    this.findFirstVisibleElement = function (props) {
 
-        var $elements, $element = null;
+        if (typeof props !== 'object') {
+            // compatibility with legacy code, `props` is `topOffset` actually
+            props = { top: props };
+        }
+
+        var $elements;
         var $firstVisibleTextNode = null;
         var percentOfElementHeight = 0;
         var foundTextNode = null;
@@ -617,10 +618,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
             return isValidTextNode(this) || this.nodeName.toLowerCase() === 'img';
         });
 
-        var contentDoc = self.getRootDocument();
         // Find the first visible text node's parent element
         // or find the element in the case of an image
         $.each($elements, function () {
+
+            var $element;
 
             if (this.nodeType === Node.TEXT_NODE) { //text node
                 $element = $(this).parent();
@@ -630,17 +632,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
                 $element = $(this); //image
             }
 
-            var elementRect = ReadiumSDK.Helpers.Rect.fromElement($element);
+            var visibilityResult = visibilityCheckerFunc($element, props, true);
 
-            if (elementRect.bottom() > topOffset) {
+            if (visibilityResult) {
                 $firstVisibleTextNode = $element;
-                if (elementRect.top > topOffset) {
-                    percentOfElementHeight = 0;
-                }
-                else {
-                    percentOfElementHeight = Math.ceil(((topOffset - elementRect.top) / elementRect.height) * 100);
-                }
-                // Break the loop
+                percentOfElementHeight = 100 - visibilityResult;
                 return false;
             }
 
@@ -690,15 +686,15 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
             startRange = nodeRange.start;
             endRange = nodeRange.end;
             /* <- debug
-            var rect = nodeRange.rect;
-            var leftOffset = -getPaginationLeftOffset();
-            addOverlayRect({
-                left: rect.left + leftOffset,
-                top: rect.top,
-                width: rect.width,
-                height: rect.height
-            }, true, self.getRootDocument());
-            // debug -> */
+             var rect = nodeRange.rect;
+             var leftOffset = -getPaginationLeftOffset();
+             addOverlayRect({
+             left: rect.left + leftOffset,
+             top: rect.top,
+             width: rect.width,
+             height: rect.height
+             }, true, self.getRootDocument());
+             // debug -> */
             cfi = EPUBcfi.Generator.generateCharOffsetRangeComponent(node, startRange, node, endRange,
                 ["cfi-marker"],
                 [],
@@ -729,23 +725,24 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
     };
 
     function getWrappedCfi(partialCfi) {
-        return "epubcfi("+partialCfi+")";
+        return "epubcfi(" + partialCfi + ")";
     }
 
     function getWrappedCfiRelativeToContent(partialCfi) {
-        return "epubcfi(/99!"+partialCfi+")";
+        return "epubcfi(/99!" + partialCfi + ")";
     }
 
-    this.isRangeCfi = function(partialCfi){
+    this.isRangeCfi = function (partialCfi) {
         return EPUBcfi.Interpreter.isRangeCfi(getWrappedCfi(partialCfi));
     };
 
-    this.getPageForElementCfi = function (cfi) {
+    this.getPageForElementCfi = function (cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         var cfiParts = splitCfi(cfi);
         var partialCfi = cfiParts.cfi;
 
-        var $element = getElementByPartialCfi(cfiParts.cfi);
+        var $element = getElementByPartialCfi(cfiParts.cfi, classBlacklist, elementBlacklist, idBlacklist);
+
         if (!$element) {
             return -1;
         }
@@ -771,7 +768,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
 
     };
 
-    function getElementByPartialCfi(cfi) {
+    function getElementByPartialCfi(cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         var contentDoc = self.getRootDocument();
 
@@ -779,10 +776,8 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
 
         try {
             //noinspection JSUnresolvedVariable
-            var $element = EPUBcfi.Interpreter.getTargetElementWithPartialCFI(wrappedCfi, contentDoc,
-                ["cfi-marker"],
-                [],
-                ["MathJax_Message"]);
+            var $element = EPUBcfi.getTargetElementWithPartialCFI(wrappedCfi, contentDoc, classBlacklist, elementBlacklist, idBlacklist);
+
         } catch (ex) {
             //EPUBcfi.Interpreter can throw a SyntaxError
         }
@@ -795,7 +790,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         return $element;
     }
 
-    this.getNodeRangeInfoFromCfi = function(cfi){
+    this.getNodeRangeInfoFromCfi = function (cfi) {
         var contentDoc = self.getRootDocument();
 
         var wrappedCfi = getWrappedCfiRelativeToContent(cfi);
@@ -867,10 +862,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         return undefined;
     }
 
-    this.getElementByCfi = function (cfi) {
+    this.getElementByCfi = function (cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         var cfiParts = splitCfi(cfi);
-        return getElementByPartialCfi(cfiParts.cfi);
+        return getElementByPartialCfi(cfiParts.cfi, classBlacklist, elementBlacklist, idBlacklist);
     };
 
     this.getPageForElement = function ($element) {
@@ -878,7 +873,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         return this.getPageForPointOnElement($element, 0, 0);
     };
 
-    this.getPageOffsetFromClientRects = function(parentRect,childRect,visibleColumnCount){
+    this.getPageOffsetFromClientRects = function (parentRect, childRect, visibleColumnCount) {
         /* <- debug
          console.log("parentRect.left: " + parentRect.left);
          console.log("childRect.left: " + childRect.left);
@@ -887,12 +882,23 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
          var pageOffset = Math.floor(((childRect.left - parentRect.left) / (getRootDocumentClientWidth()) * visibleColumnCount));
          console.log(pageOffset);
          console.log(Math.round(((childRect.left - parentRect.left) / (getRootDocumentClientWidth()) * visibleColumnCount)));
-        */
+         */
         return Math.floor(((childRect.left - parentRect.left) / getViewportClientWidth()));
 
     };
 
     this.getPageForPointOnElement = function ($element, x, y) {
+
+        if (options.rectangleBased) {
+            try {
+                return findPageByRectangles($element, y);
+            }
+            catch (e) // when clientRects fail (element display:none)
+            {
+                console.error(e);
+                return 0;
+            }
+        }
 
         var posInElement = this.getVerticalOffsetForPointOnElement($element, x, y);
         return Math.floor(posInElement / $viewport.height());
@@ -909,11 +915,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         return Math.ceil(elementRect.top + y * elementRect.height / 100);
     };
 
-    this.getElementBuyId = function (id) {
+    this.getElementById = function (id) {
 
         var contentDoc = this.getRootDocument();
 
-        var $element = $("#" + id, contentDoc);
+        var $element = $("#" + ReadiumSDK.Helpers.escapeJQuerySelector(id), contentDoc);
         if ($element.length == 0) {
             return undefined;
         }
@@ -923,7 +929,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
 
     this.getPageForElementId = function (id) {
 
-        var $element = this.getElementBuyId(id);
+        var $element = this.getElementById(id);
         if (!$element) {
             return -1;
         }
@@ -963,15 +969,66 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
         return ret;
     }
 
+    this.getFirstVisibleMediaOverlayElement = function (visibleContentOffsets) {
+        var docElement = this.getRootElement();
+        if (!docElement) return undefined;
+
+        var $root = $("body", docElement);
+        if (!$root || !$root[0]) return undefined;
+
+        var that = this;
+
+        var firstPartial = undefined;
+
+        function traverseArray(arr) {
+            if (!arr || !arr.length) return undefined;
+
+            for (var i = 0, count = arr.length; i < count; i++) {
+                var item = arr[i];
+                if (!item) continue;
+
+                var $item = $(item);
+
+                if ($item.data("mediaOverlayData")) {
+                    var visible = that.getElementVisibility($item, visibleContentOffsets);
+                    if (visible) {
+                        if (!firstPartial) firstPartial = item;
+
+                        if (visible == 100) return item;
+                    }
+                }
+                else {
+                    var elem = traverseArray(item.children);
+                    if (elem) return elem;
+                }
+            }
+
+            return undefined;
+        }
+
+        var el = traverseArray([$root[0]]);
+        if (!el) el = firstPartial;
+        return el;
+
+        // var $elements = this.getMediaOverlayElements($root);
+        // return this.getVisibleElements($elements, visibleContentOffsets);
+    };
+
+    this.getElementVisibility = function ($element, visibleContentOffsets) {
+        return visibilityCheckerFunc($element, visibleContentOffsets, true);
+    };
+
+    /**
+     * @deprecated
+     */
     this.getVisibleMediaOverlayElements = function (visibleContentOffsets) {
 
-        var $elements = this.getElementsWithFilter($("body", this.getRootElement()), function ($element) {
-            return $element.data("mediaOverlayData");
-        });
+        var $elements = this.getMediaOverlayElements($("body", this.getRootElement()));
         return this.getVisibleElements($elements, visibleContentOffsets);
 
     };
 
+    this.isElementVisible = visibilityCheckerFunc;
 
     this.getVisibleElementsWithFilter = function (visibleContentOffsets, filterFunction) {
 
@@ -1010,35 +1067,22 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
 
         // Find the first visible text node
         $.each($elements, function () {
+            var $element = this;
+            var visibilityPercentage = visibilityCheckerFunc(
+                $element, visibleContentOffsets, true);
 
-            var elementRect = ReadiumSDK.Helpers.Rect.fromElement(this);
-            // this is actually a point element, doesnt have a bounding rectangle
-            if (_.isNaN(elementRect.left)) {
-                var left = this.position().left;
-                var top = this.position().top;
-                elementRect = new ReadiumSDK.Helpers.Rect(top, left, 0, 0);
-            }
-
-            if (elementRect.bottom() <= visibleContentOffsets.top) {
-                return true; //next element
-            }
-
-            if (elementRect.top >= visibleContentOffsets.bottom) {
-
-                // Break the loop
+            if (visibilityPercentage) {
+                var $visibleElement = $element;
+                visibleElements.push({
+                    element: $visibleElement[0], // DOM Element is pushed
+                    percentVisible: visibilityPercentage
+                });
                 return false;
             }
 
-            var visibleTop = Math.max(elementRect.top, visibleContentOffsets.top);
-            var visibleBottom = Math.min(elementRect.bottom(), visibleContentOffsets.bottom);
-
-            var visibleHeight = visibleBottom - visibleTop;
-            var percentVisible = Math.round((visibleHeight / elementRect.height) * 100);
-
-            visibleElements.push({element: this[0], percentVisible: percentVisible});
-
-            return true;
-
+            // continue if no visibleElements have been found yet,
+            // stop otherwise
+            return visibleElements.length === 0;
         });
 
         return visibleElements;
@@ -1127,6 +1171,5 @@ ReadiumSDK.Views.CfiNavigationLogic = function($viewport, $iframe, options){
 
         return 0;
     };
-
 
 };

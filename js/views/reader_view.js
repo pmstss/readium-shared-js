@@ -41,7 +41,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
     var _iframeLoader;
     var _$el;
     var _annotationsManager = new ReadiumSDK.Views.AnnotationsManager(self, options);
-    
+
     if (options.el instanceof $) {
         _$el = options.el;
         console.log("** EL is a jQuery selector:" + options.el.attr('id'));
@@ -49,20 +49,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
         _$el = $(options.el);
         console.log("** EL is a string:" + _$el.attr('id'));
     }
-    
-    
- 
 
     if(options.iframeLoader) {
         _iframeLoader = options.iframeLoader;
     }
     else {
         _iframeLoader = new ReadiumSDK.Views.IFrameLoader();
-    }
-
-    function canDoAudio() {
-        return !!document.createElement('audio').canPlayType;
-
     }
 
     // returns true is view changed
@@ -84,8 +76,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             desiredViewType = ReadiumSDK.Views.ReflowableView;
         }
 
-        if(_currentView){
-
+        if(_currentView) {
             //current view is already rendered
             if(_currentView instanceof desiredViewType) {
                 return false;
@@ -109,17 +100,20 @@ ReadiumSDK.Views.ReaderView = function(options) {
         _currentView.setViewSettings(_viewerSettings);
 
         _currentView.on(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, function($iframe, spineItem) {
-
+            _mediaOverlayPlayer.onDocLoadStart();
             self.trigger(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, $iframe, spineItem);
         });
 
         _currentView.on(ReadiumSDK.Events.CONTENT_DOCUMENT_LOADED, function($iframe, spineItem) {
 
-            if (canDoAudio()) {
-                _mediaOverlayDataInjector.attachMediaOverlayData($iframe, spineItem, _viewerSettings);
-            }
+            _mediaOverlayDataInjector.attachMediaOverlayData($iframe, spineItem, _viewerSettings);
+
             _internalLinksSupport.processLinkElements($iframe, spineItem);
             _annotationsManager.attachAnnotations($iframe, spineItem);
+
+            var contentDoc = $iframe[0].contentDocument;
+            ReadiumSDK.Models.Trigger.register(contentDoc);
+            ReadiumSDK.Models.Switches.apply(contentDoc);
 
             self.trigger(ReadiumSDK.Events.CONTENT_DOCUMENT_LOADED, $iframe, spineItem);
         });
@@ -129,9 +123,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             //we call on onPageChanged explicitly instead of subscribing to the ReadiumSDK.Events.PAGINATION_CHANGED by
             //mediaOverlayPlayer because we hve to guarantee that mediaOverlayPlayer will be updated before the host
             //application will be notified by the same ReadiumSDK.Events.PAGINATION_CHANGED event
-            if (canDoAudio()) {
-                _mediaOverlayPlayer.onPageChanged(pageChangeData);
-            }
+            _mediaOverlayPlayer.onPageChanged(pageChangeData);
 
             self.trigger(ReadiumSDK.Events.PAGINATION_CHANGED, pageChangeData);
         });
@@ -193,20 +185,20 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
     this.openBook = function(openBookData) {
 
-		var packageData = openBookData.package ? openBookData.package : openBookData;
+        var packageData = openBookData.package ? openBookData.package : openBookData;
 
         _package = new ReadiumSDK.Models.Package(packageData);
 
         _spine = _package.spine;
 
         if(_mediaOverlayPlayer) {
+
             _mediaOverlayPlayer.reset();
         }
 
-        if (canDoAudio()) {
-            _mediaOverlayPlayer = new ReadiumSDK.Views.MediaOverlayPlayer(self, $.proxy(onMediaPlayerStatusChanged, self));
-            _mediaOverlayDataInjector = new ReadiumSDK.Views.MediaOverlayDataInjector(_package.media_overlay, _mediaOverlayPlayer);
-        }
+        _mediaOverlayPlayer = new ReadiumSDK.Views.MediaOverlayPlayer(self, $.proxy(onMediaPlayerStatusChanged, self));
+
+        _mediaOverlayDataInjector = new ReadiumSDK.Views.MediaOverlayDataInjector(_package.media_overlay, _mediaOverlayPlayer);
 
 
         resetCurrentView();
@@ -219,9 +211,21 @@ ReadiumSDK.Views.ReaderView = function(options) {
             self.setStyles(openBookData.styles);
         }
 
+        var pageRequestData = undefined;
+
         if(openBookData.openPageRequest) {
 
-            var pageRequestData = openBookData.openPageRequest;
+            if(openBookData.openPageRequest.idref || (openBookData.openPageRequest.contentRefUrl && openBookData.openPageRequest.sourceFileHref)) {
+                pageRequestData = openBookData.openPageRequest;
+            }
+            else {
+                console.log("Invalid page request data: idref required!");
+            }
+        }
+
+        if(pageRequestData) {
+
+            pageRequestData = openBookData.openPageRequest;
 
             if(pageRequestData.idref) {
 
@@ -235,12 +239,10 @@ ReadiumSDK.Views.ReaderView = function(options) {
                     self.openSpineItemPage(pageRequestData.idref, 0, self);
                 }
             }
-            else if(pageRequestData.contentRefUrl && pageRequestData.sourceFileHref) {
+            else {
                 self.openContentUrl(pageRequestData.contentRefUrl, pageRequestData.sourceFileHref, self);
             }
-            else {
-                console.log("Invalid page request data: idref required!");
-            }
+
         }
         else {// if we where not asked to open specific page we will open the first one
 
@@ -297,7 +299,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
 //console.debug("UpdateSettings: " + JSON.stringify(settingsData));
 
         _viewerSettings.update(settingsData);
-        
+
         if(_currentView && !settingsData.doNotUpdateView) {
 
             var bookMark = _currentView.bookmarkCurrentPage();
@@ -308,7 +310,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 var isViewChanged = initViewForItem(spineItem);
 
                 if(!isViewChanged) {
-            _currentView.setViewSettings(_viewerSettings);
+                    _currentView.setViewSettings(_viewerSettings);
                 }
 
                 self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
@@ -424,6 +426,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         openPage(pageData);
     };
 
+
     /**
      *
      * Opens specified page index of the current spine item
@@ -532,15 +535,22 @@ ReadiumSDK.Views.ReaderView = function(options) {
      *
      * @param styles {object} style object contains selector property and declarations object
      */
-    this.setStyles = function(styles) {
+    this.setStyles = function(styles, doNotUpdateView) {
 
         var count = styles.length;
 
         for(var i = 0; i < count; i++) {
-            _userStyles.addStyle(styles[i].selector, styles[i].declarations);
+            if (styles[i].declarations)
+            {
+                _userStyles.addStyle(styles[i].selector, styles[i].declarations);
+            }
+            else
+            {
+                _userStyles.removeStyle(styles[i].selector);
+            }
         }
 
-        applyStyles();
+        applyStyles(doNotUpdateView);
 
     };
 
@@ -575,25 +585,28 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     };
 
-    this.getElements = function(spineItem, selector) {
+    this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         if(_currentView) {
-            return _currentView.getElements(spineItem, selector);
+            return _currentView.getElementByCfi(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist);
         }
 
         return undefined;
 
     };
 
-    function applyStyles() {
+    function applyStyles(doNotUpdateView) {
 
         ReadiumSDK.Helpers.setStyles(_userStyles.getStyles(), _$el);
+
+        if (_mediaOverlayPlayer)
+            _mediaOverlayPlayer.applyStyles();
+
+        if(doNotUpdateView) return;
 
         if(_currentView) {
             _currentView.applyStyles();
         }
-
-        _mediaOverlayPlayer.applyStyles();
     }
 
     //TODO: this is public function - should be JS Doc-ed
@@ -718,6 +731,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
     this.isMediaOverlayAvailable = function() {
 
+        if (!_mediaOverlayPlayer) return false;
+
         return _mediaOverlayPlayer.isMediaOverlayAvailable();
     };
 
@@ -804,13 +819,13 @@ ReadiumSDK.Views.ReaderView = function(options) {
 //    };
 
 
-    this.getVisibleMediaOverlayElements = function() {
+    this.getFirstVisibleMediaOverlayElement = function() {
 
         if(_currentView) {
-            return _currentView.getVisibleMediaOverlayElements();
+            return _currentView.getFirstVisibleMediaOverlayElement();
         }
 
-        return [];
+        return undefined;
     };
 
     this.insureElementVisibility = function(element, initiator) {
