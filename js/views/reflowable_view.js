@@ -36,7 +36,6 @@ ReadiumSDK.Views.ReflowableView = function(options){
     var _iframeLoader = options.iframeLoader;
     
     var _currentSpineItem;
-    var _isWaitingFrameRender = false;    
     var _deferredPageRequest;
     var _fontSize = 100;
     var _$contentFrame;
@@ -471,7 +470,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
 
         _currentOpacity = _$epubHtml.css('opacity');
         _$epubHtml.css('opacity', 0);
-        }
+    }
 
     function showBook() {
 

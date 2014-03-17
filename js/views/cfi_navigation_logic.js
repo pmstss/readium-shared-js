@@ -29,6 +29,7 @@
 
 ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
+    var self = this;
     options = options || {};
 
     this.getRootElement = function () {
@@ -609,7 +610,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             props = { top: props };
         }
 
-        var $elements;
+        var $elements, $element = null;
         var $firstVisibleTextNode = null;
         var percentOfElementHeight = 0;
         var foundTextNode = null;
