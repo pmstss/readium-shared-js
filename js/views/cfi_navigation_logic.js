@@ -886,7 +886,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
          console.log(Math.round(((childRect.left - parentRect.left) / getViewportClientWidth())));
          console.log(Math.ceil(((childRect.left - parentRect.left) / getViewportClientWidth())));
          //*/
-        return Math.round(pageOffset);
+        return pageOffset;
 
     };
 
