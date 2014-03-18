@@ -874,17 +874,19 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return this.getPageForPointOnElement($element, 0, 0);
     };
 
-    this.getPageOffsetFromClientRects = function (parentRect, childRect, visibleColumnCount) {
-        /* <- debug
+    this.getPageOffsetFromClientRects = function (parentRect, childRect) {
+        ///* <- debug
          console.log("parentRect.left: " + parentRect.left);
          console.log("childRect.left: " + childRect.left);
          console.log("clientWidth: "+ getRootDocumentClientWidth());
 
-         var pageOffset = Math.floor(((childRect.left - parentRect.left) / (getRootDocumentClientWidth()) * visibleColumnCount));
-         console.log(pageOffset);
-         console.log(Math.round(((childRect.left - parentRect.left) / (getRootDocumentClientWidth()) * visibleColumnCount)));
-         */
-        return Math.floor(((childRect.left - parentRect.left) / getViewportClientWidth()));
+         var pageOffset = Math.round(((childRect.left - parentRect.left) / getViewportClientWidth()));
+         console.log((childRect.left - parentRect.left) / getViewportClientWidth());
+         console.log(Math.floor(((childRect.left - parentRect.left) / getViewportClientWidth())));
+         console.log(Math.round(((childRect.left - parentRect.left) / getViewportClientWidth())));
+         console.log(Math.ceil(((childRect.left - parentRect.left) / getViewportClientWidth())));
+         //*/
+        return Math.round(pageOffset);
 
     };
 

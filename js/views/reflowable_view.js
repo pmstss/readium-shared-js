@@ -158,6 +158,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
         var spineItem = pageRequest.spineItem;
         if(_currentSpineItem != spineItem) {
 
+            _paginationInfo.pageOffset = 0;
             _paginationInfo.currentSpreadIndex = 0;
             _currentSpineItem = spineItem;
 
@@ -467,13 +468,13 @@ ReadiumSDK.Views.ReflowableView = function(options){
 //    }
 
     function hideBook() {
-
         _currentOpacity = _$epubHtml.css('opacity');
+        console.log('hiding book: '+_currentOpacity);
         _$epubHtml.css('opacity', 0);
     }
 
     function showBook() {
-
+        console.log('showing book: ' +_currentOpacity);
         if (_currentOpacity) {
             _$epubHtml.css('opacity', _currentOpacity);
         }
