@@ -271,10 +271,10 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
                 var scale = 1;
                 //figure out a better way to get the html parent from an element..
                 var $html = $('body',$element.parents()).parent();
-                //TODO: webkit specific!
-                var matrix = $html.css('-webkit-transform');
-                if(matrix){
-                    scale = new WebKitCSSMatrix(matrix).a;
+                //get transformation scale from content document
+                var matrix = ReadiumSDK.Helpers.CSSTransformMatrix.getMatrix($html);
+                if (matrix) {
+                    scale = ReadiumSDK.Helpers.CSSTransformMatrix.getScaleFromMatrix(matrix);
                 }
                 var offset = $element.offset();
                 var position = offset;
