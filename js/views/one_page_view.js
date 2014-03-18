@@ -157,7 +157,12 @@ ReadiumSDK.Views.OnePageView = function(options){
         var css = {};
         css["-webkit-transform"] = transformString;
         css["-webkit-transform-origin"] = "0 0";
-
+        css["-moz-transform"] = transformString;
+        css["-moz-transform-origin"] = "0 0";
+        css["-ms-transform"] = transformString;
+        css["-ms-transform-origin"] = "0 0";
+        css["transform"] = transformString;
+        css["transform-origin"] = "0 0";
         return css;
     }
 
