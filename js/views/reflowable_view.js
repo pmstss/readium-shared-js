@@ -675,7 +675,8 @@ ReadiumSDK.Views.ReflowableView = function(options){
         if (_navigationLogic.isRangeCfi(partialCfi)) {
             return this.isNodeFromRangeCfiVisible(spineIdRef, partialCfi);
         }
-        var $elementFromCfi = this.getElementByCfi(spineIdRef, partialCfi);
+        var spineItem = _spine.getItemById(spineIdRef);
+        var $elementFromCfi = this.getElementByCfi(spineItem, partialCfi);
         return ($elementFromCfi && this.isElementVisible($elementFromCfi));
     };
 
