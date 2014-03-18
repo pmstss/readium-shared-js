@@ -415,6 +415,9 @@ ReadiumSDK.Views.ReflowableView = function(options){
         _$epubHtml.css("-webkit-column-width", _paginationInfo.columnWidth + "px");
         _$epubHtml.css("-moz-column-width", _paginationInfo.columnWidth + "px");
         _$epubHtml.css("column-width", _paginationInfo.columnWidth + "px");
+        _$epubHtml.css("-webkit-column-fill","auto");
+        _$epubHtml.css("-moz-column-fill","auto");
+        _$epubHtml.css("column-fill","auto");
 
         //TODO it takes time for rendition_layout engine to arrange columns we waite
         //it would be better to react on rendition_layout column reflow finished event
