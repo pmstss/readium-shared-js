@@ -143,14 +143,31 @@ ReadiumSDK.Views.ScrollView = function(options){
         }
     }
 
+    function setIframeHeight(height) {
+
+        _$iframe.css("height", height + "px");
+    }
+
     function resizeIFrameToContent() {
 
         if(!_$iframe || !_$epubHtml) {
             return;
         }
 
-        var contHeight = _$epubHtml.height();
-        _$iframe.css("height", contHeight + "px");
+        //reset the iframe height to zero
+        // (needed for IE9 or else it uses the height of the previous page/spine change)
+        setIframeHeight(0);
+        var contHeight = contentHeight();
+        setIframeHeight(contHeight);
+        //calculate and set the height again after a timeout, only if height ends up being larger
+        // (css rendering workaround)
+        setTimeout(function () {
+            var contHeight2 = contentHeight();
+            if (contHeight2 > contHeight) {
+                setIframeHeight(contHeight2);
+            }
+        }, 500);
+
     }
 
     function onIFrameLoad(success, attachedData) {
@@ -292,7 +309,7 @@ ReadiumSDK.Views.ScrollView = function(options){
                 return;
             }
 
-            topOffset = scrollHeight() - viewHeight() - 5;
+            topOffset = scrollHeightSynced() - viewHeight() - 5;
         }
         else {
             console.debug("No criteria in pageRequest");
@@ -326,7 +343,7 @@ ReadiumSDK.Views.ScrollView = function(options){
     }
 
     function scrollBottom() {
-        return scrollHeight() - (scrollTop() + viewHeight());
+        return scrollHeightSynced() - (scrollTop() + viewHeight());
     }
 
     function getCurrentPageIndex() {
@@ -339,7 +356,24 @@ ReadiumSDK.Views.ScrollView = function(options){
     }
 
     function scrollHeight() {
+
         return _$contentFrame[0].scrollHeight;
+    }
+
+    function scrollHeightSynced() {
+        //Whenever the scrollHeight value needs to be fetched:
+        // synchronize the content document height with the iframe height
+        var height = _$contentFrame[0].scrollHeight;
+        var contHeight = contentHeight();
+        if (height != contHeight) {
+            setIframeHeight(contHeight);
+        }
+        return scrollHeight();
+    }
+
+
+    function contentHeight() {
+        return _$epubHtml[0].scrollHeight;
     }
 
     this.openPagePrev = function (initiator) {
@@ -365,7 +399,7 @@ ReadiumSDK.Views.ScrollView = function(options){
             if(prevSpineItem) {
 
                 pageRequest = new ReadiumSDK.Models.PageOpenRequest(prevSpineItem, initiator);
-                pageRequest.scrollTop = scrollHeight() - viewHeight();
+                pageRequest.scrollTop = scrollHeightSynced() - viewHeight();
             }
 
         }
