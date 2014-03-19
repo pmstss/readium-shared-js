@@ -527,7 +527,7 @@ ReadiumSDK.Views.ScrollView = function(options){
         openPageRequest.setPageIndex(page);
 
         self.openPage(openPageRequest);
-    }
+    };
 
     this.getVisibleElementsWithFilter = function(filterFunction) {
 
@@ -539,13 +539,30 @@ ReadiumSDK.Views.ScrollView = function(options){
         console.warn('isElementVisible: Not implemented yet for scroll_view');
     };
 
-    /*
-    this.getElementByCfi = function(spineIdref, partialCfi){
-        if(_currentSpineItem.idref === spineIdref){
-            return _navigationLogic.getElementByCfi(partialCfi);
+    this.getElements = function(spineItem, selector) {
+
+        if(spineItem != _currentSpineItem) {
+            console.error("spine item is not loaded");
+            return undefined;
+        }
+
+        return _navigationLogic.getElements(selector);
+    };
+
+    this.isNodeFromRangeCfiVisible = function (spineIdref, partialCfi) {
+        if (_currentSpineItem.idref === spineIdref) {
+            return _navigationLogic.isNodeFromRangeCfiVisible(partialCfi);
         }
         return undefined;
     };
-    */
+
+    this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
+        if (_navigationLogic.isRangeCfi(partialCfi)) {
+            return this.isNodeFromRangeCfiVisible(spineIdRef, partialCfi);
+        }
+        var spineItem = _spine.getItemById(spineIdRef);
+        var $elementFromCfi = this.getElementByCfi(spineItem, partialCfi);
+        return ($elementFromCfi && this.isElementVisible($elementFromCfi));
+    };
 
 };
