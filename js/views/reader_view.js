@@ -73,7 +73,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
             desiredViewType = ReadiumSDK.Views.ScrollView;
         }
         else {
-            desiredViewType = ReadiumSDK.Views.ReflowableView;
+            //Use ReflowableView or fallback to ScrollView if there is no CSS3 multi column support
+            if (!Modernizr.csscolumns) {
+                desiredViewType = ReadiumSDK.Views.ScrollView;
+            } else {
+                desiredViewType = ReadiumSDK.Views.ReflowableView;
+            }
         }
 
         if(_currentView) {
