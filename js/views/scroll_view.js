@@ -197,6 +197,7 @@ ReadiumSDK.Views.ScrollView = function(options){
         setTimeout(function(){
             resizeIFrameToContent();
             openDeferredElement();
+            onPaginationChanged(self, _currentSpineItem);
         }, 50);
 
     }
