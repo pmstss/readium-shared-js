@@ -41,7 +41,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return $iframe[0].contentDocument;
     };
 
-    /* <-debug*/
+    /* <-debug
      //used for visual debug atm
      function getRandomColor() {
      var letters = '0123456789ABCDEF'.split('');
@@ -194,7 +194,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 //then this is the one we want
                 if (isClientRectVisible(rect)) {
                     found = fragment;
-                    /* <- debug*/
+                    /* <- debug
                      console.log("visible textnode fragment found:");
                      console.log(fragment);
                      console.log("------------");
@@ -693,7 +693,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             var nodeRange = getFirstVisibleTextNodeRange(node);
             startRange = nodeRange.start;
             endRange = nodeRange.end;
-            /* <- debug */
+            /* <- debug
              var rect = nodeRange.rect;
              var leftOffset = -getPaginationLeftOffset();
              addOverlayRect({
@@ -809,7 +809,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 ["cfi-marker"],
                 [],
                 ["MathJax_Message"]);
-            /* <- debug */
+            /* <- debug
              console.log(nodeResult);
              //*/
         } catch (ex) {
@@ -824,7 +824,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         var startRangeInfo = getRangeInfoFromNodeList(nodeResult.startNodes, nodeResult.startOffset);
         var endRangeInfo = getRangeInfoFromNodeList(nodeResult.endNodes, nodeResult.endOffset);
         var nodeRangeClientRect = getNodeRangeClientRect(startRangeInfo.node, startRangeInfo.offset, endRangeInfo.node, endRangeInfo.offset);
-        /* <- debug*/
+        /* <- debug
          console.log(nodeRangeClientRect);
          addOverlayRect(nodeRangeClientRect,'purple',contentDoc);
          //*/
@@ -882,17 +882,18 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     };
 
     this.getPageOffsetFromClientRects = function (parentRect, childRect) {
-        ///* <- debug
+       /* <- debug
          console.log("parentRect.left: " + parentRect.left);
          console.log("childRect.left: " + childRect.left);
          console.log("clientWidth: "+ getRootDocumentClientWidth());
 
-         var pageOffset = Math.round(((childRect.left - parentRect.left) / getViewportClientWidth()));
+
          console.log((childRect.left - parentRect.left) / getViewportClientWidth());
          console.log(Math.floor(((childRect.left - parentRect.left) / getViewportClientWidth())));
          console.log(Math.round(((childRect.left - parentRect.left) / getViewportClientWidth())));
          console.log(Math.ceil(((childRect.left - parentRect.left) / getViewportClientWidth())));
          //*/
+        var pageOffset = Math.round(((childRect.left - parentRect.left) / getViewportClientWidth()));
         return pageOffset;
 
     };
