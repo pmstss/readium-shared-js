@@ -848,7 +848,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         var currTextPosition = 0;
         var nodeOffset;
 
-        for (nodeNum = 0; nodeNum <= $textNodeList.length; nodeNum++) {
+        for (nodeNum = 0; nodeNum < $textNodeList.length; nodeNum++) {
 
             if ($textNodeList[nodeNum].nodeType === 3) {
 
