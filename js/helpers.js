@@ -277,6 +277,6 @@ ReadiumSDK.Helpers.CSSTransformMatrix = {
     getScaleFromMatrix: function (matrix) {
         var matrixRegex = /matrix\((-?\d*\.?\d+),\s*0,\s*0,\s*(-?\d*\.?\d+),\s*0,\s*0\)/,
             matches = matrix.match(matrixRegex);
-        return matches;
+        return matches[1];
     }
 };
