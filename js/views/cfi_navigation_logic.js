@@ -160,9 +160,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return range.getBoundingClientRect();
     }
 
-    function isClientRectVisible(rect) {
+    function isNodeClientRectVisible(rect) {
         //Text nodes without printable text dont have client rectangles
         if (!rect) {
+            return false;
+        }
+        //Sometimes we get client rects that are "empty" and aren't supposed to be visible
+        if (rect.left == 0 && rect.right == 0 && rect.top == 0 && rect.bottom == 0) {
             return false;
         }
         return (rect.left >= 0 && rect.right <= getViewportClientWidth());
@@ -192,7 +196,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             if (!found) {
                 //if the fragment's left or right value is within the visible client boundaries
                 //then this is the one we want
-                if (isClientRectVisible(rect)) {
+                if (isNodeClientRectVisible(rect)) {
                     found = fragment;
                     /* <- debug
                      console.log("visible textnode fragment found:");
@@ -205,16 +209,16 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         if (!found) {
             //if we didn't find a visible textnode fragment on the clientRect iteration
             //it might still mean that its visible, just only at the very end
-            var endFragment = getTextNodeFragments(textNode, null, textNode.length - 1, textNode.length)[0];
+            var endFragment = getTextNodeFragments(textNode, null, textNode.length - 2, textNode.length)[0];
 
-            if (endFragment && isClientRectVisible(endFragment.rect)) {
+            if (endFragment && isNodeClientRectVisible(endFragment.rect)) {
                 found = endFragment;
             } else {
                 console.error("Error! No visible textnode fragment found!");
             }
         }
         //create an optimized range to return based on the fragment results
-        var resultRangeData = {start: (found.end - 1), end: found.end};
+        var resultRangeData = {start: (found.end - 2), end: found.end};
         var resultRangeRect = getNodeRangeClientRect(textNode, resultRangeData.start, textNode, resultRangeData.end);
         return {start: resultRangeData.start, end: resultRangeData.end, rect: resultRangeRect};
     }
@@ -835,7 +839,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     this.isNodeFromRangeCfiVisible = function (cfi) {
         var nodeRangeInfo = this.getNodeRangeInfoFromCfi(cfi);
         if (nodeRangeInfo) {
-            return isClientRectVisible(nodeRangeInfo.clientRect);
+            return isNodeClientRectVisible(nodeRangeInfo.clientRect);
         } else {
             return undefined;
         }
