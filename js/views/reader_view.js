@@ -1033,7 +1033,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
     this.doesNextPageExist = function() {
         //TODO: this logic needs to take account of linear=no support, if that is ever added in
         var _paginationInfo = this.getPaginationInfo();
-        var currentPage = _paginationInfo.openPages[_paginationInfo.openPages.length-1];
+        var openPages = _paginationInfo.openPages;
+        if (!openPages || openPages.length === 0) {
+            //no open pages, called on bad state
+            return false;
+        }
+        var currentPage = openPages[openPages.length-1];
         var lastSpineItemIndex = _paginationInfo.spineItemCount -1;
         var lastPageIndex = currentPage.spineItemPageCount -1;
         if (currentPage.spineItemIndex !== lastSpineItemIndex) {
@@ -1046,7 +1051,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
     this.doesPreviousPageExist = function() {
         //TODO: this logic needs to take account of linear=no support, if that is ever added in
         var _paginationInfo = this.getPaginationInfo();
-        var currentPage = _paginationInfo.openPages[0];
+        var openPages = _paginationInfo.openPages;
+        if (!openPages || openPages.length === 0) {
+            //no open pages, called on bad state
+            return false;
+        }
+        var currentPage = openPages[0];
         var firstSpineItemIndex = 0;
         var firstPageIndex = 0;
         if (currentPage.spineItemIndex !== firstSpineItemIndex) {
