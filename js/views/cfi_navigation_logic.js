@@ -783,6 +783,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         var cfiParts = splitCfi(cfi);
         var partialCfi = cfiParts.cfi;
 
+        if (this.isRangeCfi(partialCfi)) {
+            //if given a range cfi the exact page index needs to be calculated by getting node info from the range cfi
+            var nodeRangeInfoFromCfi = this.getNodeRangeInfoFromCfi(partialCfi);
+            //the page index is calculated from the node's client rectangle
+            return findPageBySingleRectangle(nodeRangeInfoFromCfi.clientRect);
+        }
+        
         var $element = getElementByPartialCfi(cfiParts.cfi, classBlacklist, elementBlacklist, idBlacklist);
 
         if (!$element) {
@@ -790,22 +797,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         }
 
         var pageIndex = this.getPageForPointOnElement($element, cfiParts.x, cfiParts.y);
-        if (this.isRangeCfi(partialCfi)) {
-            //if we get a range cfi we need to calculate the exact page index by getting node info from the range cfi
-            var nodeRangeInfoFromCfi = this.getNodeRangeInfoFromCfi(partialCfi);
-            //we need the very first node (text or not) from a parent to calculate proper page offsets
-            var parentFirstNode = $element[0].childNodes[0];
-            //the end node can just be the nodeRange start node since we only need left value offsets from parent
-            var parentEndNode = nodeRangeInfoFromCfi.startInfo.node;
-            //add the calculated page offset to final page index
-            pageIndex += this.getPageOffsetFromClientRects(
-                getNodeRangeClientRect(
-                    parentFirstNode,
-                    0,
-                    parentEndNode,
-                    parentEndNode.length),
-                nodeRangeInfoFromCfi.clientRect);
-        }
+
         return pageIndex;
 
     };
@@ -913,23 +905,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     this.getPageForElement = function ($element) {
 
         return this.getPageForPointOnElement($element, 0, 0);
-    };
-
-    this.getPageOffsetFromClientRects = function (parentRect, childRect) {
-       /* <- debug
-         console.log("parentRect.left: " + parentRect.left);
-         console.log("childRect.left: " + childRect.left);
-         console.log("clientWidth: "+ getRootDocumentClientWidth());
-
-
-         console.log((childRect.left - parentRect.left) / getViewportClientWidth());
-         console.log(Math.floor(((childRect.left - parentRect.left) / getViewportClientWidth())));
-         console.log(Math.round(((childRect.left - parentRect.left) / getViewportClientWidth())));
-         console.log(Math.ceil(((childRect.left - parentRect.left) / getViewportClientWidth())));
-         //*/
-        var pageOffset = Math.round(((childRect.left - parentRect.left) / getViewportClientWidth()));
-        return pageOffset;
-
     };
 
     this.getPageForPointOnElement = function ($element, x, y) {
