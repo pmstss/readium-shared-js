@@ -382,6 +382,18 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             return null;
         }
 
+        return calculatePageIndexByRectangles(clientRectangles, spatialVerticalOffset);
+    }
+
+    /**
+     * @private
+     * Calculate a page index (0-based) for given client rectangles.
+     *
+     * @param {object} clientRectangles
+     * @param {number} spatialVerticalOffset
+     * @returns {number|null}
+     */
+    function calculatePageIndexByRectangles(clientRectangles, spatialVerticalOffset) {
         var isRtl = isPageProgressionRightToLeft();
         var columnFullWidth = getColumnFullWidth();
         var frameHeight = $iframe.height();
@@ -412,6 +424,24 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         }
 
         return pageIndex;
+    }
+
+    /**
+     * Finds a page index (0-based) for a specific client rectangle.
+     * Calculations are based on viewport dimensions, offsets, and rectangle coordinates
+     *
+     * @param {ClientRect} clientRectangle
+     * @returns {number|null}
+     */
+    function findPageBySingleRectangle(clientRectangle) {
+        var visibleContentOffsets = getVisibleContentOffsets() || {};
+        var leftContentOffset = visibleContentOffsets.left || 0;
+        var topContentOffset = visibleContentOffsets.top || 0;
+
+        var normalizedRectangle = normalizeRectangle(
+            clientRectangle, leftContentOffset, topContentOffset);
+
+        return calculatePageIndexByRectangles([normalizedRectangle]);
     }
 
     /**
