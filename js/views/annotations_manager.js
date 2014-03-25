@@ -143,14 +143,14 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         self['trigger'].apply(proxy, args);
     });
 
-    this.attachAnnotations = function($iframe, spineItem) {
+    this.attachAnnotations = function($iframe, spineItem, loadedSpineItems) {
         var epubDocumentFrame = $iframe[0];
         liveAnnotations[spineItem.index] = new EpubAnnotationsModule(epubDocumentFrame, self, annotationCSSUrl);
         spines[spineItem.index] = spineItem;
 
-        // check to see which spine indecies can be culled depending on the distance from current spine item
+        // check to see which spine indicies can be culled depending on the currently loaded spine items
         for(var spineIndex in liveAnnotations) {
-            if (Math.abs(spineIndex - spineIndex.index) > 3) {
+            if (liveAnnotations.hasOwnProperty(spineIndex) && !_.contains(loadedSpineItems, spines[spineIndex])) {
                 delete liveAnnotations[spineIndex];
             }
         }

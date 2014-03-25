@@ -114,7 +114,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             _mediaOverlayDataInjector.attachMediaOverlayData($iframe, spineItem, _viewerSettings);
 
             _internalLinksSupport.processLinkElements($iframe, spineItem);
-            _annotationsManager.attachAnnotations($iframe, spineItem);
+            _annotationsManager.attachAnnotations($iframe, spineItem, self.getLoadedSpineItems());
 
             var contentDoc = $iframe[0].contentDocument;
             ReadiumSDK.Models.Trigger.register(contentDoc);
