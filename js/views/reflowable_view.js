@@ -488,12 +488,10 @@ ReadiumSDK.Views.ReflowableView = function(options){
 
     function hideBook() {
         _currentOpacity = _$epubHtml.css('opacity');
-        console.log('hiding book: '+_currentOpacity);
         _$epubHtml.css('opacity', 0);
     }
 
     function showBook() {
-        console.log('showing book: ' +_currentOpacity);
         if (_currentOpacity) {
             _$epubHtml.css('opacity', _currentOpacity);
         }
@@ -597,7 +595,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
     this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         if(spineItem != _currentSpineItem) {
-            console.error("spine item is not loaded");
+            console.warn("spine item is not loaded");
             return undefined;
         }
 
@@ -607,7 +605,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
     this.getElement = function(spineItem, selector) {
 
         if(spineItem != _currentSpineItem) {
-            console.error("spine item is not loaded");
+            console.warn("spine item is not loaded");
             return undefined;
         }
 
@@ -678,7 +676,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
     this.getElements = function(spineItem, selector) {
 
         if(spineItem != _currentSpineItem) {
-            console.error("spine item is not loaded");
+            console.warn("spine item is not loaded");
             return undefined;
         }
 
