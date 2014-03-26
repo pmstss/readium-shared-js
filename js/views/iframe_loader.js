@@ -36,19 +36,22 @@ ReadiumSDK.Views.IFrameLoader = function() {
 
         iframe.onload = function() {
 
-            _.each(eventListeners, function(value, key){
-                for (var i = 0, count = value.length; i < count; i++) {
-                    var options = value[i].options;
-                    var event = key;
-                    var callback = value[i].callback;
-                    var context = value[i].context;
+            _.each(eventListeners, function(eventHandlerList, eventName){
+                _.each(eventHandlerList,function(eventHandler){
+                    var options = eventHandler.options;
+                    var callback = eventHandler.callback;
+                    var context = eventHandler.context;
 
                     function addJqueryEvent(obj) {
-                        obj.on(event, callback, context);
+                        obj.on(eventName, callback, context);
                     }
 
                     function addNativeEvent(obj) {
-                        obj.addEventListener(event, callback, context);
+                        obj.addEventListener(eventName, callback, context);
+                    }
+
+                    if (!iframe.contentWindow) {
+                        return;
                     }
 
                     if (!options) {
@@ -80,7 +83,7 @@ ReadiumSDK.Views.IFrameLoader = function() {
                             }
                         }
                     }
-                }
+                });
             });
 
             try
