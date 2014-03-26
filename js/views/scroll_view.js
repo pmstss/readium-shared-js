@@ -47,24 +47,7 @@ ReadiumSDK.Views.ScrollView = function(options){
         _$el = $(template);
         _$viewport.append(_$el);
 
-        _$contentFrame = $("#reflowable-content-frame", _$el);
-        _$contentFrame.css("overflow", "");
-        _$contentFrame.css("overflow-y", "auto");
-        _$contentFrame.css("-webkit-overflow-scrolling", "touch");
-        _$contentFrame.css("width", "100%");
-        _$contentFrame.css("height", "100%");
-
-        _$iframe = $("#epubContentIframe", _$el);
-        _$iframe.css("width", "100%");
-        _$iframe.css("height", "100%");
-
-        _$iframe.css("left", "");
-        _$iframe.css("right", "");
-        _$iframe.css(_spine.isLeftToRight() ? "left" : "right", "0px");
-        _$iframe.css("width", "100%");
-
-
-        _navigationLogic = new ReadiumSDK.Views.CfiNavigationLogic(_$contentFrame, _$iframe);
+        renderIframe();
 
         //We will call onViewportResize after user stopped resizing window
         var lazyResize = _.debounce(self.onViewportResize, 100);
@@ -121,12 +104,37 @@ ReadiumSDK.Views.ScrollView = function(options){
         resizeIFrameToContent();
     };
 
+    function renderIframe() {
+        if (_$contentFrame) {
+            //destroy old contentFrame
+            _$contentFrame.remove();
+        }
 
+        var template = ReadiumSDK.Helpers.loadTemplate("reflowable_book_page_frame", {});
+        _$el = $(template);
+        $bookFrame = $('#reflowable-book-frame', _$viewport).append(_$el);
+
+        _$contentFrame = $("#reflowable-content-frame", $bookFrame);
+
+        _$iframe = $("#epubContentIframe", _$el);
+
+        _$iframe.css("left", "");
+        _$iframe.css("right", "");
+        _$iframe.css("position", "relative");
+        _$iframe.css(_spine.isLeftToRight() ? "left" : "right", "0px");
+        _$iframe.css("overflow", "hidden");
+
+        _navigationLogic = new ReadiumSDK.Views.CfiNavigationLogic(
+            _$contentFrame, _$iframe,
+            { rectangleBased: true, paginationInfo: _paginationInfo });
+    }
 
     function loadSpineItemPageRequest(pageRequest) {
-
         var spineItem = pageRequest.spineItem;
         if(_currentSpineItem != spineItem) {
+
+            //create & append iframe to container frame
+            renderIframe();
 
             _currentSpineItem = spineItem;
 
