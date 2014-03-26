@@ -149,12 +149,12 @@ ReadiumSDK.Views.ReflowableView = function(options){
         }
 
         var template = ReadiumSDK.Helpers.loadTemplate("reflowable_book_page_frame", {});
-        _$el = $(template);
-        $bookFrame = $('#reflowable-book-frame', _$viewport).append(_$el);
+        var $bookFrame = $(template);
+        $bookFrame = $('#reflowable-book-frame', _$viewport).append($bookFrame);
 
         _$contentFrame = $("#reflowable-content-frame", $bookFrame);
 
-        _$iframe = $("#epubContentIframe", _$el);
+        _$iframe = $("#epubContentIframe", $bookFrame);
 
         _$iframe.css("left", "");
         _$iframe.css("right", "");

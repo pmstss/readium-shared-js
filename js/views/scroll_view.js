@@ -111,22 +111,26 @@ ReadiumSDK.Views.ScrollView = function(options){
         }
 
         var template = ReadiumSDK.Helpers.loadTemplate("reflowable_book_page_frame", {});
-        _$el = $(template);
-        $bookFrame = $('#reflowable-book-frame', _$viewport).append(_$el);
+        var $bookFrame = $(template);
+        $bookFrame = $('#reflowable-book-frame', _$viewport).append($bookFrame);
 
         _$contentFrame = $("#reflowable-content-frame", $bookFrame);
+        _$contentFrame.css("overflow", "");
+        _$contentFrame.css("overflow-y", "auto");
+        _$contentFrame.css("-webkit-overflow-scrolling", "touch");
+        _$contentFrame.css("width", "100%");
+        _$contentFrame.css("height", "100%");
 
-        _$iframe = $("#epubContentIframe", _$el);
+        _$iframe = $("#epubContentIframe", $bookFrame);
+        _$iframe.css("width", "100%");
+        _$iframe.css("height", "100%");
 
         _$iframe.css("left", "");
         _$iframe.css("right", "");
-        _$iframe.css("position", "relative");
         _$iframe.css(_spine.isLeftToRight() ? "left" : "right", "0px");
-        _$iframe.css("overflow", "hidden");
+        _$iframe.css("width", "100%");
 
-        _navigationLogic = new ReadiumSDK.Views.CfiNavigationLogic(
-            _$contentFrame, _$iframe,
-            { rectangleBased: true, paginationInfo: _paginationInfo });
+        _navigationLogic = new ReadiumSDK.Views.CfiNavigationLogic(_$contentFrame, _$iframe);
     }
 
     function loadSpineItemPageRequest(pageRequest) {
