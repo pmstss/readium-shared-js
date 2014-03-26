@@ -62,18 +62,16 @@ ReadiumSDK.Views.OnePageView = function(options){
 
     this.render = function() {
 
-        if(!_$iframe) {
+        var template = ReadiumSDK.Helpers.loadTemplate("fixed_page_frame", {});
 
-            var template = ReadiumSDK.Helpers.loadTemplate("fixed_page_frame", {});
+        _$el = $(template);
 
-            _$el = $(template);
+        _$el.css("height", "100%");
+        _$el.css("width", "100%");
 
-            _$el.css("height", "100%");
-            _$el.css("width", "100%");
+        _$el.addClass(options.class);
+        _$iframe = $("iframe", _$el);
 
-            _$el.addClass(options.class);
-            _$iframe = $("iframe", _$el);
-        }
         _navigationLogic = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
         return this;
     };
