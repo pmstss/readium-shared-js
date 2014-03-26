@@ -84,7 +84,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         if(_currentView) {
             //current view is already rendered
             if(_currentView instanceof desiredViewType) {
-                //return false;
+                return false;
             }
 
             resetCurrentView();
