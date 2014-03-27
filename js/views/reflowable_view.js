@@ -45,7 +45,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
     var _$iframe;
     var _$epubHtml;
 
-    var _currentOpacity;
+    var _originalOpacity;
 
     var _lastViewPortSize = {
         width: undefined,
@@ -73,8 +73,8 @@ ReadiumSDK.Views.ReflowableView = function(options){
         renderIframe();
 
         //We will call onViewportResize after user stopped resizing window
-        var lazyResize = _.debounce(self.onViewportResize, 100);
-        $(window).on("resize.ReadiumSDK.reflowableView", _.bind(lazyResize, self));
+        //var lazyResize = _.debounce(self.onViewportResize, 100);
+        $(window).on("resize.ReadiumSDK.reflowableView orientationchange.ReadiumSDK.reflowableView", self.onViewportResize);
 
         return self;
     };
@@ -216,7 +216,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
 
         var epubContentDocument = _$iframe[0].contentDocument;
         _$epubHtml = $("html", epubContentDocument);
-
+        _originalOpacity = _$epubHtml.css("opacity");
         _$epubHtml.css("height", _lastViewPortSize.height + "px");
         _$epubHtml.css("position", "relative");
         _$epubHtml.css("-webkit-column-axis", "horizontal");
@@ -487,15 +487,15 @@ ReadiumSDK.Views.ReflowableView = function(options){
 //    }
 
     function hideBook() {
-        _currentOpacity = _$epubHtml.css('opacity');
         _$epubHtml.css('opacity', 0);
     }
 
     function showBook() {
-        if (_currentOpacity) {
-            _$epubHtml.css('opacity', _currentOpacity);
+        if (_originalOpacity && _originalOpacity.length > 0) {
+            _$epubHtml.css('opacity', _originalOpacity);
+        } else {
+            _$epubHtml.css('opacity', 1);
         }
-        _currentOpacity = 0;
     }
 
     this.getFirstVisibleElementCfi = function() {
