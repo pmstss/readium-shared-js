@@ -281,3 +281,18 @@ ReadiumSDK.Helpers.CSSTransformMatrix = {
         return matches[1];
     }
 };
+
+ReadiumSDK.Helpers.waitForRendering = function($iframe) {
+
+    var doc = $iframe[0].contentDocument;
+
+    if(!doc) {
+        return;
+    }
+
+    var el = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
+    el.appendChild(doc.createTextNode("*{}"));
+    doc.body.appendChild(el);
+    doc.body.removeChild(el);
+    var blocking = doc.body.offsetTop; // browser rendering / layout done
+};
