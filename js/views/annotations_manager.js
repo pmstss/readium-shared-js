@@ -244,6 +244,18 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    this.setAnnotationViewStateForAll = function(state, value) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.setAnnotationViewStateForAll(state, value);
+            if(result){
+                break;
+            }
+        }
+        return result;
+    };
+
     this.getAnnotationMidpoints = function($elementSpineItemCollection){
         var output = [];
 

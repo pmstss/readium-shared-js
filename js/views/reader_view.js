@@ -931,6 +931,10 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return _annotationsManager.setAnnotationViewState(id, state, value);
     };
 
+    this.setAnnotationViewStateForAll = function (state, value) {
+        return _annotationsManager.setAnnotationViewStateForAll(state, value);
+    };
+
     this.getVisibleAnnotationMidpoints = function () {
         if (_currentView) {
             var $visibleElements = _currentView.getVisibleElementsWithFilter(_annotationsManager.getAnnotationsElementFilter(),true);
