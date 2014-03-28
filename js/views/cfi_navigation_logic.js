@@ -209,7 +209,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         if (!found) {
             //if we didn't find a visible textnode fragment on the clientRect iteration
             //it might still mean that its visible, just only at the very end
-            var endFragment = getTextNodeFragments(textNode, null, textNode.length - 2, textNode.length)[0];
+            var endFragment = getTextNodeFragments(textNode, null, textNode.length > 3 ? (textNode.length - 2) : 0, textNode.length)[0];
 
             if (endFragment && isNodeClientRectVisible(endFragment.rect)) {
                 found = endFragment;
@@ -218,7 +218,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
         }
         //create an optimized range to return based on the fragment results
-        var resultRangeData = {start: (found.end - 2), end: found.end};
+        var resultRangeData = {start: found.end > 3 ? (found.end - 2) : 0, end: found.end};
         var resultRangeRect = getNodeRangeClientRect(textNode, resultRangeData.start, textNode, resultRangeData.end);
         return {start: resultRangeData.start, end: resultRangeData.end, rect: resultRangeRect};
     }
