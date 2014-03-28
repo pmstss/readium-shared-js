@@ -69,7 +69,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
 
         _$el = $(template);
         _$viewport.append(_$el);
-
+        _$contentFrame = $('#reflowable-content-frame', _$el);
         renderIframe();
 
         //We will call onViewportResize after user stopped resizing window
@@ -141,20 +141,16 @@ ReadiumSDK.Views.ReflowableView = function(options){
             return 1;
         }
     }
-
+    var _$iframePrevious;
     function renderIframe() {
-        if (_$contentFrame) {
-            //destroy old contentFrame
-            _$contentFrame.remove();
+        if (_$iframe) {
+            //cache previous iframe
+            _$iframePrevious = _$iframe;
         }
 
-        var template = ReadiumSDK.Helpers.loadTemplate("reflowable_book_page_frame", {});
-        var $bookFrame = $(template);
-        $bookFrame = $('#reflowable-book-frame', _$viewport).append($bookFrame);
-
-        _$contentFrame = $("#reflowable-content-frame", $bookFrame);
-
-        _$iframe = $("#epubContentIframe", $bookFrame);
+        var template = ReadiumSDK.Helpers.loadTemplate("reflowable_page_frame", {});
+        _$iframe = $(template);
+        _$contentFrame.append(_$iframe);
 
         _$iframe.css("left", "");
         _$iframe.css("right", "");
@@ -236,7 +232,10 @@ ReadiumSDK.Views.ReflowableView = function(options){
 /////////
 
         self.applyStyles();
-
+        setTimeout(function(){
+            _$iframePrevious.remove();
+            _$iframePrevious = null;
+        },100);
     }
 
     this.applyStyles = function() {
