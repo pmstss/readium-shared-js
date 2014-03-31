@@ -73,8 +73,8 @@ ReadiumSDK.Views.ReflowableView = function(options){
         renderIframe();
 
         //We will call onViewportResize after user stopped resizing window
-        //var lazyResize = _.debounce(self.onViewportResize, 100);
-        $(window).on("resize.ReadiumSDK.reflowableView orientationchange.ReadiumSDK.reflowableView", self.onViewportResize);
+        var lazyResize = _.debounce(self.onViewportResize, 100);
+        $(window).on("resize.ReadiumSDK.reflowableView orientationchange.ReadiumSDK.reflowableView", lazyResize);
 
         return self;
     };
