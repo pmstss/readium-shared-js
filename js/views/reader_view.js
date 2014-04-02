@@ -492,7 +492,13 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
 
         var pageRequest;
-        var spineItem = _spine.items[spineIndex];
+        var spineItem;
+        if (spineIndex === -1) {
+            spineItem = _spine.last();
+        } else {
+            spineItem = _spine.items[spineIndex];
+        }
+
         if(!spineItem) {
             return;
         }
@@ -1018,7 +1024,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
     this.openSpineIndexPage = function(spineIndex, pageIndex, initiator) {
 
-        var spineItem = _spine.items[spineIndex];
+        var spineItem;
+        if (spineIndex === -1) {
+            spineItem = _spine.last();
+        } else {
+            spineItem = _spine.items[spineIndex];
+        }
         if(!spineItem) {
             return;
         }
