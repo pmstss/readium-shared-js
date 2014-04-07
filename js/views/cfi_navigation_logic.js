@@ -121,7 +121,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             range.setStart(node, startOverride);
             range.setEnd(node, endOverride);
             return [
-                {start: startOverride, end: endOverride, rect: range.getBoundingClientRect()}
+                {start: startOverride, end: endOverride, rect: normalizeRectangle(range.getBoundingClientRect(),0,0)}
             ];
         }
 
@@ -136,7 +136,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
             range.setEnd(node, end);
             //get the client rectangle for this character buffer
-            var rect = range.getBoundingClientRect();
+            var rect = normalizeRectangle(range.getBoundingClientRect(),0,0);
             //push the character offsets and client rectangle associated with this buffer iteration
             collection.push({start: start, end: end, rect: rect})
         }
@@ -146,18 +146,18 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     function getNodeClientRect(node) {
         var range = createRange();
         range.selectNode(node);
-        return range.getBoundingClientRect();
+        return normalizeRectangle(range.getBoundingClientRect(),0,0);
     }
 
     function getElementClientRect($element) {
-        return $element[0].getBoundingClientRect();
+        return normalizeRectangle($element[0].getBoundingClientRect(),0,0);
     }
 
     function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset) {
         var range = createRange();
         range.setStart(startNode, startOffset);
         range.setEnd(endNode, endOffset);
-        return range.getBoundingClientRect();
+        return normalizeRectangle(range.getBoundingClientRect(),0,0);
     }
 
     function isNodeClientRectVisible(rect) {
