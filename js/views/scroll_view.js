@@ -476,7 +476,7 @@ ReadiumSDK.Views.ScrollView = function(options){
 
         if(!_currentSpineItem) {
 
-            return new ReadiumSDK.Models.BookmarkData("", "");
+            return undefined;
         }
 
         return new ReadiumSDK.Models.BookmarkData(_currentSpineItem.idref, self.getFirstVisibleElementCfi());

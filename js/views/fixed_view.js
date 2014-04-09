@@ -455,7 +455,7 @@ ReadiumSDK.Views.FixedView = function(options){
             return new ReadiumSDK.Models.BookmarkData(idref, cfi);
         }
 
-        return new ReadiumSDK.Models.BookmarkData("", "");
+        return undefined;
     };
 
     function getDisplayingViews() {
