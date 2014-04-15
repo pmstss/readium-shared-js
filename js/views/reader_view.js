@@ -317,8 +317,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 if(!isViewChanged) {
                     _currentView.setViewSettings(_viewerSettings);
                 }
-
-                self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
+                if (bookMark.idref && bookMark.contentCFI) {
+                    self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
+                }
             }
         }
 
