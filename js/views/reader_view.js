@@ -637,10 +637,28 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * sourceFileHref to resolve contentUrl relative to the package file.
      * @param {object} initiator optional
      */
-    this.openContentUrl = function(contentRefUrl, sourceFileHref, initiator) {
+    this.openContentUrl = function (contentRefUrl, sourceFileHref, initiator) {
 
+        var contentResolveInfo = self.resolveContentUrl(contentRefUrl, sourceFileHref, initiator);
+
+        if (contentResolveInfo && contentResolveInfo.idref) {
+            self.openSpineItemElementId(contentResolveInfo.idref, contentResolveInfo.elementId, initiator);
+        }
+    };
+
+    /**
+     * Resolves a content url
+     *
+     * @method resolveContentUrl
+     *
+     * @param {string} contentRefUrl Url of the content document
+     * @param {string | undefined} sourceFileHref Url to the file that contentRefUrl is relative to. If contentRefUrl is
+     * relative ot the source file that contains it instead of the package file (ex. TOC file) We have to know the
+     * sourceFileHref to resolve contentUrl relative to the package file.
+     * @param {object} initiator optional
+     */
+    this.resolveContentUrl = function(contentRefUrl, sourceFileHref, initiator){
         var combinedPath = ReadiumSDK.Helpers.ResolveContentRef(contentRefUrl, sourceFileHref);
-
 
         var hashIndex = combinedPath.indexOf("#");
         var hrefPart;
@@ -655,15 +673,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
 //console.debug("============ openContentUrl - hrefPart: " + hrefPart);
 
-        var spineItem = _spine.getItemByHref(hrefPart);
-        if(!spineItem) {
-            return;
-        }
-
-        self.openSpineItemElementId(spineItem.idref, elementId, initiator);
-
-//console.debug("------- openContentUrl - elementId: " + elementId);
-
+        return {href: hrefPart, elementId: elementId, idref: _spine.getItemByHref(hrefPart).idref};
     };
 
     /**
