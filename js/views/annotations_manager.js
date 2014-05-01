@@ -143,14 +143,14 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         self['trigger'].apply(proxy, args);
     });
 
-    this.attachAnnotations = function($iframe, spineItem) {
+    this.attachAnnotations = function($iframe, spineItem, loadedSpineItems) {
         var epubDocumentFrame = $iframe[0];
         liveAnnotations[spineItem.index] = new EpubAnnotationsModule(epubDocumentFrame, self, annotationCSSUrl);
         spines[spineItem.index] = spineItem;
 
-        // check to see which spine indecies can be culled depending on the distance from current spine item
+        // check to see which spine indicies can be culled depending on the currently loaded spine items
         for(var spineIndex in liveAnnotations) {
-            if (Math.abs(spineIndex - spineIndex.index) > 3) {
+            if (liveAnnotations.hasOwnProperty(spineIndex) && !_.contains(loadedSpineItems, spines[spineIndex])) {
                 delete liveAnnotations[spineIndex];
             }
         }
@@ -244,6 +244,18 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    this.setAnnotationViewStateForAll = function(state, value) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.setAnnotationViewStateForAll(state, value);
+            if(result){
+                break;
+            }
+        }
+        return result;
+    };
+
     this.getAnnotationMidpoints = function($elementSpineItemCollection){
         var output = [];
 
@@ -271,10 +283,10 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
                 var scale = 1;
                 //figure out a better way to get the html parent from an element..
                 var $html = $('body',$element.parents()).parent();
-                //TODO: webkit specific!
-                var matrix = $html.css('-webkit-transform');
-                if(matrix){
-                    scale = new WebKitCSSMatrix(matrix).a;
+                //get transformation scale from content document
+                var matrix = ReadiumSDK.Helpers.CSSTransformMatrix.getMatrix($html);
+                if (matrix) {
+                    scale = ReadiumSDK.Helpers.CSSTransformMatrix.getScaleFromMatrix(matrix);
                 }
                 var offset = $element.offset();
                 var position = offset;

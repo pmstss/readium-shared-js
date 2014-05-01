@@ -21,13 +21,13 @@ ReadiumSDK.Views.IFrameLoader = function() {
 
     var eventListeners = {};
 
-    this.addIFrameEventListener = function(eventName, callback, context) {
+    this.addIFrameEventListener = function(eventName, callback, context, options) {
 
         if(eventListeners[eventName] == undefined) {
             eventListeners[eventName] = [];
         }
 
-        eventListeners[eventName].push({callback: callback, context: context});
+        eventListeners[eventName].push({callback: callback, context: context, options: options});
     };
 
     this.loadIframe = function(iframe, src, callback, context) {
@@ -36,10 +36,54 @@ ReadiumSDK.Views.IFrameLoader = function() {
 
         iframe.onload = function() {
 
-            _.each(eventListeners, function(value, key){
-                for(var i = 0, count = value.length; i< count; i++) {
-                    $(iframe.contentWindow).on(key, value[i].callback, value[i].context);
-                }
+            _.each(eventListeners, function(eventHandlerList, eventName){
+                _.each(eventHandlerList,function(eventHandler){
+                    var options = eventHandler.options;
+                    var callback = eventHandler.callback;
+                    var context = eventHandler.context;
+
+                    function addJqueryEvent(obj) {
+                        obj.on(eventName, callback, context);
+                    }
+
+                    function addNativeEvent(obj) {
+                        obj.addEventListener(eventName, callback, context);
+                    }
+
+                    if (!iframe.contentWindow) {
+                        return;
+                    }
+
+                    if (!options) {
+                        addNativeEvent(iframe.contentWindow);
+                    } else {
+                        if (options.onWindow) {
+                            if (options.jqueryEvent) {
+                                addJqueryEvent($(iframe.contentWindow));
+                            } else {
+                                addNativeEvent(iframe.contentWindow);
+                            }
+                        } else if (options.onDocument) {
+                            if (options.jqueryEvent) {
+                                addJqueryEvent($(iframe.contentDocument));
+                            } else {
+                                addNativeEvent(iframe.contentDocument);
+                            }
+                        } else if (options.onBody) {
+                            if (options.jqueryEvent) {
+                                addJqueryEvent($(iframe.contentDocument.body));
+                            } else {
+                                addNativeEvent(iframe.contentDocument.body);
+                            }
+                        } else if (options.onSelector) {
+                            if (options.jqueryEvent) {
+                                addJqueryEvent($(options.onSelector));
+                            } else {
+                                addNativeEvent($(options.onSelector)[0]);
+                            }
+                        }
+                    }
+                });
             });
 
             try
@@ -55,8 +99,8 @@ ReadiumSDK.Views.IFrameLoader = function() {
             {
                 console.log("epubReadingSystem INJECTION ERROR! " + ex.message);
             }
-            callback.call(context, true);
             $(iframe).show();
+            callback.call(context, true);
         };
 
         iframe.src = src;

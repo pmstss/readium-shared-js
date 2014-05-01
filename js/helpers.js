@@ -110,6 +110,22 @@ ReadiumSDK.Helpers.EndsWith = function (str, suffix) {
     return str.indexOf(suffix, str.length - suffix.length) !== -1;
 };
 
+ReadiumSDK.Helpers.BeginsWith = function (str, suffix) {
+
+    return str.indexOf(suffix) === 0;
+};
+
+ReadiumSDK.Helpers.RemoveFromString = function(str, toRemove) {
+
+    var startIx = str.indexOf(toRemove);
+
+    if(startIx == -1) {
+        return str;
+    }
+
+    return str.substring(0, startIx) + str.substring(startIx + toRemove.length);
+};
+
 ReadiumSDK.Helpers.Margins = function(margin, border, padding) {
 
     this.margin = margin;
@@ -145,9 +161,10 @@ ReadiumSDK.Helpers.loadTemplate = function(name, params) {
 };
 
 ReadiumSDK.Helpers.loadTemplate.cache = {
-    "fixed_book_frame" : '<div id="fixed-book-frame" class="clearfix book-frame fixed-book-frame"></div>',
+    "fixed_book_frame" : '<div id="fixed-book-frame" class="book-frame fixed-book-frame"></div>',
     "fixed_page_frame" : '<div class="fixed-page-frame"><iframe scrolling="no" class="iframe-fixed"></iframe></div>',
-    "reflowable_book_frame" : '<div id="reflowable-book-frame" class="clearfix book-frame reflowable-book-frame"><div id="reflowable-content-frame" class="reflowable-content-frame"><iframe scrolling="no" id="epubContentIframe"></iframe></div></div>'
+    "reflowable_book_frame" : '<div id="reflowable-book-frame" class="book-frame reflowable-book-frame"></div>',
+    "reflowable_book_page_frame": '<div id="reflowable-content-frame" class="reflowable-content-frame"><iframe scrolling="no" id="epubContentIframe"></iframe></div>'
 };
 
 ReadiumSDK.Helpers.setStyles = function(styles, $element) {
@@ -193,5 +210,89 @@ ReadiumSDK.Helpers.isRenditionSpreadPermittedForItem = function(item, orientatio
         && orientation == ReadiumSDK.Views.ORIENTATION_PORTRAIT );
 };
 
+ReadiumSDK.Helpers.escapeJQuerySelector = function(sel) {
+        //http://api.jquery.com/category/selectors/
+        //!"#$%&'()*+,./:;<=>?@[\]^`{|}~
+        // double backslash escape
+        
+        if (!sel) return undefined;
+        
+        var selector = sel.replace(/([;&,\.\+\*\~\?':"\!\^#$%@\[\]\(\)<=>\|\/\\{}`])/g, '\\$1');
+        
+        // if (selector !== sel)
+        // {
+        //     console.debug("---- SELECTOR ESCAPED");
+        //     console.debug("1: " + sel);
+        //     console.debug("2: " + selector);
+        // }
+        // else
+        // {
+        //     console.debug("---- SELECTOR OKAY: " + sel);
+        // }
+        
+        return selector;
+};
+    // TESTS BELOW ALL WORKING FINE :)
+    // (RegExp typos are hard to spot!)
+    // escapeSelector('!');
+    // escapeSelector('"');
+    // escapeSelector('#');
+    // escapeSelector('$');
+    // escapeSelector('%');
+    // escapeSelector('&');
+    // escapeSelector("'");
+    // escapeSelector('(');
+    // escapeSelector(')');
+    // escapeSelector('*');
+    // escapeSelector('+');
+    // escapeSelector(',');
+    // escapeSelector('.');
+    // escapeSelector('/');
+    // escapeSelector(':');
+    // escapeSelector(';');
+    // escapeSelector('<');
+    // escapeSelector('=');
+    // escapeSelector('>');
+    // escapeSelector('?');
+    // escapeSelector('@');
+    // escapeSelector('[');
+    // escapeSelector('\\');
+    // escapeSelector(']');
+    // escapeSelector('^');
+    // escapeSelector('`');
+    // escapeSelector('{');
+    // escapeSelector('|');
+    // escapeSelector('}');
+    // escapeSelector('~');
 
 
+ReadiumSDK.Helpers.CSSTransformMatrix = {
+    getMatrix: function ($obj) {
+        var matrix = $obj.css("-webkit-transform") ||
+            $obj.css("-moz-transform") ||
+            $obj.css("-ms-transform") ||
+            $obj.css("-o-transform") ||
+            $obj.css("transform");
+        return matrix === "none" ? undefined : matrix;
+    },
+    getScaleFromMatrix: function (matrix) {
+        var matrixRegex = /matrix\((-?\d*\.?\d+),\s*0,\s*0,\s*(-?\d*\.?\d+),\s*0,\s*0\)/,
+            matches = matrix.match(matrixRegex);
+        return matches[1];
+    }
+};
+
+ReadiumSDK.Helpers.waitForRendering = function($iframe) {
+
+    var doc = $iframe[0].contentDocument;
+
+    if(!doc) {
+        return;
+    }
+
+    var el = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
+    el.appendChild(doc.createTextNode("*{}"));
+    doc.body.appendChild(el);
+    doc.body.removeChild(el);
+    var blocking = doc.body.offsetTop; // browser rendering / layout done
+};

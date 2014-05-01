@@ -47,24 +47,7 @@ ReadiumSDK.Views.ScrollView = function(options){
         _$el = $(template);
         _$viewport.append(_$el);
 
-        _$contentFrame = $("#reflowable-content-frame", _$el);
-        _$contentFrame.css("overflow", "");
-        _$contentFrame.css("overflow-y", "auto");
-        _$contentFrame.css("-webkit-overflow-scrolling", "touch");
-        _$contentFrame.css("width", "100%");
-        _$contentFrame.css("height", "100%");
-
-        _$iframe = $("#epubContentIframe", _$el);
-        _$iframe.css("width", "100%");
-        _$iframe.css("height", "100%");
-
-        _$iframe.css("left", "");
-        _$iframe.css("right", "");
-        _$iframe.css(_spine.isLeftToRight() ? "left" : "right", "0px");
-        _$iframe.css("width", "100%");
-
-
-        _navigationLogic = new ReadiumSDK.Views.CfiNavigationLogic(_$contentFrame, _$iframe);
+        renderIframe();
 
         //We will call onViewportResize after user stopped resizing window
         var lazyResize = _.debounce(self.onViewportResize, 100);
@@ -121,19 +104,41 @@ ReadiumSDK.Views.ScrollView = function(options){
         resizeIFrameToContent();
     };
 
+    function renderIframe() {
+        if (_$contentFrame) {
+            //destroy old contentFrame
+            _$contentFrame.remove();
+        }
 
-    function registerTriggers(doc) {
-        $('trigger', doc).each(function() {
-            var trigger = new ReadiumSDK.Models.Trigger(this);
-            trigger.subscribe(doc);
+        var template = ReadiumSDK.Helpers.loadTemplate("reflowable_book_page_frame", {});
+        var $bookFrame = $(template);
+        $bookFrame = $('#reflowable-book-frame', _$viewport).append($bookFrame);
 
-        });
+        _$contentFrame = $("#reflowable-content-frame", $bookFrame);
+        _$contentFrame.css("overflow", "");
+        _$contentFrame.css("overflow-y", "auto");
+        _$contentFrame.css("-webkit-overflow-scrolling", "touch");
+        _$contentFrame.css("width", "100%");
+        _$contentFrame.css("height", "100%");
+
+        _$iframe = $("#epubContentIframe", $bookFrame);
+        _$iframe.css("width", "100%");
+        _$iframe.css("height", "100%");
+
+        _$iframe.css("left", "");
+        _$iframe.css("right", "");
+        _$iframe.css(_spine.isLeftToRight() ? "left" : "right", "0px");
+        _$iframe.css("width", "100%");
+
+        _navigationLogic = new ReadiumSDK.Views.CfiNavigationLogic(_$contentFrame, _$iframe);
     }
 
     function loadSpineItemPageRequest(pageRequest) {
-
         var spineItem = pageRequest.spineItem;
         if(_currentSpineItem != spineItem) {
+
+            //create & append iframe to container frame
+            renderIframe();
 
             _currentSpineItem = spineItem;
 
@@ -150,14 +155,31 @@ ReadiumSDK.Views.ScrollView = function(options){
         }
     }
 
+    function setIframeHeight(height) {
+
+        _$iframe.css("height", height + "px");
+    }
+
     function resizeIFrameToContent() {
 
         if(!_$iframe || !_$epubHtml) {
             return;
         }
 
-        var contHeight = _$epubHtml.height();
-        _$iframe.css("height", contHeight + "px");
+        //reset the iframe height to zero
+        // (needed for IE9 or else it uses the height of the previous page/spine change)
+        setIframeHeight(0);
+        var contHeight = contentHeight();
+        setIframeHeight(contHeight);
+        //calculate and set the height again after a timeout, only if height ends up being larger
+        // (css rendering workaround)
+        setTimeout(function () {
+            var contHeight2 = contentHeight();
+            if (contHeight2 > contHeight) {
+                setIframeHeight(contHeight2);
+            }
+        }, 500);
+
     }
 
     function onIFrameLoad(success, attachedData) {
@@ -187,10 +209,8 @@ ReadiumSDK.Views.ScrollView = function(options){
         setTimeout(function(){
             resizeIFrameToContent();
             openDeferredElement();
+            onPaginationChanged(self, _currentSpineItem);
         }, 50);
-
-        applySwitches(epubContentDocument);
-        registerTriggers(epubContentDocument);
 
     }
 
@@ -260,7 +280,7 @@ ReadiumSDK.Views.ScrollView = function(options){
         }
         else if(pageRequest.elementId) {
 
-            $element = _navigationLogic.getElementBuyId(pageRequest.elementId);
+            $element = _navigationLogic.getElementById(pageRequest.elementId);
 
             if(!$element) {
                 console.warn("Element id=" + pageRequest.elementId + " not found!");
@@ -271,7 +291,18 @@ ReadiumSDK.Views.ScrollView = function(options){
         }
         else if(pageRequest.elementCfi) {
 
-            $element = _navigationLogic.getElementByCfi(pageRequest.elementCfi);
+            try
+            {
+                $element = _navigationLogic.getElementByCfi(pageRequest.elementCfi,
+                    ["cfi-marker", "mo-cfi-highlight"],
+                    [],
+                    ["MathJax_Message"]);
+            }
+            catch (e)
+            {
+                $element = undefined;
+                console.log(e);
+            }
 
             if(!$element) {
                 console.warn("Element cfi=" + pageRequest.elementCfi + " not found!");
@@ -291,7 +322,7 @@ ReadiumSDK.Views.ScrollView = function(options){
                 return;
             }
 
-            topOffset = scrollHeight() - viewHeight() - 5;
+            topOffset = scrollHeightSynced() - viewHeight() - 5;
         }
         else {
             console.debug("No criteria in pageRequest");
@@ -315,52 +346,6 @@ ReadiumSDK.Views.ScrollView = function(options){
         return Math.ceil(scrollHeight() / viewHeight());
     }
 
-    // Description: Parse the epub "switch" tags and hide
-    // cases that are not supported
-    function applySwitches(dom) {
-
-        // helper method, returns true if a given case node
-        // is supported, false otherwise
-        var isSupported = function(caseNode) {
-
-            var ns = caseNode.attributes["required-namespace"];
-            if(!ns) {
-                // the namespace was not specified, that should
-                // never happen, we don't support it then
-                console.log("Encountered a case statement with no required-namespace");
-                return false;
-            }
-            // all the xmlns that readium is known to support
-            // TODO this is going to require maintenance
-            var supportedNamespaces = ["http://www.w3.org/1998/Math/MathML"];
-            return _.include(supportedNamespaces, ns);
-        };
-
-        $('switch', dom).each( function() {
-
-            // keep track of whether or now we found one
-            var found = false;
-
-            $('case', this).each(function() {
-
-                if( !found && isSupported(this) ) {
-                    found = true; // we found the node, don't remove it
-                }
-                else {
-                    $(this).remove(); // remove the node from the dom
-//                    $(this).prop("hidden", true);
-                }
-            });
-
-            if(found) {
-                // if we found a supported case, remove the default
-                $('default', this).remove();
-//                $('default', this).prop("hidden", true);
-            }
-        })
-    }
-
-
     function onPaginationChanged(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
 
         self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
@@ -371,7 +356,7 @@ ReadiumSDK.Views.ScrollView = function(options){
     }
 
     function scrollBottom() {
-        return scrollHeight() - (scrollTop() + viewHeight());
+        return scrollHeightSynced() - (scrollTop() + viewHeight());
     }
 
     function getCurrentPageIndex() {
@@ -384,7 +369,24 @@ ReadiumSDK.Views.ScrollView = function(options){
     }
 
     function scrollHeight() {
+
         return _$contentFrame[0].scrollHeight;
+    }
+
+    function scrollHeightSynced() {
+        //Whenever the scrollHeight value needs to be fetched:
+        // synchronize the content document height with the iframe height
+        var height = _$contentFrame[0].scrollHeight;
+        var contHeight = contentHeight();
+        if (height != contHeight) {
+            setIframeHeight(contHeight);
+        }
+        return scrollHeight();
+    }
+
+
+    function contentHeight() {
+        return _$epubHtml[0].scrollHeight;
     }
 
     this.openPagePrev = function (initiator) {
@@ -410,7 +412,7 @@ ReadiumSDK.Views.ScrollView = function(options){
             if(prevSpineItem) {
 
                 pageRequest = new ReadiumSDK.Models.PageOpenRequest(prevSpineItem, initiator);
-                pageRequest.scrollTop = scrollHeight() - viewHeight();
+                pageRequest.scrollTop = scrollHeightSynced() - viewHeight();
             }
 
         }
@@ -474,7 +476,7 @@ ReadiumSDK.Views.ScrollView = function(options){
 
         if(!_currentSpineItem) {
 
-            return new ReadiumSDK.Models.BookmarkData("", "");
+            return undefined;
         }
 
         return new ReadiumSDK.Models.BookmarkData(_currentSpineItem.idref, self.getFirstVisibleElementCfi());
@@ -485,6 +487,16 @@ ReadiumSDK.Views.ScrollView = function(options){
         return [_currentSpineItem];
     };
 
+    this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
+
+        if(spineItem != _currentSpineItem) {
+            console.error("spine item is not loaded");
+            return undefined;
+        }
+
+        return _navigationLogic.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
+    };
+    
     this.getElement = function(spineItem, selector) {
 
         if(spineItem != _currentSpineItem) {
@@ -495,20 +507,9 @@ ReadiumSDK.Views.ScrollView = function(options){
         return _navigationLogic.getElement(selector);
     };
 
-    this.getElements = function(spineItem, selector) {
+    this.getFirstVisibleMediaOverlayElement = function() {
 
-        if(spineItem != _currentSpineItem) {
-            console.error("spine item is not loaded");
-            return undefined;
-        }
-
-        return _navigationLogic.getElements(selector);
-    };
-
-
-    this.getVisibleMediaOverlayElements = function() {
-
-        return _navigationLogic.getVisibleMediaOverlayElements(visibleOffsets());
+        return _navigationLogic.getFirstVisibleMediaOverlayElement(visibleOffsets());
     };
 
     function visibleOffsets() {
@@ -525,7 +526,7 @@ ReadiumSDK.Views.ScrollView = function(options){
         var $element = $(element);
 
 
-        if(_navigationLogic.isElementVisible($element, visibleOffsets())) {
+        if(_navigationLogic.getElementVisibility($element, visibleOffsets()) > 0) {
             return;
         }
 
@@ -539,7 +540,7 @@ ReadiumSDK.Views.ScrollView = function(options){
         openPageRequest.setPageIndex(page);
 
         self.openPage(openPageRequest);
-    }
+    };
 
     this.getVisibleElementsWithFilter = function(filterFunction) {
 
@@ -551,11 +552,30 @@ ReadiumSDK.Views.ScrollView = function(options){
         console.warn('isElementVisible: Not implemented yet for scroll_view');
     };
 
-    this.getElementByCfi = function(spineIdref, partialCfi){
-        if(_currentSpineItem.idref === spineIdref){
-            return _navigationLogic.getElementByCfi(partialCfi);
+    this.getElements = function(spineItem, selector) {
+
+        if(spineItem != _currentSpineItem) {
+            console.error("spine item is not loaded");
+            return undefined;
+        }
+
+        return _navigationLogic.getElements(selector);
+    };
+
+    this.isNodeFromRangeCfiVisible = function (spineIdref, partialCfi) {
+        if (_currentSpineItem.idref === spineIdref) {
+            return _navigationLogic.isNodeFromRangeCfiVisible(partialCfi);
         }
         return undefined;
+    };
+
+    this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
+        if (_navigationLogic.isRangeCfi(partialCfi)) {
+            return this.isNodeFromRangeCfiVisible(spineIdRef, partialCfi);
+        }
+        var spineItem = _spine.getItemById(spineIdRef);
+        var $elementFromCfi = this.getElementByCfi(spineItem, partialCfi);
+        return ($elementFromCfi && this.isElementVisible($elementFromCfi));
     };
 
 };
