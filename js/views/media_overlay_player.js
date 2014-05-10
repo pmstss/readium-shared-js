@@ -2,19 +2,29 @@
 //
 //  Created by Boris Schneiderman.
 // Modified by Daniel Weck
-//  Copyright (c) 2012-2013 The Readium Foundation.
-//
-//  The Readium SDK is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
+//  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
+//  
+//  Redistribution and use in source and binary forms, with or without modification, 
+//  are permitted provided that the following conditions are met:
+//  1. Redistributions of source code must retain the above copyright notice, this 
+//  list of conditions and the following disclaimer.
+//  2. Redistributions in binary form must reproduce the above copyright notice, 
+//  this list of conditions and the following disclaimer in the documentation and/or 
+//  other materials provided with the distribution.
+//  3. Neither the name of the organization nor the names of its contributors may be 
+//  used to endorse or promote products derived from this software without specific 
+//  prior written permission.
+//  
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
 
@@ -204,7 +214,18 @@ ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
 
                 if (!element)
                 {
-                    element = reader.getElement(spineItem, (paginationData.initiator == self && !paginationData.elementId) ? "body" : ("#" + ReadiumSDK.Helpers.escapeJQuerySelector(paginationData.elementId)));
+                    if (paginationData.initiator == self && !paginationData.elementId)
+                    {
+                        var $element = reader.getElement(spineItem, "body");
+                        element = ($element && $element.length > 0) ? $element[0] : undefined;
+                    }
+                    else
+                    {
+                        var $element = reader.getElementById(spineItem, paginationData.elementId);
+                        element = ($element && $element.length > 0) ? $element[0] : undefined;
+                        //("#" + ReadiumSDK.Helpers.escapeJQuerySelector(paginationData.elementId))
+                    }
+                    
                     if (element)
                     {
                         /*
@@ -338,6 +359,7 @@ ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
             {
                 paginationData.elementIdResolved = element;
             }
+            
             self.toggleMediaOverlayRefresh(paginationData);
         }
     };
@@ -850,8 +872,8 @@ ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
     var tokeniseTTS = function(element)
     {
         var BLOCK_DELIMITERS = ['p', 'div', 'pagenum', 'td', 'table', 'li', 'ul', 'ol'];
-        var BOUNDARY_PUNCTUATION = [',', ';', '.', '-', 'Ð', 'Ñ', '?', '!'];
-        var IGNORABLE_PUNCTUATION = ['"', '\'', 'Ò', 'Ó', 'Ô', 'Õ'];
+        var BOUNDARY_PUNCTUATION = [',', ';', '.', '-', '??', '??', '?', '!'];
+        var IGNORABLE_PUNCTUATION = ['"', '\'', '??', '??', '??', '??'];
 
         var flush = function(t, r)
         {
@@ -1463,7 +1485,7 @@ console.debug("TTS resume");
                 {
                     _elementHighlighter.highlightElement(_smilIterator.currentPar, _package.media_overlay.activeClass, _package.media_overlay.playbackActiveClass);
 
-                    reader.insureElementVisibility(_smilIterator.currentPar.element, self);
+                    reader.insureElementVisibility(_smilIterator.currentPar.getSmil().spineItemId, _smilIterator.currentPar.element, self);
                 }
             
                 return;
@@ -1474,7 +1496,7 @@ console.debug("TTS resume");
                 {
                     _elementHighlighter.highlightCfi(_smilIterator.currentPar, _package.media_overlay.activeClass, _package.media_overlay.playbackActiveClass);
 
-                    reader.insureElementVisibility(_smilIterator.currentPar.cfi.cfiTextParent, self);
+                    reader.insureElementVisibility(_smilIterator.currentPar.getSmil().spineItemId, _smilIterator.currentPar.cfi.cfiTextParent, self);
                 }
                 
                 return;
@@ -1827,7 +1849,6 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
 
 //console.debug("moData SMIL: " + moData.par.getSmil().href + " // " + + moData.par.getSmil().id);
 
-
         var spineItems = reader.getLoadedSpineItems();
 
         //paginationData.pageProgressionDirection === "rtl"
@@ -1878,11 +1899,23 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
 
                 if (id)
                 {
-                    element = reader.getElement(spineItem, "#" + ReadiumSDK.Helpers.escapeJQuerySelector(id));
+                    var $element = reader.getElementById(spineItem, id);
+                    //var $element = reader.getElement(spineItem, "#" + ReadiumSDK.Helpers.escapeJQuerySelector(id));
+                    element = ($element && $element.length > 0) ? $element[0] : undefined;
                 }
                 else if (spineItem.isFixedLayout())
                 {
-                    element = reader.getElement(spineItem, "body");
+                    if (paginationData && paginationData.paginationInfo && paginationData.paginationInfo.openPages)
+                    {
+                        // openPages are sorted by spineItem index, so the smallest index on display is the one we need to play (page on the left in LTR, or page on the right in RTL progression)
+                        var index = 0; // paginationData.paginationInfo.pageProgressionDirection === "ltr" ? 0 : paginationData.paginationInfo.openPages.length - 1;
+                    
+                        if (paginationData.paginationInfo.openPages[index] && paginationData.paginationInfo.openPages[index].idref && paginationData.paginationInfo.openPages[index].idref === spineItem.idref)
+                        {
+                            var $element = reader.getElement(spineItem, "body");
+                            element = ($element && $element.length > 0) ? $element[0] : undefined;
+                        }
+                    }
                 }
 
                 if (element)
@@ -1907,6 +1940,7 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
 
         if (!moData)
         {
+            var foundMe = false;
             var depthFirstTraversal = function(elements)
             {
                 if (!elements)
@@ -1916,11 +1950,16 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
 
                 for (var i = 0; i < elements.length; i++)
                 {
-                    var d = $(elements[i]).data("mediaOverlayData");
-                    if (d)
+                    if (element === elements[i]) foundMe = true;
+                    
+                    if (foundMe)
                     {
-                        moData = d;
-                        return true;
+                        var d = $(elements[i]).data("mediaOverlayData");
+                        if (d)
+                        {
+                            moData = d;
+                            return true;
+                        }
                     }
 
                     var found = depthFirstTraversal(elements[i].children);
@@ -1964,16 +2003,15 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
         {
             _smilIterator.reset();
         }
-
-        if (id)
+        
+        _smilIterator.goToPar(zPar);
+        
+        if (!_smilIterator.currentPar && id)
         {
+            _smilIterator.reset();
             _smilIterator.findTextId(id);
         }
-        else
-        {
-            _smilIterator.goToPar(zPar);
-        }
-
+        
         if (!_smilIterator.currentPar)
         {
             self.reset();
