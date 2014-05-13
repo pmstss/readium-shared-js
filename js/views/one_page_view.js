@@ -561,7 +561,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
 
     this.getFirstVisibleElementCfi = function(){
 
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = self.getNavigator();
         return navigation.getFirstVisibleElementCfi(0);
 
     };
@@ -578,7 +578,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
             return undefined;
         }
 
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = self.getNavigator();
         return navigation.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
     };
 
@@ -589,7 +589,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
             return undefined;
         }
 
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = self.getNavigator();
         return navigation.getElementById(id);
     };
 
@@ -600,12 +600,12 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
             return undefined;
         }
 
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = self.getNavigator();
         return navigation.getElement(selector);
     };
 
     this.getFirstVisibleMediaOverlayElement = function() {
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = self.getNavigator();
         return navigation.getFirstVisibleMediaOverlayElement({top:0, bottom: _$iframe.height()});
     };
 
@@ -619,7 +619,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
     };
 
     this.getVisibleElementsWithFilter = function(filterFunction, includeSpineItem) {
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = self.getNavigator();
         var visibleContentOffsets = {top:0, bottom: _$iframe.height()};
         var elements = navigation.getVisibleElementsWithFilter(visibleContentOffsets,filterFunction);
 
@@ -632,7 +632,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
     };
 
     this.getAllElementsWithFilter = function(filterFunction, includeSpineItem) {
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = self.getNavigator();
         var elements = navigation.getAllElementsWithFilter(filterFunction);
 
         if (includeSpineItem) {
