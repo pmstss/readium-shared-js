@@ -275,8 +275,8 @@ ReadiumSDK.Views.FixedView = function(options){
             return;
         }
 
-        var viewportWidth = _$viewport.width();
-        var viewportHeight = _$viewport.height();
+        var viewportWidth = _$viewport[0].clientWidth;
+        var viewportHeight = _$viewport[0].clientHeight;
 
         var leftPageMargins = _leftPageView.isDisplaying() ? ReadiumSDK.Helpers.Margins.fromElement(_leftPageView.element()) : ReadiumSDK.Helpers.Margins.empty();
         var rightPageMargins = _rightPageView.isDisplaying() ? ReadiumSDK.Helpers.Margins.fromElement(_rightPageView.element()) : ReadiumSDK.Helpers.Margins.empty();
