@@ -177,9 +177,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
             // performance degrades with large DOM (e.g. word-level text-audio sync)
             _mediaOverlayDataInjector.attachMediaOverlayData($iframe, spineItem, _viewerSettings);
-            
+
             _internalLinksSupport.processLinkElements($iframe, spineItem);
-            _annotationsManager.attachAnnotations($iframe, spineItem);
+            _annotationsManager.attachAnnotations($iframe, spineItem, self.getLoadedSpineItems());
 
             var contentDoc = $iframe[0].contentDocument;
             ReadiumSDK.Models.Trigger.register(contentDoc);
@@ -224,9 +224,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
             return;
         }
 
-        self.trigger(ReadiumSDK.Events.READER_VIEW_DESTROYED);
-
         _currentView.off(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED);
+
         _currentView.remove();
         _currentView = undefined;
     }
@@ -262,7 +261,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
     this.openBook = function(openBookData) {
 
-		var packageData = openBookData.package ? openBookData.package : openBookData;
+        var packageData = openBookData.package ? openBookData.package : openBookData;
 
         _package = new ReadiumSDK.Models.Package(packageData);
 
@@ -345,10 +344,10 @@ ReadiumSDK.Views.ReaderView = function(options) {
     this.openPageLeft = function() {
 
         if(_package.spine.isLeftToRight()) {
-            self.openPagePrev();
+            return self.openPagePrev();
         }
         else {
-            self.openPageNext();
+            return self.openPageNext();
         }
     };
 
@@ -359,10 +358,10 @@ ReadiumSDK.Views.ReaderView = function(options) {
     this.openPageRight = function() {
 
         if(_package.spine.isLeftToRight()) {
-            self.openPageNext();
+            return self.openPageNext();
         }
         else {
-            self.openPagePrev();
+            return self.openPagePrev();
         }
 
     };
@@ -448,14 +447,13 @@ ReadiumSDK.Views.ReaderView = function(options) {
         var paginationInfo = _currentView.getPaginationInfo();
 
         if(paginationInfo.openPages.length == 0) {
-            return;
+            return false;
         }
 
         var lastOpenPage = paginationInfo.openPages[paginationInfo.openPages.length - 1];
 
         if(lastOpenPage.spineItemPageIndex < lastOpenPage.spineItemPageCount - 1) {
-            _currentView.openPageNext(self);
-            return;
+            return _currentView.openPageNext(self);
         }
 
         var currentSpineItem = _spine.getItemById(lastOpenPage.idref);
@@ -463,13 +461,13 @@ ReadiumSDK.Views.ReaderView = function(options) {
         var nextSpineItem = _spine.nextItem(currentSpineItem);
 
         if(!nextSpineItem) {
-            return;
+            return false;
         }
 
         var openPageRequest = new ReadiumSDK.Models.PageOpenRequest(nextSpineItem, self);
         openPageRequest.setFirstPage();
 
-        openPage(openPageRequest, 2);
+        return openPage(openPageRequest, 2);
     };
 
     /**
@@ -485,14 +483,14 @@ ReadiumSDK.Views.ReaderView = function(options) {
         var paginationInfo = _currentView.getPaginationInfo();
 
         if(paginationInfo.openPages.length == 0) {
-            return;
+            return false;
         }
 
         var firstOpenPage = paginationInfo.openPages[0];
 
         if(firstOpenPage.spineItemPageIndex > 0) {
-            _currentView.openPagePrev(self);
-            return;
+
+            return _currentView.openPagePrev(self);
         }
 
         var currentSpineItem = _spine.getItemById(firstOpenPage.idref);
@@ -500,13 +498,13 @@ ReadiumSDK.Views.ReaderView = function(options) {
         var prevSpineItem = _spine.prevItem(currentSpineItem);
 
         if(!prevSpineItem) {
-            return;
+            return false;
         }
 
         var openPageRequest = new ReadiumSDK.Models.PageOpenRequest(prevSpineItem, self);
         openPageRequest.setLastPage();
 
-        openPage(openPageRequest, 1);
+        return openPage(openPageRequest, 1);
     };
 
     function getSpineItem(idref) {
@@ -545,7 +543,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
 
         var pageData = new ReadiumSDK.Models.PageOpenRequest(spineItem, initiator);
-        if(elementCfi) {
+        if(elementCfi && elementCfi !== '') {
             pageData.setElementCfi(elementCfi);
         }
 
@@ -588,11 +586,49 @@ ReadiumSDK.Views.ReaderView = function(options) {
             var spineItems = this.getLoadedSpineItems();
             if(spineItems.length > 0) {
                 pageRequest = new ReadiumSDK.Models.PageOpenRequest(spineItems[0], initiator);
-                pageRequest.setPageIndex(pageIndex);
+                if (pageIndex === -1) {
+                    pageRequest.setLastPage();
+                } else {
+                    pageRequest.setPageIndex(pageIndex);
+                }
+
             }
         }
 
         openPage(pageRequest, 0);
+    };
+
+
+    /**
+     *
+     * Opens spine item by a specified index
+     *
+     * @method openSpineItemByIndex
+     *
+     * @param {number} spineIndex Zero based index of the spine item
+     * @param {object} initiator optional
+     */
+    this.openSpineItemByIndex = function(spineIndex, initiator) {
+
+        if(!_currentView) {
+            return;
+        }
+
+        var pageRequest;
+        var spineItem;
+        if (spineIndex === -1) {
+            spineItem = _spine.last();
+        } else {
+            spineItem = _spine.items[spineIndex];
+        }
+
+        if(!spineItem) {
+            return;
+        }
+
+        pageRequest = new ReadiumSDK.Models.PageOpenRequest(spineItem, initiator);
+        pageRequest.setPageIndex(0);
+        openPage(pageRequest);
     };
 
     function openPage(pageRequest, dir) {
@@ -601,10 +637,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
         if(!isViewChanged) {
             _currentView.setViewSettings(_viewerSettings);
         }
-        
+
         _currentView.openPage(pageRequest, dir);
     }
-
 
     /**
      *
@@ -644,8 +679,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
         for(var i = 0; i < count; i++) {
             if (styles[i].declarations)
             {
-            _userStyles.addStyle(styles[i].selector, styles[i].declarations);
-        }
+                _userStyles.addStyle(styles[i].selector, styles[i].declarations);
+            }
             else
             {
                 _userStyles.removeStyle(styles[i].selector);
@@ -736,10 +771,28 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * sourceFileHref to resolve contentUrl relative to the package file.
      * @param {object} initiator optional
      */
-    this.openContentUrl = function(contentRefUrl, sourceFileHref, initiator) {
+    this.openContentUrl = function (contentRefUrl, sourceFileHref, initiator) {
 
+        var contentResolveInfo = self.resolveContentUrl(contentRefUrl, sourceFileHref, initiator);
+
+        if (contentResolveInfo && contentResolveInfo.idref) {
+            self.openSpineItemElementId(contentResolveInfo.idref, contentResolveInfo.elementId, initiator);
+        }
+    };
+
+    /**
+     * Resolves a content url
+     *
+     * @method resolveContentUrl
+     *
+     * @param {string} contentRefUrl Url of the content document
+     * @param {string | undefined} sourceFileHref Url to the file that contentRefUrl is relative to. If contentRefUrl is
+     * relative ot the source file that contains it instead of the package file (ex. TOC file) We have to know the
+     * sourceFileHref to resolve contentUrl relative to the package file.
+     * @param {object} initiator optional
+     */
+    this.resolveContentUrl = function(contentRefUrl, sourceFileHref, initiator){
         var combinedPath = ReadiumSDK.Helpers.ResolveContentRef(contentRefUrl, sourceFileHref);
-
 
         var hashIndex = combinedPath.indexOf("#");
         var hrefPart;
@@ -752,6 +805,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             hrefPart = combinedPath;
             elementId = undefined;
         }
+
 
         var spineItem = _spine.getItemByHref(hrefPart);
         if(!spineItem) {
@@ -766,8 +820,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 return;
             }
         }
-
-        self.openSpineItemElementId(spineItem.idref, elementId, initiator);
+        
+        return {href: hrefPart, elementId: elementId, idref: spineItem.idref};
     };
 
     /**
@@ -802,10 +856,10 @@ ReadiumSDK.Views.ReaderView = function(options) {
      *
      * @method bookmarkCurrentPage
      *
-     * @returns {string} Stringified ReadiumSDK.Models.BookmarkData object.
+     * @returns {string} Serialized ReadiumSDK.Models.BookmarkData object as JSON string.
      */
     this.bookmarkCurrentPage = function() {
-        return JSON.stringify(_currentView.bookmarkCurrentPage());
+        return _currentView.bookmarkCurrentPage().toString();
     };
 
     /**
@@ -847,7 +901,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
     this.isMediaOverlayAvailable = function() {
 
         if (!_mediaOverlayPlayer) return false;
-        
+
         return _mediaOverlayPlayer.isMediaOverlayAvailable();
     };
 
@@ -1032,22 +1086,177 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     this.removeHighlight = function(id) {
         return _annotationsManager.removeHighlight(id);
-    }; 
+    };
 
     /**
-     * Lets user to subscribe to iframe's window events
+     * Allows the subscription of events that trigger inside the epub content iframe
      *
-     * @method addIFrameEventsListener
-     * @param {string} eventName event name.
-     * @param {string} callback callback function.
-     * @param {string} context user specified data passed to the callback function.
+     * @method addIFrameEventListener
+     * @param {string} eventName    Event name.
+     * @param {function} callback   Callback function.
+     * @param {object} context      User specified data passed to the callback function.
+     * @param {object} options      Specify additional options: (as a hash object)
      *
+     *                              jqueryEvent {bool}: use a jquery or a native event binding.
+     *                              onWindow {bool}: bind the event on the window.
+     *                              onDocument {bool}: bind the event on the contentDocument.
+     *                              onBody {bool}: bind the event on the body inside the iframe.
+     *                              onSelector {string}: if specified, bind the event on a selector
+     *                                                   matching an element inside the iframe.
      * @returns {undefined}
      */
-    this.addIFrameEventListener = function(eventName, callback, context) {
-        _iframeLoader.addIFrameEventListener(eventName, callback, context);
-    }
+    this.addIFrameEventListener = function (eventName, callback, context, options) {
+        _iframeLoader.addIFrameEventListener(eventName, callback, context, options);
+    };
+    
+    /**
+     * Redraws all annotations
+     *
+     * @method redrawAnnotations
+     */
 
+    this.redrawAnnotations = function(){
+        _annotationsManager.redrawAnnotations();
+    };
+
+    /**
+     *
+     * @method updateAnnotationView
+     * @param {string} id
+     * @param {string} styles
+     * @returns {undefined}
+     */
+
+    this.updateAnnotationView = function(id, styles) {
+        return _annotationsManager.updateAnnotationView(id, styles);
+    };
+
+    this.setAnnotationViewState = function(id, state, value) {
+        return _annotationsManager.setAnnotationViewState(id, state, value);
+    };
+
+    this.setAnnotationViewStateForAll = function (state, value) {
+        return _annotationsManager.setAnnotationViewStateForAll(state, value);
+    };
+
+    this.getVisibleAnnotationMidpoints = function () {
+        if (_currentView) {
+            var $visibleElements = _currentView.getVisibleElementsWithFilter(_annotationsManager.getAnnotationsElementFilter(),true);
+
+            var elementMidpoints = _annotationsManager.getAnnotationMidpoints($visibleElements);
+            return elementMidpoints || [];
+        }
+        return [];
+    };
+
+    this.isVisibleSpineItemElementCfi = function(spineIdRef, partialCfi){
+        var spineItem = getSpineItem(spineIdRef);
+
+        if (!spineItem) {
+            return false;
+        }
+
+        if (_currentView) {
+
+            if(!partialCfi || (partialCfi && partialCfi === '')){
+                var spines = _currentView.getLoadedSpineItems();
+                for(var i = 0, count = spines.length; i < count; i++) {
+                    if(spines[i].idref == spineIdRef){
+                        return true;
+                    }
+                }
+            }
+            return _currentView.isVisibleSpineItemElementCfi(spineIdRef, partialCfi);
+
+        }
+        return false;
+    };
+
+    this.getElements = function(spineItem, selector) {
+
+        if(_currentView) {
+            return _currentView.getElements(spineItem, selector);
+        }
+
+        return undefined;
+    };
+    
+    this.isElementVisible = function (element) {
+        return _currentView.isElementVisible($(element));
+
+    };
+
+    this.getPaginationInfo = function(){
+        return _currentView.getPaginationInfo();
+    };
+
+
+    /**
+     *
+     * Opens page index of the spine item with index provided
+     *
+     * @param {string} spineIndex Zero based index of the item in the spine
+     * @param {number} pageIndex Zero based index of the page in the spine item
+     * @param {object} initiator optional
+     */
+    this.openSpineIndexPage = function(spineIndex, pageIndex, initiator) {
+
+        var spineItem;
+        if (spineIndex === -1) {
+            spineItem = _spine.last();
+        } else {
+            spineItem = _spine.items[spineIndex];
+        }
+        if(!spineItem) {
+            return;
+        }
+
+        var pageRequest = new ReadiumSDK.Models.PageOpenRequest(spineItem, initiator);
+
+        if (pageIndex === -1) {
+            pageRequest.setLastPage();
+        } else if(pageIndex) {
+            pageRequest.setPageIndex(pageIndex);
+        }
+
+        openPage(pageRequest, 0);
+    };
+
+    this.doesNextPageExist = function() {
+        //TODO: this logic needs to take account of linear=no support, if that is ever added in
+        var _paginationInfo = this.getPaginationInfo();
+        var openPages = _paginationInfo.openPages;
+        if (!openPages || openPages.length === 0) {
+            //no open pages, called on bad state
+            return false;
+        }
+        var currentPage = openPages[openPages.length-1];
+        var lastSpineItemIndex = _paginationInfo.spineItemCount -1;
+        var lastPageIndex = currentPage.spineItemPageCount -1;
+        if (currentPage.spineItemIndex !== lastSpineItemIndex) {
+            return true;
+        } else {
+            return currentPage.spineItemPageIndex !== lastPageIndex;
+        }
+    };
+
+    this.doesPreviousPageExist = function() {
+        //TODO: this logic needs to take account of linear=no support, if that is ever added in
+        var _paginationInfo = this.getPaginationInfo();
+        var openPages = _paginationInfo.openPages;
+        if (!openPages || openPages.length === 0) {
+            //no open pages, called on bad state
+            return false;
+        }
+        var currentPage = openPages[0];
+        var firstSpineItemIndex = 0;
+        var firstPageIndex = 0;
+        if (currentPage.spineItemIndex !== firstSpineItemIndex) {
+            return true;
+        } else {
+            return currentPage.spineItemPageIndex !== firstPageIndex;
+        }
+    };
 };
 
 ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED = 1;
