@@ -200,7 +200,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
         _currentView.on(ReadiumSDK.Events.FXL_VIEW_RESIZED, function(){
             self.trigger(ReadiumSDK.Events.FXL_VIEW_RESIZED);
-        })
+        });
+
+        _currentView.on(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, function($iframe, spineItem) {
+            self.trigger(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, $iframe, spineItem);
+        });
 
         _currentView.render();
 
