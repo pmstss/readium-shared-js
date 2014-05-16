@@ -642,6 +642,17 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
         }
     };
 
+    this.getElements = function(spineItem, selector) {
+
+        if(spineItem != _currentSpineItem) {
+            console.error("spine item is not loaded");
+            return undefined;
+        }
+
+        var navigation = self.getNavigator();
+
+        return navigation.getElements(selector);
+    };
 
 };
 
