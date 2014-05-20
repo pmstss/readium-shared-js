@@ -850,40 +850,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         return {startInfo: startRangeInfo, endInfo: endRangeInfo, clientRect: nodeRangeClientRect}
     };
-    
-    this.getNodeRangeInfoFromCfi = function (cfi) {
-        var contentDoc = self.getRootDocument();
-
-        var wrappedCfi = getWrappedCfiRelativeToContent(cfi);
-
-        try {
-            //noinspection JSUnresolvedVariable
-            var nodeResult = EPUBcfi.Interpreter.getRangeTextNodes(wrappedCfi, contentDoc,
-                ["cfi-marker"],
-                [],
-                ["MathJax_Message"]);
-            /* <- debug
-             console.log(nodeResult);
-             //*/
-        } catch (ex) {
-            //EPUBcfi.Interpreter can throw a SyntaxError
-        }
-
-        if (!nodeResult) {
-            console.log("Can't find nodes for range CFI: " + cfi);
-            return undefined;
-        }
-
-        var startRangeInfo = getRangeInfoFromNodeList(nodeResult.startNodes, nodeResult.startOffset);
-        var endRangeInfo = getRangeInfoFromNodeList(nodeResult.endNodes, nodeResult.endOffset);
-        var nodeRangeClientRect = getNodeRangeClientRect(startRangeInfo.node, startRangeInfo.offset, endRangeInfo.node, endRangeInfo.offset);
-        /* <- debug
-         console.log(nodeRangeClientRect);
-         addOverlayRect(nodeRangeClientRect,'purple',contentDoc);
-         //*/
-
-        return {startInfo: startRangeInfo, endInfo: endRangeInfo, clientRect: nodeRangeClientRect}
-    };
 
     this.isNodeFromRangeCfiVisible = function (cfi) {
         var nodeRangeInfo = this.getNodeRangeInfoFromCfi(cfi);
