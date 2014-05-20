@@ -1,20 +1,29 @@
 //  LauncherOSX
 //
 //  Created by Boris Schneiderman.
-//  Copyright (c) 2012-2013 The Readium Foundation.
-//
-//  The Readium SDK is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
+//  
+//  Redistribution and use in source and binary forms, with or without modification, 
+//  are permitted provided that the following conditions are met:
+//  1. Redistributions of source code must retain the above copyright notice, this 
+//  list of conditions and the following disclaimer.
+//  2. Redistributions in binary form must reproduce the above copyright notice, 
+//  this list of conditions and the following disclaimer in the documentation and/or 
+//  other materials provided with the distribution.
+//  3. Neither the name of the organization nor the names of its contributors may be 
+//  used to endorse or promote products derived from this software without specific 
+//  prior written permission.
+//  
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*
  * CFI navigation helper class
@@ -510,6 +519,16 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
         }
 
+        if (clientRectangles.length === 0) {
+            // sometimes an element is either hidden or empty, and that means
+            // Webkit-based browsers fail to assign proper clientRects to it
+            // in this case we need to go for its sibling (if it exists)
+            $el = $el.next();
+            if ($el.length) {
+                return getNormalizedRectangles($el, visibleContentOffsets);
+            }
+        }
+
         return {
             wrapperRectangle: wrapperRectangle,
             clientRectangles: clientRectangles
@@ -651,62 +670,36 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             props = { top: props };
         }
 
-        var $elements, $element = null;
+        var $elements;
         var $firstVisibleTextNode = null;
         var percentOfElementHeight = 0;
-        var foundTextNode = null;
 
         $elements = $("body", this.getRootElement()).find(":not(iframe)").contents().filter(function () {
             return isValidTextNode(this) || this.nodeName.toLowerCase() === 'img';
         });
 
-        // Find the first visible text node's parent element
-        // or find the element in the case of an image
-        $.each($elements, function () {
+        // Find the first visible text node
+        $.each($elements, function() {
 
             var $element;
 
-            if (this.nodeType === Node.TEXT_NODE) { //text node
+            if(this.nodeType === Node.TEXT_NODE)  { //text node
                 $element = $(this).parent();
-                foundTextNode = this;
             }
             else {
                 $element = $(this); //image
             }
 
             var visibilityResult = visibilityCheckerFunc($element, props, true);
-
             if (visibilityResult) {
                 $firstVisibleTextNode = $element;
                 percentOfElementHeight = 100 - visibilityResult;
                 return false;
             }
-
-            return true; //next element
+            return true;
         });
 
-        if (foundTextNode && $element) {
-            $elements = $element.find(":not(iframe)").addBack().contents().filter(function () {
-                return isValidTextNode(this);
-            });
-            // Find (roughly) the first visible text node
-            $.each($elements, function () {
-                var nodeRect = getNodeClientRect(this);
-                // if the rectangle's right is a positive value, this means that part of it has to be visible
-                // from the client's perspective
-                if (nodeRect.right > 0) {
-                    foundTextNode = this;
-                    // break the loop we found a visible text node
-                    // but if its a large text node it still needs to be fragmented
-                    // and further checked for visibility
-                    return false;
-                }
-
-                return true;
-            });
-        }
-
-        return {$element: $firstVisibleTextNode, percentY: percentOfElementHeight, foundTextNode: foundTextNode};
+        return {$element: $firstVisibleTextNode, percentY: percentOfElementHeight};
     };
 
 
@@ -765,7 +758,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         return cfi;
     };
-
+    
     function getWrappedCfi(partialCfi) {
         return "epubcfi(" + partialCfi + ")";
     }
@@ -789,7 +782,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             //the page index is calculated from the node's client rectangle
             return findPageBySingleRectangle(nodeRangeInfoFromCfi.clientRect);
         }
-        
+
         var $element = getElementByPartialCfi(cfiParts.cfi, classBlacklist, elementBlacklist, idBlacklist);
 
         if (!$element) {
@@ -832,6 +825,40 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         try {
             //noinspection JSUnresolvedVariable
             var nodeResult = EPUBcfi.Interpreter.getRangeTargetNodes(wrappedCfi, contentDoc,
+                ["cfi-marker"],
+                [],
+                ["MathJax_Message"]);
+            /* <- debug
+             console.log(nodeResult);
+             //*/
+        } catch (ex) {
+            //EPUBcfi.Interpreter can throw a SyntaxError
+        }
+
+        if (!nodeResult) {
+            console.log("Can't find nodes for range CFI: " + cfi);
+            return undefined;
+        }
+
+        var startRangeInfo = getRangeInfoFromNodeList(nodeResult.startNodes, nodeResult.startOffset);
+        var endRangeInfo = getRangeInfoFromNodeList(nodeResult.endNodes, nodeResult.endOffset);
+        var nodeRangeClientRect = getNodeRangeClientRect(startRangeInfo.node, startRangeInfo.offset, endRangeInfo.node, endRangeInfo.offset);
+        /* <- debug
+         console.log(nodeRangeClientRect);
+         addOverlayRect(nodeRangeClientRect,'purple',contentDoc);
+         //*/
+
+        return {startInfo: startRangeInfo, endInfo: endRangeInfo, clientRect: nodeRangeClientRect}
+    };
+    
+    this.getNodeRangeInfoFromCfi = function (cfi) {
+        var contentDoc = self.getRootDocument();
+
+        var wrappedCfi = getWrappedCfiRelativeToContent(cfi);
+
+        try {
+            //noinspection JSUnresolvedVariable
+            var nodeResult = EPUBcfi.Interpreter.getRangeTextNodes(wrappedCfi, contentDoc,
                 ["cfi-marker"],
                 [],
                 ["MathJax_Message"]);
@@ -938,8 +965,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         var contentDoc = this.getRootDocument();
 
-        var $element = $("#" + ReadiumSDK.Helpers.escapeJQuerySelector(id), contentDoc);
-        if ($element.length == 0) {
+        var $element = $(contentDoc.getElementById(id));
+        //$("#" + ReadiumSDK.Helpers.escapeJQuerySelector(id), contentDoc);
+        
+        if($element.length == 0) {
             return undefined;
         }
 
@@ -988,12 +1017,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return ret;
     }
 
-    this.getFirstVisibleMediaOverlayElement = function (visibleContentOffsets) {
+    // returns raw DOM element (not $ jQuery-wrapped)
+    this.getFirstVisibleMediaOverlayElement = function(visibleContentOffsets) {
         var docElement = this.getRootElement();
         if (!docElement) return undefined;
 
         var $root = $("body", docElement);
-        if (!$root || !$root[0]) return undefined;
+        if (!$root || !$root.length || !$root[0]) return undefined;
 
         var that = this;
 
@@ -1037,15 +1067,15 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return visibilityCheckerFunc($element, visibleContentOffsets, true);
     };
 
-    /**
-     * @deprecated
-     */
-    this.getVisibleMediaOverlayElements = function (visibleContentOffsets) {
-
-        var $elements = this.getMediaOverlayElements($("body", this.getRootElement()));
-        return this.getVisibleElements($elements, visibleContentOffsets);
-
-    };
+    // /**
+    //  * @deprecated
+    //  */
+    // this.getVisibleMediaOverlayElements = function(visibleContentOffsets) {
+    // 
+    //     var $elements = this.getMediaOverlayElements($("body", this.getRootElement()));
+    //     return this.getVisibleElements($elements, visibleContentOffsets);
+    // 
+    // };
 
     this.isElementVisible = visibilityCheckerFunc;
 
@@ -1189,11 +1219,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         var $element = this.getElements(selector);
 
-        if ($element.length > 0) {
-            return $element[0];
+        if($element.length > 0) {
+            return $element;
         }
 
-        return 0;
+        return undefined;
     };
 
 };

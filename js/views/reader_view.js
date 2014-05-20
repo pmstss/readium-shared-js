@@ -1,19 +1,28 @@
 //  Created by Boris Schneiderman.
 // Modified by Daniel Weck
-//  Copyright (c) 2012-2013 The Readium Foundation.
-//
-//  The Readium SDK is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
+//  
+//  Redistribution and use in source and binary forms, with or without modification, 
+//  are permitted provided that the following conditions are met:
+//  1. Redistributions of source code must retain the above copyright notice, this 
+//  list of conditions and the following disclaimer.
+//  2. Redistributions in binary form must reproduce the above copyright notice, 
+//  this list of conditions and the following disclaimer in the documentation and/or 
+//  other materials provided with the distribution.
+//  3. Neither the name of the organization nor the names of its contributors may be 
+//  used to endorse or promote products derived from this software without specific 
+//  prior written permission.
+//  
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /**
  *
@@ -42,6 +51,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
     var _$el;
     var _annotationsManager = new ReadiumSDK.Views.AnnotationsManager(self, options);
 
+    var _enablePageTransitions = options.enablePageTransitions;
+    
+    //We will call onViewportResize after user stopped resizing window
+    var lazyResize = _.debounce(function() { self.handleViewportResize() }, 100);
+    $(window).on("resize.ReadiumSDK.readerView", _.bind(lazyResize, self));
+
     if (options.el instanceof $) {
         _$el = options.el;
         console.log("** EL is a jQuery selector:" + options.el.attr('id'));
@@ -50,6 +65,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         console.log("** EL is a string:" + _$el.attr('id'));
     }
 
+
     if(options.iframeLoader) {
         _iframeLoader = options.iframeLoader;
     }
@@ -57,33 +73,96 @@ ReadiumSDK.Views.ReaderView = function(options) {
         _iframeLoader = new ReadiumSDK.Views.IFrameLoader();
     }
 
+    function createViewForType(viewType, options) {
+        var createdView;
+        switch(viewType) {
+            case ReadiumSDK.Views.ReaderView.VIEW_TYPE_FIXED:
+                createdView = new ReadiumSDK.Views.FixedView(options);
+                break;
+            case ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_DOC:
+                createdView = new ReadiumSDK.Views.ScrollView(options, false);
+                break;
+            case ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS:
+                createdView = new ReadiumSDK.Views.ScrollView(options, true);
+                break;
+            default:
+                if (window.Modernizr && !window.Modernizr.csscolumns) {
+                    // IE9 doesn't support columnization, instead use a scroll doc view
+                    createdView = new ReadiumSDK.Views.FallbackScrollView(options, false);
+                    break;
+                }
+                createdView = new ReadiumSDK.Views.ReflowableView(options);
+                break;
+        }
+
+        self.trigger(ReadiumSDK.Events.READER_VIEW_CREATED, viewType);
+        return createdView;
+    }
+
+    function getViewType(view) {
+
+        if(view instanceof ReadiumSDK.Views.ReflowableView) {
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED;
+        }
+
+        if(view instanceof ReadiumSDK.Views.FixedView) {
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_FIXED;
+        }
+
+        if(view instanceof ReadiumSDK.Views.ScrollView) {
+            if(view.isContinuousScroll()) {
+                return ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS;
+            }
+
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_DOC;
+        }
+
+        if(view instanceof ReadiumSDK.Views.FallbackScrollView) {
+            // fake a columnized view because it's a fallback of it
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED;
+        }
+
+        console.error("Unrecognized view type");
+        return undefined;
+    }
+
+    //based on https://docs.google.com/spreadsheet/ccc?key=0AoPMUkQhc4wcdDI0anFvWm96N0xRT184ZE96MXFRdFE&usp=drive_web#gid=0 document
+    function deduceDesiredViewType(spineItem) {
+
+        //check settings
+        if(_viewerSettings.scroll == "scroll-doc") {
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_DOC;
+        }
+
+        if(_viewerSettings.scroll == "scroll-continuous") {
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS;
+        }
+
+        //is fixed layout ignore flow
+        if(spineItem.isFixedLayout()) {
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_FIXED;
+        }
+
+        //flow
+        if(spineItem.isFlowScrolledDoc()) {
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_DOC;
+        }
+
+        if(spineItem.isFlowScrolledContinuous()) {
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS;
+        }
+
+        return ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED;
+    }
+
     // returns true is view changed
     function initViewForItem(spineItem) {
 
-        var desiredViewType;
-
-        if(_viewerSettings.isScrollViewDoc || _viewerSettings.isScrollViewContinuous) {
-            desiredViewType = ReadiumSDK.Views.ScrollView;
-        }
-        else if(spineItem.isFixedLayout()) {
-            desiredViewType = ReadiumSDK.Views.FixedView;
-        }
-        //we don't support scroll continues yet we will create scroll doc instead
-        else if(spineItem.isScrolledDoc() || spineItem.isScrolledContinuous()) {
-            desiredViewType = ReadiumSDK.Views.ScrollView;
-        }
-        else {
-            //Use ReflowableView or fallback to ScrollView if there is no CSS3 multi column support
-            if (!Modernizr.csscolumns) {
-                desiredViewType = ReadiumSDK.Views.ScrollView;
-            } else {
-                desiredViewType = ReadiumSDK.Views.ReflowableView;
-            }
-        }
+        var desiredViewType = deduceDesiredViewType(spineItem);
 
         if(_currentView) {
-            //current view is already rendered
-            if(_currentView instanceof desiredViewType) {
+
+            if(getViewType(_currentView) == desiredViewType) {
                 return false;
             }
 
@@ -95,22 +174,18 @@ ReadiumSDK.Views.ReaderView = function(options) {
             spine: _spine,
             userStyles: _userStyles,
             bookStyles: _bookStyles,
-            iframeLoader: _iframeLoader
+            iframeLoader: _iframeLoader,
+            enablePageTransitions: _enablePageTransitions
         };
 
 
-        _currentView = new desiredViewType(viewCreationParams);
-
-
-        _currentView.setViewSettings(_viewerSettings);
-
-        _currentView.on(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, function($iframe, spineItem) {
-            _mediaOverlayPlayer.onDocLoadStart();
-            self.trigger(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, $iframe, spineItem);
-        });
+        _currentView = createViewForType(desiredViewType, viewCreationParams);
 
         _currentView.on(ReadiumSDK.Events.CONTENT_DOCUMENT_LOADED, function($iframe, spineItem) {
 
+            if (!ReadiumSDK.Helpers.isIframeAlive($iframe[0])) return;
+
+            // performance degrades with large DOM (e.g. word-level text-audio sync)
             _mediaOverlayDataInjector.attachMediaOverlayData($iframe, spineItem, _viewerSettings);
 
             _internalLinksSupport.processLinkElements($iframe, spineItem);
@@ -133,7 +208,17 @@ ReadiumSDK.Views.ReaderView = function(options) {
             self.trigger(ReadiumSDK.Events.PAGINATION_CHANGED, pageChangeData);
         });
 
+        _currentView.on(ReadiumSDK.Events.FXL_VIEW_RESIZED, function(){
+            self.trigger(ReadiumSDK.Events.FXL_VIEW_RESIZED);
+        });
+
+        _currentView.on(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, function($iframe, spineItem) {
+            self.trigger(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, $iframe, spineItem);
+        });
+
         _currentView.render();
+
+        _currentView.setViewSettings(_viewerSettings);
 
         return true;
     }
@@ -195,9 +280,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
         _package = new ReadiumSDK.Models.Package(packageData);
 
         _spine = _package.spine;
+        _spine.handleLinear(true);
 
         if(_mediaOverlayPlayer) {
-
             _mediaOverlayPlayer.reset();
         }
 
@@ -255,7 +340,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             if(spineItem) {
                 var pageOpenRequest = new ReadiumSDK.Models.PageOpenRequest(spineItem, self);
                 pageOpenRequest.setFirstPage();
-                openPage(pageOpenRequest);
+                openPage(pageOpenRequest, 0);
             }
 
         }
@@ -295,6 +380,26 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     };
 
+    this.isCurrentViewFixedLayout = function() {
+        return _currentView instanceof ReadiumSDK.Views.FixedView;
+    };
+
+    this.setZoom = function(zoom) {
+        // zoom only handled by fixed layout views 
+        if (self.isCurrentViewFixedLayout()) {
+            _currentView.setZoom(zoom);
+        }
+    };
+
+    this.getViewScale = function() {
+        if (self.isCurrentViewFixedLayout()) {
+            return 100 * _currentView.getViewScale();
+        }
+        else {
+            return 100;
+        }
+    };
+
     /**
      * Updates reader view based on the settings specified in settingsData object
      * @param settingsData
@@ -304,21 +409,38 @@ ReadiumSDK.Views.ReaderView = function(options) {
 //console.debug("UpdateSettings: " + JSON.stringify(settingsData));
 
         _viewerSettings.update(settingsData);
-
+        
         if(_currentView && !settingsData.doNotUpdateView) {
 
             var bookMark = _currentView.bookmarkCurrentPage();
 
-            if(bookMark) {
+            if(bookMark && bookMark.idref) {
+     
+                var wasPlaying = false;
+                if (_currentView.isReflowable && _currentView.isReflowable())
+                {
+                    wasPlaying = self.isPlayingMediaOverlay();
+                    if (wasPlaying)
+                    {
+                        self.pauseMediaOverlay();
+                    }
+                }
 
                 var spineItem = _spine.getItemById(bookMark.idref);
+                
                 var isViewChanged = initViewForItem(spineItem);
-
                 if(!isViewChanged) {
                     _currentView.setViewSettings(_viewerSettings);
                 }
-                if (bookMark.idref && bookMark.contentCFI) {
-                    self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
+
+                self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
+
+                if (wasPlaying)
+                {
+                    self.playMediaOverlay();
+                    // setTimeout(function()
+                    // {
+                    // }, 60);
                 }
             }
         }
@@ -331,6 +453,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
     this.openPageNext = function() {
 
+        if(getViewType(_currentView) === ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS) {
+            _currentView.openPageNext(self);
+            return;
+        }
+
         var paginationInfo = _currentView.getPaginationInfo();
 
         if(paginationInfo.openPages.length == 0) {
@@ -340,7 +467,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         var lastOpenPage = paginationInfo.openPages[paginationInfo.openPages.length - 1];
 
         if(lastOpenPage.spineItemPageIndex < lastOpenPage.spineItemPageCount - 1) {
-            return _currentView.openPageNext(this);
+            return _currentView.openPageNext(self);
         }
 
         var currentSpineItem = _spine.getItemById(lastOpenPage.idref);
@@ -354,13 +481,18 @@ ReadiumSDK.Views.ReaderView = function(options) {
         var openPageRequest = new ReadiumSDK.Models.PageOpenRequest(nextSpineItem, self);
         openPageRequest.setFirstPage();
 
-        return openPage(openPageRequest);
+        return openPage(openPageRequest, 2);
     };
 
     /**
      * Opens the previews page.
      */
     this.openPagePrev = function() {
+
+        if(getViewType(_currentView) === ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS) {
+            _currentView.openPagePrev(self);
+            return;
+        }
 
         var paginationInfo = _currentView.getPaginationInfo();
 
@@ -386,7 +518,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         var openPageRequest = new ReadiumSDK.Models.PageOpenRequest(prevSpineItem, self);
         openPageRequest.setLastPage();
 
-        return openPage(openPageRequest);
+        return openPage(openPageRequest, 1);
     };
 
     function getSpineItem(idref) {
@@ -429,9 +561,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
             pageData.setElementCfi(elementCfi);
         }
 
-        openPage(pageData);
+        openPage(pageData, 0);
     };
-
 
     /**
      *
@@ -449,6 +580,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
 
         var pageRequest;
+        var spineItem = _spine.items[pageIndex];
+        if(!spineItem) {
+            return;
+        }
+
 
         if(_package.isFixedLayout()) {
             var spineItem = _spine.items[pageIndex];
@@ -473,7 +609,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             }
         }
 
-        openPage(pageRequest);
+        openPage(pageRequest, 0);
     };
 
 
@@ -509,12 +645,15 @@ ReadiumSDK.Views.ReaderView = function(options) {
         openPage(pageRequest);
     };
 
-    function openPage(pageRequest) {
+    function openPage(pageRequest, dir) {
 
-        initViewForItem(pageRequest.spineItem);
-        return _currentView.openPage(pageRequest);
+        var isViewChanged = initViewForItem(pageRequest.spineItem);
+        if(!isViewChanged) {
+            _currentView.setViewSettings(_viewerSettings);
+        }
+
+        _currentView.openPage(pageRequest, dir);
     }
-
 
     /**
      *
@@ -537,7 +676,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             pageData.setPageIndex(pageIndex);
         }
 
-        openPage(pageData);
+        openPage(pageData, 0);
     };
 
     /**
@@ -594,9 +733,17 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
 
         return undefined;
-
     };
 
+    this.getElementById = function(spineItem, id) {
+
+        if(_currentView) {
+            return _currentView.getElementById(spineItem, id);
+        }
+
+        return undefined;
+    };
+    
     this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         if(_currentView) {
@@ -672,9 +819,23 @@ ReadiumSDK.Views.ReaderView = function(options) {
             hrefPart = combinedPath;
             elementId = undefined;
         }
-//console.debug("============ openContentUrl - hrefPart: " + hrefPart);
 
-        return {href: hrefPart, elementId: elementId, idref: _spine.getItemByHref(hrefPart).idref};
+
+        var spineItem = _spine.getItemByHref(hrefPart);
+        if(!spineItem) {
+            console.warn('spineItem ' + hrefPart + ' not found');
+            // sometimes that happens because spine item's URI gets encoded,
+            // yet it's compared with raw strings by `getItemByHref()` -
+            // so we try to search with decoded link as well
+            var decodedHrefPart = decodeURIComponent(hrefPart);
+            spineItem = _spine.getItemByHref(decodedHrefPart);
+            if (!spineItem) {
+                console.warn('decoded spineItem ' + decodedHrefPart + ' missing as well');
+                return;
+            }
+        }
+        
+        return {href: hrefPart, elementId: elementId, idref: spineItem.idref};
     };
 
     /**
@@ -700,7 +861,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
 
 
-        openPage(pageData);
+        openPage(pageData, 0);
     };
 
     /**
@@ -850,16 +1011,35 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return undefined;
     };
 
-    this.insureElementVisibility = function(element, initiator) {
+    this.insureElementVisibility = function(spineItemId, element, initiator) {
 
         if(_currentView) {
-            _currentView.insureElementVisibility(element, initiator);
+            _currentView.insureElementVisibility(spineItemId, element, initiator);
         }
     }
 
     this.handleViewportResize = function(){
         if (_currentView){
+            
+            var wasPlaying = false;
+            if (_currentView.isReflowable && _currentView.isReflowable())
+            {
+                wasPlaying = self.isPlayingMediaOverlay();
+                if (wasPlaying)
+                {
+                    self.pauseMediaOverlay();
+                }
+            }
+            
             _currentView.onViewportResize();
+
+            if (wasPlaying)
+            {
+                setTimeout(function()
+                {
+                    self.playMediaOverlay();
+                }, 150);
+            }
         }
     }
 
@@ -922,6 +1102,27 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return _annotationsManager.removeHighlight(id);
     };
 
+    /**
+     * Allows the subscription of events that trigger inside the epub content iframe
+     *
+     * @method addIFrameEventListener
+     * @param {string} eventName    Event name.
+     * @param {function} callback   Callback function.
+     * @param {object} context      User specified data passed to the callback function.
+     * @param {object} options      Specify additional options: (as a hash object)
+     *
+     *                              jqueryEvent {bool}: use a jquery or a native event binding.
+     *                              onWindow {bool}: bind the event on the window.
+     *                              onDocument {bool}: bind the event on the contentDocument.
+     *                              onBody {bool}: bind the event on the body inside the iframe.
+     *                              onSelector {string}: if specified, bind the event on a selector
+     *                                                   matching an element inside the iframe.
+     * @returns {undefined}
+     */
+    this.addIFrameEventListener = function (eventName, callback, context, options) {
+        _iframeLoader.addIFrameEventListener(eventName, callback, context, options);
+    };
+    
     /**
      * Redraws all annotations
      *
@@ -999,27 +1200,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     };
 
-    /**
-     * Allows the subscription of events that trigger inside the epub content iframe
-     *
-     * @method addIFrameEventListener
-     * @param {string} eventName    Event name.
-     * @param {function} callback   Callback function.
-     * @param {object} context      User specified data passed to the callback function.
-     * @param {object} options      Specify additional options: (as a hash object)
-     *
-     *                              jqueryEvent {bool}: use a jquery or a native event binding.
-     *                              onWindow {bool}: bind the event on the window.
-     *                              onDocument {bool}: bind the event on the contentDocument.
-     *                              onBody {bool}: bind the event on the body inside the iframe.
-     *                              onSelector {string}: if specified, bind the event on a selector
-     *                                                   matching an element inside the iframe.
-     * @returns {undefined}
-     */
-    this.addIFrameEventListener = function (eventName, callback, context, options) {
-        _iframeLoader.addIFrameEventListener(eventName, callback, context, options);
-    };
-
     this.getPaginationInfo = function(){
         return _currentView.getPaginationInfo();
     };
@@ -1053,7 +1233,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             pageRequest.setPageIndex(pageIndex);
         }
 
-        openPage(pageRequest);
+        openPage(pageRequest, 0);
     };
 
     this.doesNextPageExist = function() {
@@ -1092,3 +1272,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
     };
 };
+
+ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED = 1;
+ReadiumSDK.Views.ReaderView.VIEW_TYPE_FIXED = 2;
+ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_DOC = 3;
+ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS = 4;

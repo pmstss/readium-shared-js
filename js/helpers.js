@@ -1,20 +1,29 @@
 //  LauncherOSX
 //
 //  Created by Boris Schneiderman.
-//  Copyright (c) 2012-2013 The Readium Foundation.
-//
-//  The Readium SDK is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
+//  
+//  Redistribution and use in source and binary forms, with or without modification, 
+//  are permitted provided that the following conditions are met:
+//  1. Redistributions of source code must retain the above copyright notice, this 
+//  list of conditions and the following disclaimer.
+//  2. Redistributions in binary form must reproduce the above copyright notice, 
+//  this list of conditions and the following disclaimer in the documentation and/or 
+//  other materials provided with the distribution.
+//  3. Neither the name of the organization nor the names of its contributors may be 
+//  used to endorse or promote products derived from this software without specific 
+//  prior written permission.
+//  
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ReadiumSDK.Helpers.Rect = function(left, top, width, height) {
@@ -146,6 +155,101 @@ ReadiumSDK.Helpers.Margins = function(margin, border, padding) {
     }
 };
 
+ReadiumSDK.Helpers.triggerLayout = function($iframe) {
+
+    var doc = $iframe[0].contentDocument;
+
+    if(!doc) {
+        return;
+    }
+    
+    var ss = undefined;
+    try
+    {
+        ss = doc.styleSheets && doc.styleSheets.length ? doc.styleSheets[0] : undefined;
+        if (!ss)
+        {
+            var style = doc.createElement('style');
+            doc.head.appendChild(style);
+            style.appendChild(doc.createTextNode(''));
+            ss = style.sheet;
+        }
+    
+        if (ss)
+            ss.insertRule('body:first-child::before {content:\'READIUM\';color: red;font-weight: bold;}', ss.cssRules.length);
+    }
+    catch (ex)
+    {
+        console.error(ex);
+    }
+    
+    try
+    {
+        var el = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
+        el.appendChild(doc.createTextNode("*{}"));
+        doc.body.appendChild(el);
+        doc.body.removeChild(el);
+
+        if (ss)
+            ss.deleteRule(ss.cssRules.length-1);
+    }
+    catch (ex)
+    {
+        console.error(ex);
+    }
+
+    if(doc.body) {
+        var val = doc.body.offsetTop; // triggers layout
+    }
+
+};
+
+//Based on https://docs.google.com/spreadsheet/ccc?key=0AoPMUkQhc4wcdDI0anFvWm96N0xRT184ZE96MXFRdFE&usp=drive_web#gid=0 doc
+ReadiumSDK.Helpers.deduceSyntheticSpread = function($viewport, spineItem, settings) {
+
+    if(!$viewport || $viewport.length == 0) {
+        return false;
+    }
+
+    if(spineItem && spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_NONE) {
+        return false;
+    }
+
+    if(settings.syntheticSpread == "double") {
+        return true;
+    }
+    else if(settings.syntheticSpread == "single") {
+        return false;
+    }
+
+    if(!spineItem) {
+        return false;
+    }
+
+    if(spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_AUTO || spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_BOTH) {
+        return true;
+    }
+
+    var orientation = ReadiumSDK.Helpers.getOrientation($viewport);
+
+    if(spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_LANDSCAPE) {
+        return orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE;
+    }
+
+    if(spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_PORTRAIT) {
+        return orientation === ReadiumSDK.Views.ORIENTATION_PORTRAIT;
+    }
+
+    if(!spineItem.rendition_spread) {
+        // if no spread set in document and user didn't set in in setting we will do double for landscape
+        return orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE;
+    }
+
+    console.warn("Unexpected spread properties condition!");
+    return false;
+
+};
+
 ReadiumSDK.Helpers.Margins.fromElement = function($element) {
     return new this($element.margin(), $element.border(), $element.padding());
 };
@@ -161,8 +265,10 @@ ReadiumSDK.Helpers.loadTemplate = function(name, params) {
 };
 
 ReadiumSDK.Helpers.loadTemplate.cache = {
+
     "fixed_book_frame" : '<div id="fixed-book-frame" class="book-frame fixed-book-frame"></div>',
-    "fixed_page_frame" : '<div class="fixed-page-frame"><iframe scrolling="no" class="iframe-fixed"></iframe></div>',
+    "single_page_frame" : '<div class="single-page-frame"><iframe scrolling="no" class="iframe-fixed"></iframe></div>',
+    "scrolled_book_frame" : '<div id="reflowable-book-frame" class="book-frame reflowable-book-frame"><div id="scrolled-content-frame"></div></div>',
     "reflowable_book_frame" : '<div id="reflowable-book-frame" class="book-frame reflowable-book-frame"></div>',
     "reflowable_book_page_frame": '<div id="reflowable-content-frame" class="reflowable-content-frame"><iframe scrolling="no" id="epubContentIframe"></iframe></div>'
 };
@@ -186,6 +292,25 @@ ReadiumSDK.Helpers.setStyles = function(styles, $element) {
     }
 
 };
+
+ReadiumSDK.Helpers.isIframeAlive = function(iframe)
+{
+    var w = undefined;
+    var d = undefined;
+    try
+    {
+        w = iframe.contentWindow;
+        d = iframe.contentDocument;
+    }
+    catch (ex)
+    {
+        console.error(ex);
+        return false;
+    }
+    
+    return w && d;
+};
+
 
 ReadiumSDK.Helpers.getOrientation = function($viewport) {
 
@@ -281,7 +406,7 @@ ReadiumSDK.Helpers.CSSTransformMatrix = {
         return matches[1];
     }
 };
-
+//use triggerLayout helper instead
 ReadiumSDK.Helpers.waitForRendering = function($iframe) {
 
     var doc = $iframe[0].contentDocument;
