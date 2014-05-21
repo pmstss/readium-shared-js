@@ -1271,6 +1271,10 @@ ReadiumSDK.Views.ReaderView = function(options) {
             return currentPage.spineItemPageIndex !== firstPageIndex;
         }
     };
+
+    this.getRenderedSythenticSpread = function(){
+        return self.getPaginationInfo().openPages.length === 2 ? 'double' : 'single';
+    }
 };
 
 ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED = 1;
