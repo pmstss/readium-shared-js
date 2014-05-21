@@ -635,7 +635,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
 
         var navigation = self.getNavigator();
         var visibleContentOffsets = {top:0, bottom: _$iframe.height()};
-        var elements = navigation.getVisibleElementsWithFilter(selector, visibleContentOffsets);
+        var elements = navigation.getVisibleElements(selector, visibleContentOffsets);
 
         if (includeSpineItem) {
             return {elements: elements, spineItem:_currentSpineItem};
