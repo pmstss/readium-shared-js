@@ -1046,7 +1046,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     this.isElementVisible = visibilityCheckerFunc;
 
     this.getVisibleElementsWithFilter = function (visibleContentOffsets, filterFunction) {
-
         var $elements = this.getElementsWithFilter($("body", this.getRootElement()), filterFunction);
         return this.getVisibleElements($elements, visibleContentOffsets);
     };
@@ -1064,15 +1063,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     };
 
     this.getAllVisibleElementsWithSelector = function (selector, visibleContentOffset) {
-        var elements = $(selector, this.getRootElement()).filter(function (e) {
-            return true;
-        });
+        var elements = $(selector, this.getRootElement());
         var $newElements = [];
         $.each(elements, function () {
             $newElements.push($(this));
         });
-        var visibleDivs = this.getVisibleElements($newElements, visibleContentOffset);
-        return visibleDivs;
+        var visibleElements = this.getVisibleElements($newElements, visibleContentOffset);
+        return visibleElements;
 
     };
 
@@ -1080,7 +1077,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         var visibleElements = [];
 
-        // Find the first visible text node
         $.each($elements, function () {
             var $element = this;
             var visibilityPercentage = visibilityCheckerFunc(
@@ -1092,17 +1088,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                     element: $visibleElement[0], // DOM Element is pushed
                     percentVisible: visibilityPercentage
                 });
-                return true;
             }
-
-            // if element's position cannot be determined, just go to next one
-            if (visibilityPercentage === null) {
-                return true;
-            }
-
-            // continue if no visibleElements have been found yet,
-            // stop otherwise
-            return visibleElements.length === 0;
         });
 
         return visibleElements;
