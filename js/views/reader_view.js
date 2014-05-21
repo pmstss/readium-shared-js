@@ -1155,7 +1155,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     this.getVisibleAnnotationMidpoints = function () {
         if (_currentView) {
-            var $visibleElements = _currentView.getVisibleElementsWithFilter(_annotationsManager.getAnnotationsElementFilter(),true);
+            var $visibleElements = _currentView.getVisibleElements(_annotationsManager.getAnnotationsElementSelector(), true);
 
             var elementMidpoints = _annotationsManager.getAnnotationMidpoints($visibleElements);
             return elementMidpoints || [];

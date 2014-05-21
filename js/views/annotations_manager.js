@@ -271,6 +271,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         _.each($elementSpineItemCollection, function (item){
             var annotations = [];
 
+            var lastId = null;
             _.each(item.elements, function(element){
 
                 var $element;
@@ -282,16 +283,19 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
                     $element = $(element);
                     element = element[0];
                 }
-                var elementId = $element.attr('id');
+                var elementId = $element.attr('data-id');
+
                 if(!elementId){
                     console.warn('AnnotationsManager:getAnnotationMidpoints: Got an annotation element with no ID??')
                     return;
                 }
-                elementId = elementId.substring(6);
+                if (elementId === lastId) return;
+                lastId = elementId;
+
                 //calculate position offsets with scaling
                 var scale = 1;
                 //figure out a better way to get the html parent from an element..
-                var $html = $('body',$element.parents()).parent();
+                var $html = $element.parent();
                 //get transformation scale from content document
                 var matrix = ReadiumSDK.Helpers.CSSTransformMatrix.getMatrix($html);
                 if (matrix) {
@@ -312,9 +316,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return output;
     };
 
-    this.getAnnotationsElementFilter = function(){
-        return function ($element) {
-            return $element.is('span.range-start-marker');
-        }
+    this.getAnnotationsElementSelector = function () {
+        return 'div.highlight';
     };
 };
