@@ -621,7 +621,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
     this.getVisibleElementsWithFilter = function(filterFunction, includeSpineItem) {
         var navigation = self.getNavigator();
         var visibleContentOffsets = {top:0, bottom: _$iframe.height()};
-        var elements = navigation.getVisibleElementsWithFilter(visibleContentOffsets,filterFunction);
+        var elements = navigation.getVisibleElementsWithFilter(visibleContentOffsets, filterFunction);
 
         if (includeSpineItem) {
             return {elements: elements, spineItem:_currentSpineItem};
@@ -631,9 +631,23 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
 
     };
 
-    this.getAllElementsWithFilter = function(filterFunction, includeSpineItem) {
+    this.getVisibleElements = function(selector, includeSpineItem) {
+
         var navigation = self.getNavigator();
-        var elements = navigation.getAllElementsWithFilter(filterFunction);
+        var visibleContentOffsets = {top:0, bottom: _$iframe.height()};
+        var elements = navigation.getVisibleElementsWithFilter(selector, visibleContentOffsets);
+
+        if (includeSpineItem) {
+            return {elements: elements, spineItem:_currentSpineItem};
+        } else {
+            return elements;
+        }
+
+    };
+
+    this.getAllElementsWithFilter = function(filterFunction, includeSpineItem, outsideBody) {
+        var navigation = self.getNavigator();
+        var elements = navigation.getAllElementsWithFilter(filterFunction, outsideBody);
 
         if (includeSpineItem) {
             return {elements: elements, spineItem:_currentSpineItem};

@@ -667,6 +667,20 @@ ReadiumSDK.Views.FixedView = function(options){
         return elements;
     };
 
+    this.getVisibleElements = function(selector, includeSpineItems) {
+
+        var elements = [];
+
+        var views = getDisplayingViews();
+
+        for(var i = 0, count = views.length; i < count; i++) {
+            //for now we assume that for fixed layouts, elements are always visible
+            elements.push(views[i].getVisibleElements(selector, includeSpineItems));
+        }
+
+        return elements;
+    };
+
     this.isElementVisible = function($element){
 
         //for now we assume that for fixed layouts, elements are always visible
