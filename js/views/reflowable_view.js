@@ -369,7 +369,7 @@ ReadiumSDK.Views.ReflowableView = function(options){
 
     function onPaginationChanged(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
 
-        _paginationInfo.pageOffset = (_paginationInfo.columnWidth + _paginationInfo.columnGap) * _paginationInfo.visibleColumnCount * _paginationInfo.currentSpreadIndex;
+        _paginationInfo.pageOffset = (_$contentFrame.width() + _paginationInfo.columnGap) * _paginationInfo.currentSpreadIndex;
         redraw();
         self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
     }
