@@ -560,12 +560,17 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
 
     this.getVisibleElementsWithFilter = function(filterFunction) {
 
-        console.warn('getVisibleElementsWithFilter: Not implemented yet for scroll_view');
+        console.warn('getVisibleElementsWithFilter: Not implemented for IE9 fallback view');
+    };
+
+    this.getVisibleElements = function(selector, includeSpineItems) {
+
+        console.warn('getVisibleElements: Not implemented for IE9 fallback view');
     };
 
     this.isElementVisible = function($element){
 
-        console.warn('isElementVisible: Not implemented yet for scroll_view');
+        console.warn('isElementVisible: Not implemented for IE9 fallback view');
     };
 
     this.getElements = function(spineItem, selector) {
