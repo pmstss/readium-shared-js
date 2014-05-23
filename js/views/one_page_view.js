@@ -376,7 +376,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
         }
     };
 
-    this.transformContent = _.bind(_.debounce(this.transformContentImmediate, 50), self);
+    this.transformContent = _.bind(_.debounce(this.transformContentImmediate, 50, true), self);
 
     function generateTransformCSS(scale, left, top) {
 
