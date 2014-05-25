@@ -1238,7 +1238,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     this.doesNextPageExist = function() {
         //TODO: this logic needs to take account of linear=no support, if that is ever added in
-        var _paginationInfo = this.getPaginationInfo();
+        var _paginationInfo = self.getPaginationInfo();
         var openPages = _paginationInfo.openPages;
         if (!openPages || openPages.length === 0) {
             //no open pages, called on bad state
@@ -1256,7 +1256,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     this.doesPreviousPageExist = function() {
         //TODO: this logic needs to take account of linear=no support, if that is ever added in
-        var _paginationInfo = this.getPaginationInfo();
+        var _paginationInfo = self.getPaginationInfo();
         var openPages = _paginationInfo.openPages;
         if (!openPages || openPages.length === 0) {
             //no open pages, called on bad state
@@ -1270,6 +1270,22 @@ ReadiumSDK.Views.ReaderView = function(options) {
         } else {
             return currentPage.spineItemPageIndex !== firstPageIndex;
         }
+    };
+
+    this.doesRightPageExist = function(){
+        var _paginationInfo = self.getPaginationInfo();
+        if (_paginationInfo.pageProgressionDirection === "rtl") {
+            return self.doesPreviousPageExist();
+        }
+        return self.doesNextPageExist();
+    };
+
+    this.doesLeftPageExist = function(){
+        var _paginationInfo = self.getPaginationInfo();
+        if (_paginationInfo.pageProgressionDirection === "rtl") {
+            return self.doesNextPageExist();
+        }
+        return self.doesPreviousPageExist();
     };
 
     this.getRenderedSythenticSpread = function(){
