@@ -618,42 +618,25 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
         return undefined;
     };
 
-    this.getVisibleElementsWithFilter = function(filterFunction, includeSpineItem) {
+    this.getVisibleElementsWithFilter = function (filterFunction) {
         var navigation = self.getNavigator();
-        var visibleContentOffsets = {top:0, bottom: _$iframe.height()};
+        var visibleContentOffsets = {top: 0, bottom: _$iframe.height()};
         var elements = navigation.getVisibleElementsWithFilter(visibleContentOffsets, filterFunction);
-
-        if (includeSpineItem) {
-            return {elements: elements, spineItem:_currentSpineItem};
-        } else {
-            return elements;
-        }
-
+        return elements;
     };
 
-    this.getVisibleElements = function(selector, includeSpineItem) {
+    this.getVisibleElements = function (selector) {
 
         var navigation = self.getNavigator();
-        var visibleContentOffsets = {top:0, bottom: _$iframe.height()};
+        var visibleContentOffsets = {top: 0, bottom: _$iframe.height()};
         var elements = navigation.getAllVisibleElementsWithSelector(selector, visibleContentOffsets);
-
-        if (includeSpineItem) {
-            return {elements: elements, spineItem:_currentSpineItem};
-        } else {
-            return elements;
-        }
-
+        return elements;
     };
 
-    this.getAllElementsWithFilter = function(filterFunction, includeSpineItem, outsideBody) {
+    this.getAllElementsWithFilter = function (filterFunction, outsideBody) {
         var navigation = self.getNavigator();
         var elements = navigation.getAllElementsWithFilter(filterFunction, outsideBody);
-
-        if (includeSpineItem) {
-            return {elements: elements, spineItem:_currentSpineItem};
-        } else {
-            return elements;
-        }
+        return elements;
     };
 
     this.getElements = function(spineItem, selector) {
