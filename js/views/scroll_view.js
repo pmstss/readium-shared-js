@@ -1322,6 +1322,16 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         console.warn('isVisibleSpineItemElementCfi: Not implemented yet for scroll_view');
     };
 
+    this.getLoadedContentFrames = function () {
+        var views = getVisiblePageViews();
+        var contentDocuments = [];
+        for (var i = 0, count = views.length; i < count; i++) {
+            var view = views[i];
+            contentDocuments.push(view.getLoadedContentFrames()[0]);
+        }
+        return contentDocuments.length ? contentDocuments : undefined ;
+    };
+
 };
 
 

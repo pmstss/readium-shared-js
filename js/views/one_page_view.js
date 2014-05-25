@@ -651,6 +651,9 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
         return navigation.getElements(selector);
     };
 
+    this.getLoadedContentFrames = function () {
+        return [{spineItem: _currentSpineItem, $iframe: _$iframe}];
+    };
 };
 
 ReadiumSDK.Views.OnePageView.SPINE_ITEM_OPEN_START = "SpineItemOpenStart";

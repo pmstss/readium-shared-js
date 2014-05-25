@@ -1274,7 +1274,14 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     this.getRenderedSythenticSpread = function(){
         return self.getPaginationInfo().openPages.length === 2 ? 'double' : 'single';
-    }
+    };
+
+    this.getLoadedContentFrames = function () {
+        if (_currentView) {
+            return _currentView.getLoadedContentFrames();
+        }
+        return undefined;
+    };
 };
 
 ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED = 1;

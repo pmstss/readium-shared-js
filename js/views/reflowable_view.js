@@ -739,4 +739,8 @@ ReadiumSDK.Views.ReflowableView = function(options){
         return ($elementFromCfi && this.isElementVisible($elementFromCfi));
     };
 
+    this.getLoadedContentFrames = function () {
+        return [{spineItem: _currentSpineItem, $iframe: _$iframe}];
+    };
+
 };
