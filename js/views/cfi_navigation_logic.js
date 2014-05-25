@@ -673,6 +673,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         var $elements;
         var $firstVisibleTextNode = null;
         var percentOfElementHeight = 0;
+        var foundTextNode = null;
 
         $elements = $("body", this.getRootElement()).find(":not(iframe)").contents().filter(function () {
             return isValidTextNode(this) || this.nodeName.toLowerCase() === 'img';
@@ -685,6 +686,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
             if(this.nodeType === Node.TEXT_NODE)  { //text node
                 $element = $(this).parent();
+                foundTextNode = this;
             }
             else {
                 $element = $(this); //image
@@ -699,7 +701,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             return true;
         });
 
-        return {$element: $firstVisibleTextNode, percentY: percentOfElementHeight};
+        return {$element: $firstVisibleTextNode, percentY: percentOfElementHeight, foundTextNode: foundTextNode};
     };
 
 
