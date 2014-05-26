@@ -107,9 +107,9 @@ ReadiumSDK.Views.ReflowableView = function(options){
         return true;
     };
 
-    this.onViewportResize = function() {
+    this.onViewportResize = function(forceResize) {
 
-        if(updateViewportSize()) {
+        if(forceResize || updateViewportSize()) {
             //depends on aspect ratio of viewport and rendition:spread-* setting we may have to switch spread on/off
             _paginationInfo.visibleColumnCount = recalculateColumnCount();
             updatePagination();

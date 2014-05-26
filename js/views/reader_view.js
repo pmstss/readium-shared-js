@@ -1013,7 +1013,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
     }
 
-    this.handleViewportResize = function(){
+    this.handleViewportResize = function(forceResize){
         if (_currentView){
             
             var wasPlaying = false;
@@ -1026,7 +1026,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 }
             }
             
-            _currentView.onViewportResize();
+            _currentView.onViewportResize(forceResize);
 
             if (wasPlaying)
             {
