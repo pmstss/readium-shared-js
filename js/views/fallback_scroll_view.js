@@ -116,6 +116,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
         updateHtmlFontSize();
 
         resizeIFrameToContent();
+        onPaginationChanged(self);
     };
 
     function renderIframe() {
