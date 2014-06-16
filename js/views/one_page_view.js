@@ -380,10 +380,8 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
 
     function generateTransformCSS(scale, left, top) {
 
-        var translate = (left !== 0 || top !== 0) ? "translate(" + left + "px, " + top + "px)" : undefined;
-        var scale = scale !== 1 ? "scale(" + scale + ")" : undefined;
-
-        if (!(translate || scale)) return {};
+        var translate =  "translate(" + left + "px, " + top + "px)";
+        var scale =  "scale(" + scale + ")";
 
         var transformString = (translate && scale) ? (translate + " " + scale) : (translate ? translate : scale); // the order is important!
 
