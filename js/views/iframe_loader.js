@@ -135,14 +135,22 @@ ReadiumSDK.Views.IFrameLoader = function() {
 
         }, 8000);
 
-        //replace location history instead of setting src attribute
-        // because browsers like to create new history entries with the latter
-        if (iframe.contentWindow
-            && iframe.contentWindow.location
-            && iframe.contentWindow.location.replace
-            && (typeof iframe.contentWindow.location.replace) === "function") {
+        if (window.location.protocol
+            && window.location.protocol === 'http:'
+            || window.location.protocol === 'https:') {
+            //replace location history instead of setting src attribute
+            // because browsers like to create new history entries with the latter
+            // (this prevents unexpected behaviour when hitting a browser's back button
+            // but does not seem to work well with file:// protocols)
+            if (iframe.contentWindow
+                && iframe.contentWindow.location
+                && iframe.contentWindow.location.replace
+                && (typeof iframe.contentWindow.location.replace) === "function") {
 
-            iframe.contentWindow.location.replace(src);
+                iframe.contentWindow.location.replace(src);
+            } else {
+                iframe.src = src;
+            }
         } else {
             iframe.src = src;
         }
