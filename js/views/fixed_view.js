@@ -707,6 +707,22 @@ ReadiumSDK.Views.FixedView = function(options){
         return undefined;
     };
 
+    this.getNodeRangeInfoFromCfi = function (spineIdRef, partialCfi) {
+
+        var views = getDisplayingViews();
+
+        for (var i = 0, count = views.length; i < count; i++) {
+
+            var view = views[i];
+            if (view.currentSpineItem().idref == spineIdRef) {
+                //for now we assume that for fixed layouts, everything is always visible
+                return view.getNodeRangeInfoFromCfi(spineIdRef, partialCfi);
+            }
+        }
+
+        return undefined;
+    };
+
     this.getLoadedContentFrames = function () {
         var views = getDisplayingViews();
         var contentDocuments = [];

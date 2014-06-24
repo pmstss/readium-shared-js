@@ -1195,6 +1195,18 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     };
 
+    this.getNodeRangeInfoFromCfi = function (spineIdRef, partialCfi) {
+        if (_currentView && spineIdRef && partialCfi) {
+            var nodeRangeInfo = _currentView.getNodeRangeInfoFromCfi(spineIdRef, partialCfi);
+            if (nodeRangeInfo) {
+                return new ReadiumSDK.Models.NodeRangeInfo(nodeRangeInfo.clientRect)
+                    .setStartInfo(nodeRangeInfo.startInfo)
+                    .setEndInfo(nodeRangeInfo.endInfo);
+            }
+        }
+        return undefined;
+    };
+
     this.getPaginationInfo = function(){
         return _currentView.getPaginationInfo();
     };

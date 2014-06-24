@@ -603,4 +603,17 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
     this.getLoadedContentFrames = function () {
         return [{spineItem: _currentSpineItem, $iframe: _$iframe}];
     };
+
+    this.getNodeRangeInfoFromCfi = function(spineIdRef, partialCfi){
+        if (spineIdRef != _currentSpineItem.idref) {
+            console.warn("spine item is not loaded");
+            return undefined;
+        }
+        if (_navigationLogic.isRangeCfi(partialCfi)) {
+            return _navigationLogic.getNodeRangeInfoFromCfi(partialCfi);
+        } else {
+            console.error("partialCfi is not in range format (needs character offsets)");
+            return undefined;
+        }
+    };
 };
