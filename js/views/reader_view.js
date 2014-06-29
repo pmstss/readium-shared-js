@@ -236,7 +236,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         };
     }
 
-    function createViewForType(viewType, options) {
+    this.createViewForType = function(viewType, options) {
         var createdView;
         switch(viewType) {
             case ReadiumSDK.Views.ReaderView.VIEW_TYPE_FIXED:
@@ -253,22 +253,25 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 break;
         }
 
-        self.trigger(ReadiumSDK.Events.READER_VIEW_CREATED, viewType);
         return createdView;
-    }
+    };
 
-    function getViewType(view) {
+    this.getCurrentViewType = function() {
 
-        if(view instanceof ReadiumSDK.Views.ReflowableView) {
+        if(!_currentView) {
+            return undefined;
+        }
+
+        if(_currentView instanceof ReadiumSDK.Views.ReflowableView) {
             return ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED;
         }
 
-        if(view instanceof ReadiumSDK.Views.FixedView) {
+        if(_currentView instanceof ReadiumSDK.Views.FixedView) {
             return ReadiumSDK.Views.ReaderView.VIEW_TYPE_FIXED;
         }
 
-        if(view instanceof ReadiumSDK.Views.ScrollView) {
-            if(view.isContinuousScroll()) {
+        if(_currentView instanceof ReadiumSDK.Views.ScrollView) {
+            if(_currentView.isContinuousScroll()) {
                 return ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS;
             }
 
@@ -277,7 +280,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
         console.error("Unrecognized view type");
         return undefined;
-    }
+    };
 
     //based on https://docs.google.com/spreadsheet/ccc?key=0AoPMUkQhc4wcdDI0anFvWm96N0xRT184ZE96MXFRdFE&usp=drive_web#gid=0 document
     function deduceDesiredViewType(spineItem) {
@@ -315,7 +318,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
         if(_currentView) {
 
-            if(getViewType(_currentView) == desiredViewType) {
+            if(self.getCurrentViewType() == desiredViewType) {
                 callback(false);
                 return;
             }
@@ -332,7 +335,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
         };
 
 
-        _currentView = createViewForType(desiredViewType, viewCreationParams);
+        _currentView = self.createViewForType(desiredViewType, viewCreationParams);
+        self.trigger(ReadiumSDK.Events.READER_VIEW_CREATED, desiredViewType);
 
         _currentView.on(ReadiumSDK.Events.CONTENT_DOCUMENT_LOADED, function($iframe, spineItem) {
 
@@ -626,7 +630,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * Opens the next page.
      */
     this.openPageNext = function() {
-
         var noEvent = true;
         if (_currentView.openPageNextEvent)
         {
@@ -639,8 +642,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
     
     var openPageNext_ = function() {
-
-        if(getViewType(_currentView) === ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS) {
+        if(self.getCurrentViewType() === ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS) {
             _currentView.openPageNext(self);
             return;
         }
@@ -676,7 +678,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * Opens the previews page.
      */
     this.openPagePrev = function() {
-
         var noEvent = true;
         if (_currentView.openPagePrevEvent)
         {
@@ -689,8 +690,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
     
     var openPagePrev_ = function() {
-
-        if(getViewType(_currentView) === ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS) {
+        if(self.getCurrentViewType() === ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS) {
             _currentView.openPagePrev(self);
             return;
         }
