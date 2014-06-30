@@ -591,11 +591,7 @@ ReadiumSDK.Views.FixedView = function(options){
                     if(!pageView.meta_height() || !pageView.meta_width()) {
                         console.error("Invalid document " + spineItem.href + ": viewport is not specified!");
                     }
-                    
-                    //TODO: remove after unload? ...or alternatively, attach to PageView instance (which gets cleaned-up automatically by the garbage collector, whereas the spineItem's lifetime is that of the opened EPUB)
-                    spineItem._$IFRAME = $iframe;
-                    $iframe[0].setAttribute("data-spineItem.idref", spineItem.idref);
-                
+
                     self.trigger(ReadiumSDK.Events.CONTENT_DOCUMENT_LOADED, $iframe, spineItem);
                 }
                 

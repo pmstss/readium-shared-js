@@ -115,8 +115,30 @@ ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
     
     var _lastPaginationData = undefined;
     
+    this.onSubPageChanged = function(subPaginationData) {
+        if (_lastPaginationData)
+        {
+            _lastPaginationData.elementId = subPaginationData.elementId;
+            
+            if (_lastPaginationData.initiator === this)
+            {
+                _lastPaginationData.initiator = undefined;
+            }
+            
+console.debug("onSubPageChanged: " + _lastPaginationData.elementId);
+            this.onPageChanged(_lastPaginationData);
+        }
+        else
+        {
+console.error("onSubPageChanged !_lastPaginationData ??");
+            this.onPageChanged({elementId: subPaginationData.elementId});
+        }
+    };
+    
     this.onPageChanged = function(paginationData) {
-        
+
+if (paginationData) console.debug("onPageChanged: " + paginationData.elementId);
+
         _lastPaginationData = paginationData;
         
         var wasPausedBecauseNoAutoNextSmil = _wasPausedBecauseNoAutoNextSmil;
@@ -149,7 +171,7 @@ ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
         var fakeOpfRoot = "/99!";
         var epubCfiPrefix = "epubcfi";
         
-        if (paginationData.elementId || paginationData.initiator == self)
+        if (paginationData.elementId || paginationData.initiator === self)
         {
             var spineItems = reader.getLoadedSpineItems();
 
@@ -334,12 +356,12 @@ ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
 //console.debug("+++> paginationData.elementId: " + paginationData.elementId + " /// " + _smilIterator.currentPar.text.srcFile + " # " + _smilIterator.currentPar.text.srcFragmentId); //PageOpenRequest.elementId
 
 
-        if(paginationData.initiator == self)
+        if (paginationData.initiator === self)
         {
             var notSameTargetID = paginationData.elementId && paginationData.elementId !== _smilIterator.currentPar.text.srcFragmentId;
 
             if(notSameTargetID) {
-                console.error("!! paginationData.elementId !== _smilIterator.currentPar.text.srcFragmentId");
+                console.error("!! paginationData.elementId ("+paginationData.elementId+") !== _smilIterator.currentPar.text.srcFragmentId (" +_smilIterator.currentPar.text.srcFragmentId+")");
             }
 
             if(notSameTargetID || noReverseData) {

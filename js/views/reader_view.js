@@ -75,6 +75,85 @@ ReadiumSDK.Views.ReaderView = function(options) {
     {
         navigator.epubReadingSystem.Pagination = {};
         
+        var _mapWindowActiveSubPage = [];
+        navigator.epubReadingSystem.Pagination.ActiveSubPage = function(win, index, total, elementId)
+        {
+            if (!win) return;
+    
+            if (typeof index !== "undefined" && typeof total !== "undefined")
+            {
+                if (_mediaOverlayPlayer)
+                {
+                    if (elementId)
+                    {
+                        var subpageChangeData = {elementId: elementId};
+                        _mediaOverlayPlayer.onSubPageChanged(subpageChangeData);
+                    }
+                    else
+                    {
+//                          // reset all
+// console.error("ActiveSubPage !elementId ??");
+//                         var wasPlaying = self.isPlayingMediaOverlay();
+//                         if (wasPlaying)
+//                         {
+//                             self.pauseMediaOverlay();
+//                         }
+//
+//                         _mediaOverlayPlayer.reset();
+//
+//                         // var pageChangeData = undefined;
+//                         // _mediaOverlayPlayer.onPageChanged(pageChangeData);
+//
+//                         if (wasPlaying)
+//                         {
+//                             // ensure that top element is visible (transition in progress?)
+//                             setTimeout(function()
+//                             {
+//                                 self.playMediaOverlay();
+//                             }, 700);
+//                         }
+                    }
+                }
+                
+                
+                var data = navigator.epubReadingSystem.Pagination.ActiveSubPage(win);
+                if (!data) // first time
+                {
+                    win.addEventListener("unload", function()
+                    {
+                        for(var i = _mapWindowActiveSubPage.length - 1; i >= 0; i--)
+                        {
+                            var data = _mapWindowActiveSubPage[i];
+                            if (win === data.window)
+                            {
+                                _mapWindowActiveSubPage[i] = undefined;
+                                _mapWindowActiveSubPage.splice(i, 1);
+                            }
+                        }
+                    });
+        
+                    _mapWindowActiveSubPage.push({window: win, index: index, total: total});
+                }
+                else
+                {
+                    data.index = index;
+                    data.total = total;
+                }
+            }
+
+            for(var i = _mapWindowActiveSubPage.length - 1; i >= 0; i--)
+            {
+                var data = _mapWindowActiveSubPage[i];
+
+                if (win === data.window)
+                {
+                    return data;
+                }
+            }
+    
+            return undefined;
+        };
+
         var _touchSuspendWindows = [];
         navigator.epubReadingSystem.Pagination.TouchSuspend = function(win, suspend)
         {
@@ -119,6 +198,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
         
         navigator.epubReadingSystem.Pagination.EVENT_PAGE_NEXT = "epubReadingSystem.Pagination.EVENT_PAGE_NEXT";
         navigator.epubReadingSystem.Pagination.EVENT_PAGE_PREVIOUS = "epubReadingSystem.Pagination.EVENT_PAGE_PREVIOUS";
+        
+        navigator.epubReadingSystem.Pagination.EVENT_SUBPAGE_ELEMENT_ACTIVATE = "epubReadingSystem.Pagination.EVENT_SUBPAGE_ELEMENT_ACTIVATE";
 
         var _onOff = function(off, win, event, responder)
         {
@@ -128,7 +209,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
             }
 
             if (event !== navigator.epubReadingSystem.Pagination.EVENT_PAGE_PREVIOUS
-                && event !== navigator.epubReadingSystem.Pagination.EVENT_PAGE_NEXT)
+                && event !== navigator.epubReadingSystem.Pagination.EVENT_PAGE_NEXT
+                && event !== navigator.epubReadingSystem.Pagination.EVENT_SUBPAGE_ELEMENT_ACTIVATE)
             {
                 return false;
             }
@@ -190,12 +272,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 var messageCallback = function(e)
                 {
                     if (!e) return;
-                
+            
                     //e.origin
                     //assert e.source === window
-                
+            
                     var payload = e.data;
-                
+            
                     if (!payload || !payload.event || payload.event !== event) return;
                 
                     if (!_currentView) return;
@@ -203,18 +285,27 @@ ReadiumSDK.Views.ReaderView = function(options) {
                     //payload.spineItemIdRef
                     //var paginationInfo = _currentView ? _currentView.getPaginationInfo() : undefined;
                     
-                    var response = responder(); // TODO payload?
-                
-                    if (response) // normal page turn allowed
+                    if (event === navigator.epubReadingSystem.Pagination.EVENT_PAGE_PREVIOUS
+                        || event === navigator.epubReadingSystem.Pagination.EVENT_PAGE_NEXT)
                     {
-                        if (event === navigator.epubReadingSystem.Pagination.EVENT_PAGE_PREVIOUS)
+                        var response = responder(); // TODO payload?
+            
+                        if (response) // normal page turn allowed
                         {
-                            openPagePrev_();
+                            if (event === navigator.epubReadingSystem.Pagination.EVENT_PAGE_PREVIOUS)
+                            {
+                                openPagePrev_();
+                            }
+                            else if (event === navigator.epubReadingSystem.Pagination.EVENT_PAGE_NEXT)
+                            {
+                                openPageNext_();
+                            }
                         }
-                        else if (event === navigator.epubReadingSystem.Pagination.EVENT_PAGE_NEXT)
-                        {
-                            openPageNext_();
-                        }
+                    }
+                    else if (event === navigator.epubReadingSystem.Pagination.EVENT_SUBPAGE_ELEMENT_ACTIVATE)
+                    {
+                        if (!payload.elementId) return;
+                        responder(payload.elementId);
                     }
                 };
                 
@@ -341,7 +432,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
         _currentView.on(ReadiumSDK.Events.CONTENT_DOCUMENT_LOADED, function($iframe, spineItem) {
 
             if (!ReadiumSDK.Helpers.isIframeAlive($iframe[0])) return;
-
+            
+            //TODO: remove after unload? ...or alternatively, attach to PageView instance (which gets cleaned-up automatically by the garbage collector, whereas the spineItem's lifetime is that of the opened EPUB)
+            spineItem._$IFRAME = $iframe;
+            $iframe[0].setAttribute("data-spineItem.idref", spineItem.idref);
+        
             // performance degrades with large DOM (e.g. word-level text-audio sync)
             _mediaOverlayDataInjector.attachMediaOverlayData($iframe, spineItem, _viewerSettings);
             
@@ -1172,6 +1267,34 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
         if(_currentView) {
             _currentView.insureElementVisibility(spineItemId, element, initiator);
+            
+            var spineItem = _package.spine.getItemById(spineItemId);
+            if (!spineItem || !spineItem._$IFRAME) return;
+
+            var win = spineItem._$IFRAME[0].contentWindow;
+            if (!win) return;
+            
+            if (navigator.epubReadingSystem
+                && navigator.epubReadingSystem.Pagination
+                && win.READIUM_activeEvents
+                && win.READIUM_activeEvents[navigator.epubReadingSystem.Pagination.EVENT_SUBPAGE_ELEMENT_ACTIVATE]
+                && win.READIUM_activeEvents[navigator.epubReadingSystem.Pagination.EVENT_SUBPAGE_ELEMENT_ACTIVATE].length)
+            {
+                var elemID = element.getAttribute("id");
+                if (!elemID)
+                {
+                    do
+                    {
+                        var N = 4; // length of random ID
+                        elemID = "_" + new Array(N+1).join((Math.random().toString(36)+'00000000000000000').slice(2, 18)).slice(0, N);
+                    }
+                    while (document.getElementById(elemID));
+                    
+                    element.setAttribute("id", elemID);
+                }
+                
+                win.postMessage({event: navigator.epubReadingSystem.Pagination.EVENT_SUBPAGE_ELEMENT_ACTIVATE, elementId: elemID}, "*");
+            }
         }
     }
 
