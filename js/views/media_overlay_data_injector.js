@@ -20,18 +20,51 @@ ReadiumSDK.Views.MediaOverlayDataInjector = function (mediaOverlay, mediaOverlay
             else {
                 $body.data("mediaOverlayClick", {ping: "pong"});
 
-                var clickEvent = 'ontouchstart' in document.documentElement ? 'touchstart' : 'click';
-                $body.bind(clickEvent, function (event)
+                var touchable = 'ontouchstart' in document.documentElement;
+                var clickEvent = touchable ? 'touchend' : 'click';
+                
+                var _touchX = 0;
+                var _touchY = 0;
+                
+                if (touchable)
                 {
+                    $body.bind("touchstart", function (ev)
+                    {
+                        mediaOverlayPlayer.touchInit();
+                        
+                        var event = ev.originalEvent;
+                        
+                        if (!event || !event.changedTouches || !event.changedTouches.length) return true;
+
+                        _touchX = event.changedTouches[0].pageX;
+                        _touchY = event.changedTouches[0].pageY;
+                    });
+                }
+                
+                $body.bind(clickEvent, function (ev)
+                {
+                    var event = ev.originalEvent;
+
                     var elem = $(this)[0]; // body
-                    elem = event.target; // body descendant
+                    elem = ev.target; // body descendant
 
                     if (!elem)
                     {
                         mediaOverlayPlayer.touchInit();
                         return true;
                     }
+                
+                    if (touchable)
+                    {
+                        if (!event || !event.changedTouches || !event.changedTouches.length) return true;
 
+                        if (
+                            (_touchX < (event.changedTouches[0].pageX - 20) || _touchX > (event.changedTouches[0].pageX + 20))
+                            ||
+                            (_touchY < (event.changedTouches[0].pageY - 20) || _touchY > (event.changedTouches[0].pageY + 20))
+                        ) return true;
+                    }
+                    
 //console.debug("MO CLICK: " + elem.id);
 
                     var data = undefined;
