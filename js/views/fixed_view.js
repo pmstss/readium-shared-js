@@ -442,8 +442,10 @@ ReadiumSDK.Views.FixedView = function(options){
         
         var hasChanged = leftItem !== _spread.leftItem || rightItem !== _spread.rightItem || centerItem !== _spread.centerItem;
         updatePageSwitchDir(dir === 0 ? 0 : (_spread.spine.isRightToLeft() ? (dir === 1 ? 2 : 1) : dir), hasChanged);
-        
-        redraw(paginationRequest.initiator, paginationRequest);
+
+        if (hasChanged) {
+            redraw(paginationRequest.initiator, paginationRequest);
+        }
     };
 
 
