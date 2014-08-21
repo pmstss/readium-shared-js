@@ -697,6 +697,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 $firstVisibleTextNode = $element;
                 percentOfElementHeight = 100 - visibilityResult;
                 return false;
+            } else if (foundTextNode === this) {
+                //if our textnode parent element is not visible
+                foundTextNode = null;
+                $firstVisibleTextNode = null;
+                //reset the textnode flags
             }
             return true;
         });
