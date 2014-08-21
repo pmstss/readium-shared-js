@@ -649,18 +649,14 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
         return navigation.getElements(selector);
     };
 
-    this.getNodeRangeInfoFromCfi = function(spineIdRef, partialCfi){
+    this.getNodeRangeInfoFromCfi = function (spineIdRef, partialCfi) {
         if (spineIdRef != _currentSpineItem.idref) {
             console.warn("spine item is not loaded");
             return undefined;
         }
         var navigation = self.getNavigator();
-        if (navigation.isRangeCfi(partialCfi)) {
-            return navigation.getNodeRangeInfoFromCfi(partialCfi);
-        } else {
-            console.error("partialCfi is not in range format (needs character offsets)");
-            return undefined;
-        }
+
+        return navigation.getNodeRangeInfoFromCfi(partialCfi);
     };
 
     this.getLoadedContentFrames = function () {
