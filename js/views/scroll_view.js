@@ -1045,7 +1045,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         var viewPortRange = getVisibleRange();
         var viewPortHeight = viewPortRange.bottom - viewPortRange.top;
 
-        var paginationInfo = new ReadiumSDK.Models.CurrentPagesInfo(_spine.items.length, false, _spine.direction);
+        var paginationInfo = new ReadiumSDK.Models.CurrentPagesInfo(_spine, false, _spine.direction);
 
         var visibleViews = getVisiblePageViews();
 

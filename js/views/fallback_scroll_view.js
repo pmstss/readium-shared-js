@@ -476,7 +476,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
 
     this.getPaginationInfo = function() {
 
-        var paginationInfo = new ReadiumSDK.Models.CurrentPagesInfo(_spine.items.length, false, _spine.direction);
+        var paginationInfo = new ReadiumSDK.Models.CurrentPagesInfo(_spine, false, _spine.direction);
 
         if(!_currentSpineItem) {
             return paginationInfo;
