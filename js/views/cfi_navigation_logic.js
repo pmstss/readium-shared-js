@@ -850,7 +850,14 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
             var startRangeInfo = getRangeInfoFromNodeList(nodeResult.startNodes, nodeResult.startOffset);
             var endRangeInfo = getRangeInfoFromNodeList(nodeResult.endNodes, nodeResult.endOffset);
-            var nodeRangeClientRect = getNodeRangeClientRect(startRangeInfo.node, startRangeInfo.offset, endRangeInfo.node, endRangeInfo.offset);
+            var nodeRangeClientRect =
+                    startRangeInfo && endRangeInfo ?
+                        getNodeRangeClientRect(
+                            startRangeInfo.node,
+                            startRangeInfo.offset,
+                            endRangeInfo.node,
+                            endRangeInfo.offset)
+                        : null;
             /* <- debug
              console.log(nodeRangeClientRect);
              addOverlayRect(nodeRangeClientRect,'purple',contentDoc);
