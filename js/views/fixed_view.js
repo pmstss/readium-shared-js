@@ -28,7 +28,7 @@
  * @class ReadiumSDK.Views.FixedView
  */
 
-ReadiumSDK.Views.FixedView = function(options){
+ReadiumSDK.Views.FixedView = function(options, reader){
 
     _.extend(this, Backbone.Events);
 
@@ -61,14 +61,7 @@ ReadiumSDK.Views.FixedView = function(options){
 
     function createOnePageView(elementClass) {
 
-        var pageView = new ReadiumSDK.Views.OnePageView({
-
-            iframeLoader: _iframeLoader,
-            spine: _spine,
-            bookStyles: _bookStyles,
-            // class: cssclass,
-            // contentAlignment: contentAlignment
-        },
+        var pageView = new ReadiumSDK.Views.OnePageView(options,
         [elementClass],
         false); //enableBookStyleOverrides
 
@@ -119,7 +112,7 @@ ReadiumSDK.Views.FixedView = function(options){
         
         _viewSettings = settings;
         
-        _spread.setSyntheticSpread(ReadiumSDK.Helpers.deduceSyntheticSpread(_$viewport, getFirstVisibleItem(), _viewSettings));
+        _spread.setSyntheticSpread(ReadiumSDK.Helpers.deduceSyntheticSpread(_$viewport, getFirstVisibleItem(), _viewSettings) == true); // force boolean value (from truthy/falsey return value)
 
         var views = getDisplayingViews();
         for(var i = 0, count = views.length; i < count; i++) {
@@ -257,7 +250,7 @@ ReadiumSDK.Views.FixedView = function(options){
             return;
         }
 
-        var isSyntheticSpread = ReadiumSDK.Helpers.deduceSyntheticSpread(_$viewport, firstVisibleItem, _viewSettings);
+        var isSyntheticSpread = ReadiumSDK.Helpers.deduceSyntheticSpread(_$viewport, firstVisibleItem, _viewSettings) == true; // force boolean value (from truthy/falsey return value)
 
         if(isSpreadChanged(firstVisibleItem, isSyntheticSpread)) {
             _spread.setSyntheticSpread(isSyntheticSpread);
@@ -467,7 +460,7 @@ ReadiumSDK.Views.FixedView = function(options){
         var rightItem = _spread.rightItem;
         var centerItem = _spread.centerItem;
 
-        var isSyntheticSpread = ReadiumSDK.Helpers.deduceSyntheticSpread(_$viewport, paginationRequest.spineItem, _viewSettings);
+        var isSyntheticSpread = ReadiumSDK.Helpers.deduceSyntheticSpread(_$viewport, paginationRequest.spineItem, _viewSettings) == true; // force boolean value (from truthy/falsey return value)
         _spread.setSyntheticSpread(isSyntheticSpread);
         _spread.openItem(paginationRequest.spineItem);
         
@@ -605,7 +598,7 @@ ReadiumSDK.Views.FixedView = function(options){
 
     this.getPaginationInfo = function() {
 
-        var paginationInfo = new ReadiumSDK.Models.CurrentPagesInfo(_spine.items.length, true, _spine.direction);
+        var paginationInfo = new ReadiumSDK.Models.CurrentPagesInfo(_spine, true);
 
         var spreadItems = [_spread.leftItem, _spread.rightItem, _spread.centerItem];
 
@@ -729,7 +722,7 @@ ReadiumSDK.Views.FixedView = function(options){
 
     this.insureElementVisibility = function(spineItemId, element, initiator) {
 
-        //for now we assume that for fixed layout element is always visible
+        //TODO: during zoom+pan, playing element might not actualy be visible
 
     }
 

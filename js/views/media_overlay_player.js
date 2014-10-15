@@ -461,7 +461,8 @@ if (paginationData) console.debug("onPageChanged: " + paginationData.elementId);
     }
 
     function playCurrentPar() {
-
+        _wasPlayingScrolling = false;
+        
         if (!_smilIterator || !_smilIterator.currentPar)
         {
             console.error("playCurrentPar !_smilIterator || !_smilIterator.currentPar ???");
@@ -734,7 +735,7 @@ if (paginationData) console.debug("onPageChanged: " + paginationData.elementId);
         var spineItemIdRef = (_smilIterator && _smilIterator.smil && _smilIterator.smil.spineItemId) ? _smilIterator.smil.spineItemId : ((_lastPaginationData && _lastPaginationData.spineItem && _lastPaginationData.spineItem.idref) ? _lastPaginationData.spineItem.idref : undefined);
         if (doNotNextSmil && spineItemIdRef && _lastPaginationData && _lastPaginationData.paginationInfo && _lastPaginationData.paginationInfo.openPages && _lastPaginationData.paginationInfo.openPages.length > 1)
         {
-            //var iPage = _lastPaginationData.paginationInfo.pageProgressionDirection === "rtl" ? _lastPaginationData.paginationInfo.openPages.length - 1 : 0;
+            //var iPage = _lastPaginationData.paginationInfo.isRightToLeft ? _lastPaginationData.paginationInfo.openPages.length - 1 : 0;
             var iPage = 0;
             
             var openPage = _lastPaginationData.paginationInfo.openPages[iPage];
@@ -809,6 +810,8 @@ if (paginationData) console.debug("onPageChanged: " + paginationData.elementId);
             if (skip)
             {
                 console.log("MO SKIP: " + parent.epubtype);
+
+                self.pause();
 
                 var pos = goNext ? _smilIterator.currentPar.audio.clipEnd + 0.1 : DIRECTION_MARK - 1;
 
@@ -1566,7 +1569,10 @@ console.debug("TTS resume");
                 {
                     _elementHighlighter.highlightElement(_smilIterator.currentPar, _package.media_overlay.activeClass, _package.media_overlay.playbackActiveClass);
 
-                    reader.insureElementVisibility(_smilIterator.currentPar.getSmil().spineItemId, _smilIterator.currentPar.element, self);
+                    if (!_wasPlayingScrolling)
+                    {
+                        reader.insureElementVisibility(_smilIterator.currentPar.getSmil().spineItemId, _smilIterator.currentPar.element, self);
+                    }
                 }
             
                 return;
@@ -1577,7 +1583,10 @@ console.debug("TTS resume");
                 {
                     _elementHighlighter.highlightCfi(_smilIterator.currentPar, _package.media_overlay.activeClass, _package.media_overlay.playbackActiveClass);
 
-                    reader.insureElementVisibility(_smilIterator.currentPar.getSmil().spineItemId, _smilIterator.currentPar.cfi.cfiTextParent, self);
+                    if (!_wasPlayingScrolling)
+                    {
+                        reader.insureElementVisibility(_smilIterator.currentPar.getSmil().spineItemId, _smilIterator.currentPar.cfi.cfiTextParent, self);
+                    }
                 }
                 
                 return;
@@ -1729,7 +1738,6 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
         _skipAudioEnded = false;
     };
 
-
     this.play = function ()
     {
         if (_smilIterator && _smilIterator.smil && !_smilIterator.smil.id)
@@ -1764,6 +1772,8 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
 
     this.pause = function()
     {
+        _wasPlayingScrolling = false;
+        
         if (_blankPagePlayer)
         {
             this.resetBlankPage();
@@ -1925,18 +1935,18 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
         this.toggleMediaOverlayRefresh(undefined);
     };
 
+    var _wasPlayingScrolling = false;
+
     this.toggleMediaOverlayRefresh = function(paginationData)
     {
-
 //console.debug("moData SMIL: " + moData.par.getSmil().href + " // " + + moData.par.getSmil().id);
 
         var spineItems = reader.getLoadedSpineItems();
 
-        //paginationData.pageProgressionDirection === "rtl"
+        //paginationData.isRightToLeft
         var rtl = reader.spine().isRightToLeft();
 
         //paginationData.spineItemCount
-
         //paginationData.openPages
         //{spineItemPageIndex: , spineItemPageCount: , idref: , spineItemIndex: }
 
@@ -1944,9 +1954,18 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
         var wasPlaying = self.isPlaying();
         if(wasPlaying && _smilIterator)
         {
-            self.pause();
+            var isScrollView = paginationData.initiator && paginationData.initiator instanceof ReadiumSDK.Views.ScrollView;
+            if (isScrollView && _settings.mediaOverlaysPreservePlaybackWhenScroll)
+            {
+                _wasPlayingScrolling = true;
+                return;
+            }
+            
             playingPar = _smilIterator.currentPar;
+            self.pause();
         }
+        
+        _wasPlayingScrolling = false;
 
         //paginationData && paginationData.elementId
         //paginationData.initiator != self
@@ -1989,7 +2008,7 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
                     if (paginationData && paginationData.paginationInfo && paginationData.paginationInfo.openPages)
                     {
                         // openPages are sorted by spineItem index, so the smallest index on display is the one we need to play (page on the left in LTR, or page on the right in RTL progression)
-                        var index = 0; // paginationData.paginationInfo.pageProgressionDirection === "ltr" ? 0 : paginationData.paginationInfo.openPages.length - 1;
+                        var index = 0; // !paginationData.paginationInfo.isRightToLeft ? 0 : paginationData.paginationInfo.openPages.length - 1;
                     
                         if (paginationData.paginationInfo.openPages[index] && paginationData.paginationInfo.openPages[index].idref && paginationData.paginationInfo.openPages[index].idref === spineItem.idref)
                         {
