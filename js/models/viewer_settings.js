@@ -31,6 +31,9 @@ ReadiumSDK.Models.ViewerSettings = function(settingsData) {
     this.syntheticSpread = "auto";
     this.fontSize = 100;
     this.columnGap = 20;
+
+    this.mediaOverlaysPreservePlaybackWhenScroll = false;
+
     this.mediaOverlaysSkipSkippables = false;
     this.mediaOverlaysEscapeEscapables = true;
 
@@ -42,6 +45,14 @@ ReadiumSDK.Models.ViewerSettings = function(settingsData) {
     this.mediaOverlaysVolume = 100;
     
     this.mediaOverlaysSynchronizationGranularity = "";
+
+    this.mediaOverlaysAutomaticPageTurn = true;
+
+    this.enableGPUHardwareAccelerationCSS3D = false;
+
+    // -1 ==> disable
+    // [0...n] ==> index of transition in pre-defined array
+    this.pageTransition = -1;
     
     this.scroll = "auto";
 
@@ -78,6 +89,7 @@ ReadiumSDK.Models.ViewerSettings = function(settingsData) {
 
         mapProperty("columnGap", settingsData);
         mapProperty("fontSize", settingsData);
+        mapProperty("mediaOverlaysPreservePlaybackWhenScroll", settingsData);
         mapProperty("mediaOverlaysSkipSkippables", settingsData);
         mapProperty("mediaOverlaysEscapeEscapables", settingsData);
         mapProperty("mediaOverlaysSkippables", settingsData, buildArray);
@@ -86,8 +98,11 @@ ReadiumSDK.Models.ViewerSettings = function(settingsData) {
         mapProperty("mediaOverlaysRate", settingsData);
         mapProperty("mediaOverlaysVolume", settingsData);
         mapProperty("mediaOverlaysSynchronizationGranularity", settingsData);
+        mapProperty("mediaOverlaysAutomaticPageTurn", settingsData);
         mapProperty("scroll", settingsData);
         mapProperty("syntheticSpread", settingsData);
+        mapProperty("pageTransition", settingsData);
+        mapProperty("enableGPUHardwareAccelerationCSS3D", settingsData);
     };
 
     this.update(settingsData);
