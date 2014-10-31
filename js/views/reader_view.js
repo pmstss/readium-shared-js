@@ -103,7 +103,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
                     createdView = new ReadiumSDK.Views.FallbackScrollView(options, false);
                     break;
                 }
-                createdView = new ReadiumSDK.Views.ReflowableView(options);
+                createdView = new ReadiumSDK.Views.ReflowableView(options, self);
                 break;
         }
 
