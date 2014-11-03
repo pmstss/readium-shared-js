@@ -504,6 +504,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         // At 100% font-size = 16px (on HTML, not body or descendant markup!)
         var MAXW = 550; //TODO user/vendor-configurable?
         var MINW = 400;
+        var LIMIT_WIDTH = false;
         
         var isDoublePageSyntheticSpread = ReadiumSDK.Helpers.deduceSyntheticSpread(_$viewport, _currentSpineItem, _viewSettings);
         
@@ -592,8 +593,11 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
                 filler = Math.floor((textWidth - MAXW) * 0.5);
             }
         }
-        
-        _$el.css({"left": (filler+adjustedGapLeft + "px"), "right": (filler+adjustedGapRight + "px")});
+
+        if (LIMIT_WIDTH) {
+            _$el.css({"left": (filler + adjustedGapLeft + "px"), "right": (filler + adjustedGapRight + "px")});
+        }
+
         updateViewportSize(); //_$contentFrame ==> _lastViewPortSize
 
         
