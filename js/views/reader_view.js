@@ -923,9 +923,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * @method bookmarkCurrentPage
      *
      * @returns {string} Serialized ReadiumSDK.Models.BookmarkData object as JSON string.
+     *          {null} If a bookmark could not be created successfully.
      */
     this.bookmarkCurrentPage = function() {
-        return _currentView.bookmarkCurrentPage().toString();
+        var bookmark = _currentView.bookmarkCurrentPage();
+        return bookmark ? bookmark.toString() : null;
     };
 
     /**
