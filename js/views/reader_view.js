@@ -1207,6 +1207,21 @@ ReadiumSDK.Views.ReaderView = function(options) {
     this.addIFrameEventListener = function (eventName, callback, context, options) {
         _iframeLoader.addIFrameEventListener(eventName, callback, context, options);
     };
+
+    /**
+     * Re-binds all registered iframe event listeners to the currently loaded content frames.
+     *
+     * @method updateIFrameEvents
+     * @returns {undefined}
+     */
+    this.updateIFrameEvents = function(){
+        var contentFrames = this.getLoadedContentFrames();
+        if (contentFrames) {
+            _.each(contentFrames, function (contentFrameInfo) {
+                _iframeLoader.updateIframeEvents(contentFrameInfo.$iframe[0]);
+            });
+        }
+    };
     
 
     var BackgroundAudioTrackManager = function()
@@ -1675,7 +1690,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     this.getLoadedContentFrames = function () {
-        if (_currentView) {
+        if (_currentView && _currentView.getLoadedContentFrames) {
             return _currentView.getLoadedContentFrames();
         }
         return undefined;
