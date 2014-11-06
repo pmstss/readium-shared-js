@@ -98,11 +98,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 createdView = new ReadiumSDK.Views.ScrollView(options, true, self);
                 break;
             default:
-                if (window.Modernizr && !window.Modernizr.csscolumns) {
+                //if (window.Modernizr && !window.Modernizr.csscolumns) {
                     // IE9 doesn't support columnization, instead use a scroll doc view
                     createdView = new ReadiumSDK.Views.FallbackScrollView(options, false);
                     break;
-                }
+                //}
                 createdView = new ReadiumSDK.Views.ReflowableView(options, self);
                 break;
         }
@@ -132,7 +132,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             return ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_DOC;
         }
 
-        if(view instanceof ReadiumSDK.Views.FallbackScrollView) {
+        if(_currentView instanceof ReadiumSDK.Views.FallbackScrollView) {
             // fake a columnized view because it's a fallback of it
             return ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED;
         }
