@@ -815,9 +815,9 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         return [_currentSpineItem];
     };
 
-    this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
+    this.getElementByCfi = function(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
-        if(spineItem != _currentSpineItem) {
+        if(spineItemIdref != _currentSpineItem.idref) {
             console.warn("spine item is not loaded");
             return undefined;
         }
@@ -825,9 +825,9 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         return _navigationLogic.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
     };
 
-    this.getElementById = function(spineItem, id) {
+    this.getElementById = function(spineItemIdref, id) {
 
-        if(spineItem != _currentSpineItem) {
+        if(spineItemIdref != _currentSpineItem.idref) {
             console.error("spine item is not loaded");
             return undefined;
         }
@@ -835,9 +835,9 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         return _navigationLogic.getElementById(id);
     };
 
-    this.getElement = function(spineItem, selector) {
+    this.getElement = function(spineItemIdref, selector) {
 
-        if(spineItem != _currentSpineItem) {
+        if(spineItemIdref != _currentSpineItem.idref) {
             console.warn("spine item is not loaded");
             return undefined;
         }
@@ -926,9 +926,9 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
     };
 
-    this.getElements = function(spineItem, selector) {
+    this.getElements = function(spineItemIdref, selector) {
 
-        if(spineItem != _currentSpineItem) {
+        if(spineItemIdref != _currentSpineItem.idref) {
             console.warn("spine item is not loaded");
             return undefined;
         }
@@ -947,8 +947,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         if (_navigationLogic.isRangeCfi(partialCfi)) {
             return this.isNodeFromRangeCfiVisible(spineIdRef, partialCfi);
         }
-        var spineItem = _spine.getItemById(spineIdRef);
-        var $elementFromCfi = this.getElementByCfi(spineItem, partialCfi);
+        var $elementFromCfi = this.getElementByCfi(spineIdRef, partialCfi);
         return ($elementFromCfi && this.isElementVisible($elementFromCfi));
     };
 

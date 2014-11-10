@@ -603,15 +603,15 @@ ReadiumSDK.Views.FixedView = function(options, reader){
         return _spread.validItems();
     };
 
-    this.getElement = function(spineItem, selector) {
+    this.getElement = function(spineItemIdref, selector) {
 
         var views = getDisplayingViews();
 
         for(var i = 0, count = views.length; i < count; i++) {
 
             var view = views[i];
-            if(view.currentSpineItem() == spineItem) {
-                return view.getElement(spineItem, selector);
+            if(view.currentSpineItem().idref == spineItemIdref) {
+                return view.getElement(spineItemIdref, selector);
             }
         }
 
@@ -619,15 +619,15 @@ ReadiumSDK.Views.FixedView = function(options, reader){
         return undefined;
     };
 
-    this.getElementById = function(spineItem, id) {
+    this.getElementById = function(spineItemIdref, id) {
 
         var views = getDisplayingViews();
 
         for(var i = 0, count = views.length; i < count; i++) {
 
             var view = views[i];
-            if(view.currentSpineItem() == spineItem) {
-                return view.getElementById(spineItem, id);
+            if(view.currentSpineItem().idref == spineItemIdref) {
+                return view.getElementById(spineItemIdref, id);
             }
         }
 
@@ -636,15 +636,15 @@ ReadiumSDK.Views.FixedView = function(options, reader){
     };
 
 
-    this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
+    this.getElementByCfi = function(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         var views = getDisplayingViews();
 
         for(var i = 0, count = views.length; i < count; i++) {
 
             var view = views[i];
-            if(view.currentSpineItem() == spineItem) {
-                return view.getElementByCfi(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist);
+            if(view.currentSpineItem().idref == spineItemIdref) {
+                return view.getElementByCfi(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist);
             }
         }
 
@@ -670,15 +670,15 @@ ReadiumSDK.Views.FixedView = function(options, reader){
 
     };
     
-    this.getElements = function(spineItem, selector) {
+    this.getElements = function(spineItemIdref, selector) {
 
         var views = getDisplayingViews();
 
         for(var i = 0, count = views.length; i < count; i++) {
 
             var view = views[i];
-            if(view.currentSpineItem() == spineItem) {
-                return view.getElements(spineItem, selector);
+            if(view.currentSpineItem().idref == spineItemIdref) {
+                return view.getElements(spineItemIdref, selector);
             }
         }
 
@@ -715,9 +715,9 @@ ReadiumSDK.Views.FixedView = function(options, reader){
         for (var i = 0, count = views.length; i < count; i++) {
             //for now we assume that for fixed layouts, elements are always visible
             if (includeSpineItems) {
-                elements.push({elements: views[i].getElements(views[i].currentSpineItem(), selector), spineItem: views[i].currentSpineItem()});
+                elements.push({elements: views[i].getElements(views[i].currentSpineItem().idref, selector), spineItem: views[i].currentSpineItem()});
             } else {
-                elements.push(views[i].getElements(views[i].currentSpineItem(), selector));
+                elements.push(views[i].getElements(views[i].currentSpineItem().idref, selector));
             }
         }
 
