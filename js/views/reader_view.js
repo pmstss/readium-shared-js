@@ -224,6 +224,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     }
 
     /**
+     * Get Loaded Spine Items
+     *
      * Returns a list of the currently active spine items
      *
      * @returns {ReadiumSDK.Models.SpineItem[]}
@@ -250,6 +252,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     }
 
     /**
+     * Viewer Settings
+     *
      * Returns the currently instanced viewer settings
      *
      * @returns {ReadiumSDK.Models.ViewerSettings}
@@ -259,6 +263,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Package
+     *
      * Returns a data object based on the package document
      *
      * @returns {ReadiumSDK.Models.Package}
@@ -268,6 +274,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Spine
+     *
      * Returns a representation of the spine as a data object, also acts as list of spine items
      *
      * @returns {ReadiumSDK.Models.Spine}
@@ -277,6 +285,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * User Styles
+     *
      * Returns the user CSS styles collection
      *
      * @returns {ReadiumSDK.Collections.StyleCollection}
@@ -286,7 +296,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
-     * Open book data
+     * Open Book Data
+     *
      * @typedef {object} OpenBookData
      * @property {ReadiumSDK.Models.Package} package - packageData (required)
      * @property {OpenPageRequestData} openPageRequest - openPageRequestData, (optional) data related to open page request
@@ -296,9 +307,10 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
 
     /**
+     * Open Book
+     *
      * Triggers the process of opening the book and requesting resources specified in the packageData
      *
-     * @method openBook
      * @param {OpenBookData} openBookData - object with open book data
      */
     this.openBook = function(openBookData) {
@@ -380,8 +392,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
     }
 
     /**
+     * Open Page Left
+     *
      * Flips the page from left to right. Takes to account the page progression direction to decide to flip to prev or next page.
-     * @method openPageLeft
      *
      * @returns {boolean} True if page successfully opened, false if page failed to open, undefined if the result is undetermined (as this depends on child view implementations)
      */
@@ -396,8 +409,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Open Page Right
+     *
      * Flips the page from right to left. Takes to account the page progression direction to decide to flip to prev or next page.
-     * @method openPageRight
      *
      * @returns {boolean} True if page successfully opened, false if page failed to open, undefined if the result is undetermined (as this depends on child view implementations)
      */
@@ -413,6 +427,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Is Current View Fixed Layout
+     *
      * Returns if the current child view is an instance of a fixed page view
      * @returns {boolean}
      */
@@ -428,6 +444,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
 
     /**
+     * Set Zoom
+     *
      * Set the zoom options.
      *
      * @param {ZoomOptions} zoom Zoom options
@@ -440,6 +458,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Get View Scale
+     *
      * Returns the current view scale as a percentage
      * @returns {number}
      */
@@ -453,7 +473,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
-     * Settings data options
+     * Settings Data Options
+     *
      * @typedef {object} SettingsData
      * @property {number} fontSize - Font size as percentage
      * @property {(string|boolean)} syntheticSpread - "auto"|true|false
@@ -463,6 +484,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
 
     /**
+     * Update Settings
+     *
      * Updates reader view based on the settings specified in settingsData object
      * @param {SettingsData} settingsData Settings data
      * @fires ReadiumSDK.Events.SETTINGS_APPLIED
@@ -512,6 +535,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Open Page Next
+     *
      * Opens the next page.
      * @returns {boolean} True if page successfully opened, false if page failed to open, undefined if the result is undetermined (as this depends on child view implementations)
      */
@@ -549,6 +574,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Open Page Previous
+     *
      * Opens the previous page.
      * @returns {boolean} True if page successfully opened, false if page failed to open, undefined if the result is undetermined (as this depends on child view implementations)
      */
@@ -605,9 +632,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
     }
 
     /**
-     * Opens the page of the spine item with element with provided cfi
+     * Open by Spine Item Element CFI
      *
-     * @method openSpineItemElementCfi
+     * Opens the page of the spine item with element with provided cfi
      *
      * @param {string} idref Id of the spine item
      * @param {string} elementCfi CFI of the element to be shown
@@ -630,10 +657,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Open Page by Index
      *
      * Opens specified page index of the current spine item
-     *
-     * @method openPageIndex
      *
      * @param {number} pageIndex Zero based index of the page in the current spine item
      * @param {object} initiator optional
@@ -674,10 +700,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
 
     /**
+     * Open Spine Item by Index
      *
      * Opens spine item by a specified index
-     *
-     * @method openSpineItemByIndex
      *
      * @param {number} spineIndex Zero based index of the spine item
      * @param {object} initiator optional
@@ -716,6 +741,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
     }
 
     /**
+     * Open Spine Item and Page by Index
      *
      * Opens page index of the spine item with idref provided
      *
@@ -740,9 +766,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
-     * Set CSS Styles to the reader container
+     * Set Styles
      *
-     * @method setStyles
+     * Set CSS Styles to the reader container
      *
      * @param styles {object} style object contains selector property and declarations object
      */
@@ -766,9 +792,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
-     * Set CSS Styles to the content documents
+     * Set Book Styles
      *
-     * @method setBookStyles
+     * Set CSS Styles to the content documents
      *
      * @param styles {object} style object contains selector property and declarations object
      */
@@ -786,6 +812,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     };
 
+    /**
+     *
+     * @param spineItemIdref
+     * @param selector
+     * @returns {HTMLElement}
+     */
     this.getElement = function(spineItemIdref, selector) {
 
         if(_currentView) {
@@ -837,8 +869,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Opens the content document specified by the url
      *
-     * @method openContentUrl
-     *
      * @param {string} contentRefUrl Url of the content document
      * @param {string | undefined} sourceFileHref Url to the file that contentRefUrl is relative to. If contentRefUrl is
      * relative ot the source file that contains it instead of the package file (ex. TOC file) We have to know the
@@ -856,8 +886,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     /**
      * Resolves a content url
-     *
-     * @method resolveContentUrl
      *
      * @param {string} contentRefUrl Url of the content document
      * @param {string | undefined} sourceFileHref Url to the file that contentRefUrl is relative to. If contentRefUrl is
@@ -901,8 +929,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Opens the page of the spine item with element with provided cfi
      *
-     * @method openSpineItemElementId
-     *
      * @param {string} idref Id of the spine item
      * @param {string} elementId id of the element to be shown
      * @param {object} initiator optional
@@ -928,8 +954,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
      *
      * Returns the bookmark associated with currently opened page.
      *
-     * @method bookmarkCurrentPage
-     *
      * @returns {string} Serialized ReadiumSDK.Models.BookmarkData object as JSON string.
      */
     this.bookmarkCurrentPage = function() {
@@ -939,7 +963,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Resets all the custom styles set by setStyle callers at runtime
      *
-     * @method clearStyles
      */
     this.clearStyles = function() {
 
@@ -951,7 +974,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Resets all the custom styles set by setBookStyle callers at runtime
      *
-     * @method clearBookStyles
      */
     this.clearBookStyles = function() {
 
@@ -967,8 +989,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      *
      * Returns true if media overlay available for one of the open pages.
-     *
-     * @method isMediaOverlayAvailable
      *
      * @returns {boolean}
      */
@@ -1106,7 +1126,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Returns current selection partial Cfi, useful for workflows that need to check whether the user has selected something.
      *
-     * @method getCurrentSelectionCfi 
      * @returns {object | undefined} partial cfi object or undefined if nothing is selected
     *
      */
@@ -1118,14 +1137,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Creates a higlight based on given parameters
      *
-     * @method addHighlight 
      * @param {string} spineIdRef spine idref that defines the partial Cfi
      * @param {string} CFI partial CFI (withouth the indirection step) relative to the spine index
      * @param {string} id id of the highlight. must be unique
      * @param {string} type currently "highlight" only
      *
      * @returns {object | undefined} partial cfi object of the created highlight
-    *
      */
 
     this.addHighlight = function(spineIdRef, Cfi, id, type, styles) {
@@ -1136,14 +1153,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Creates a higlight based on current selection
      *
-     * @method addSelectionHighlight
      * @param {string} id id of the highlight. must be unique
      * @param {string} type currently "highlight" only
      *
      * @returns {object | undefined} partial cfi object of the created highlight
-    *
      */
-
     this.addSelectionHighlight =  function(id, type) {
         return _annotationsManager.addSelectionHighlight(id,type);
     };
@@ -1151,7 +1165,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Removes given highlight
      *
-     * @method removeHighlight
      * @param {string} id id of the highlight.
      *
      * @returns {undefined} 
@@ -1165,7 +1178,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Allows the subscription of events that trigger inside the epub content iframe
      *
-     * @method addIFrameEventListener
      * @param {string} eventName    Event name.
      * @param {function} callback   Callback function.
      * @param {object} context      User specified data passed to the callback function.
@@ -1186,7 +1198,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Redraws all annotations
      *
-     * @method redrawAnnotations
      */
 
     this.redrawAnnotations = function(){
@@ -1195,7 +1206,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     /**
      *
-     * @method updateAnnotationView
      * @param {string} id
      * @param {string} styles
      * @returns {undefined}
