@@ -786,28 +786,28 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     };
 
-    this.getElement = function(spineItem, selector) {
+    this.getElement = function(spineItemIdref, selector) {
 
         if(_currentView) {
-            return _currentView.getElement(spineItem, selector);
+            return _currentView.getElement(spineItemIdref, selector);
         }
 
         return undefined;
     };
 
-    this.getElementById = function(spineItem, id) {
+    this.getElementById = function(spineItemIdref, id) {
 
         if(_currentView) {
-            return _currentView.getElementById(spineItem, id);
+            return _currentView.getElementById(spineItemIdref, id);
         }
 
         return undefined;
     };
     
-    this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
+    this.getElementByCfi = function(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         if(_currentView) {
-            return _currentView.getElementByCfi(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist);
+            return _currentView.getElementByCfi(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist);
         }
 
         return undefined;
@@ -1246,10 +1246,10 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return false;
     };
 
-    this.getElements = function(spineItem, selector) {
+    this.getElements = function(spineItemIdref, selector) {
 
         if(_currentView) {
-            return _currentView.getElements(spineItem, selector);
+            return _currentView.getElements(spineItemIdref, selector);
         }
 
         return undefined;
