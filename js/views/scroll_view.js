@@ -24,6 +24,12 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/**
+ * Renders content inside a scrollable view port
+ * @param options
+ * @param isContinuousScroll
+ * @constructor
+ */
 ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
 
     var _DEBUG = false;

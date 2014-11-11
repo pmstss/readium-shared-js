@@ -29,6 +29,11 @@
  * Based on Reflowable view.
  */
 
+/**
+ *
+ * @param options
+ * @constructor
+ */
 ReadiumSDK.Views.FallbackScrollView = function(options){
 
     _.extend(this, Backbone.Events);

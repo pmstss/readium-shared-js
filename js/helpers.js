@@ -25,7 +25,14 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
+/**
+ *
+ * @param left
+ * @param top
+ * @param width
+ * @param height
+ * @constructor
+ */
 ReadiumSDK.Helpers.Rect = function(left, top, width, height) {
 
     this.left = left;
@@ -54,7 +61,11 @@ ReadiumSDK.Helpers.Rect = function(left, top, width, height) {
     }
 };
 
-
+/**
+ *
+ * @param $element
+ * @returns {ReadiumSDK.Helpers.Rect}
+ */
 //This method treats multicolumn view as one long column and finds the rectangle of the element in this "long" column
 //we are not using jQuery Offset() and width()/height() function because for multicolumn rendition_layout it produces rectangle as a bounding box of element that
 // reflows between columns this is inconstant and difficult to analyze .
@@ -87,7 +98,11 @@ ReadiumSDK.Helpers.Rect.fromElement = function($element) {
 
 
 /**
- * @return {string}
+ *
+ * @param contentRef
+ * @param sourceFileHref
+ * @returns {string}
+ * @constructor
  */
 ReadiumSDK.Helpers.ResolveContentRef = function(contentRef, sourceFileHref) {
 
@@ -112,18 +127,37 @@ ReadiumSDK.Helpers.ResolveContentRef = function(contentRef, sourceFileHref) {
 
 };
 
+
 /**
- * @return {boolean}
+ *
+ * @param str
+ * @param suffix
+ * @returns {boolean}
+ * @static
  */
 ReadiumSDK.Helpers.EndsWith = function (str, suffix) {
     return str.indexOf(suffix, str.length - suffix.length) !== -1;
 };
 
+/**
+ *
+ * @param str
+ * @param suffix
+ * @returns {boolean}
+ * @static
+ */
 ReadiumSDK.Helpers.BeginsWith = function (str, suffix) {
 
     return str.indexOf(suffix) === 0;
 };
 
+/**
+ *
+ * @param str
+ * @param toRemove
+ * @returns {string}
+ * @static
+ */
 ReadiumSDK.Helpers.RemoveFromString = function(str, toRemove) {
 
     var startIx = str.indexOf(toRemove);
@@ -135,6 +169,13 @@ ReadiumSDK.Helpers.RemoveFromString = function(str, toRemove) {
     return str.substring(0, startIx) + str.substring(startIx + toRemove.length);
 };
 
+/**
+ *
+ * @param margin
+ * @param border
+ * @param padding
+ * @constructor
+ */
 ReadiumSDK.Helpers.Margins = function(margin, border, padding) {
 
     this.margin = margin;
@@ -155,6 +196,10 @@ ReadiumSDK.Helpers.Margins = function(margin, border, padding) {
     }
 };
 
+/**
+ *
+ * @param $iframe
+ */
 ReadiumSDK.Helpers.triggerLayout = function($iframe) {
 
     var doc = $iframe[0].contentDocument;
@@ -204,6 +249,13 @@ ReadiumSDK.Helpers.triggerLayout = function($iframe) {
 
 };
 
+/**
+ *
+ * @param $viewport
+ * @param spineItem
+ * @param settings
+ * @returns {boolean}
+ */
 //Based on https://docs.google.com/spreadsheet/ccc?key=0AoPMUkQhc4wcdDI0anFvWm96N0xRT184ZE96MXFRdFE&usp=drive_web#gid=0 doc
 ReadiumSDK.Helpers.deduceSyntheticSpread = function($viewport, spineItem, settings) {
 
@@ -250,20 +302,38 @@ ReadiumSDK.Helpers.deduceSyntheticSpread = function($viewport, spineItem, settin
 
 };
 
+/**
+ *
+ * @param $element
+ * @returns {ReadiumSDK.Helpers.Rect}
+ */
 ReadiumSDK.Helpers.Margins.fromElement = function($element) {
     return new this($element.margin(), $element.border(), $element.padding());
 };
 
+/**
+ * @returns {ReadiumSDK.Helpers.Rect}
+ */
 ReadiumSDK.Helpers.Margins.empty = function() {
 
     return new this({left:0, right:0, top:0, bottom: 0}, {left:0, right:0, top:0, bottom: 0}, {left:0, right:0, top:0, bottom: 0});
 
 };
 
+/**
+ *
+ * @param name
+ * @param params
+ * @returns {ReadiumSDK.Helpers.loadTemplate.cache}
+ */
 ReadiumSDK.Helpers.loadTemplate = function(name, params) {
     return ReadiumSDK.Helpers.loadTemplate.cache[name];
 };
 
+/**
+ *
+ * @type {{fixed_book_frame: string, single_page_frame: string, scrolled_book_frame: string, reflowable_book_frame: string, reflowable_book_page_frame: string}}
+ */
 ReadiumSDK.Helpers.loadTemplate.cache = {
 
     "fixed_book_frame" : '<div id="fixed-book-frame" class="book-frame fixed-book-frame"></div>',
@@ -273,6 +343,11 @@ ReadiumSDK.Helpers.loadTemplate.cache = {
     "reflowable_book_page_frame": '<div id="reflowable-content-frame" class="reflowable-content-frame"><iframe scrolling="no" id="epubContentIframe"></iframe></div>'
 };
 
+/**
+ *
+ * @param styles
+ * @param $element
+ */
 ReadiumSDK.Helpers.setStyles = function(styles, $element) {
 
     var count = styles.length;
@@ -293,6 +368,11 @@ ReadiumSDK.Helpers.setStyles = function(styles, $element) {
 
 };
 
+/**
+ *
+ * @param iframe
+ * @returns {boolean}
+ */
 ReadiumSDK.Helpers.isIframeAlive = function(iframe)
 {
     var w = undefined;
@@ -311,7 +391,11 @@ ReadiumSDK.Helpers.isIframeAlive = function(iframe)
     return w && d;
 };
 
-
+/**
+ *
+ * @param $viewport
+ * @returns {ReadiumSDK.Views.ORIENTATION_LANDSCAPE|ReadiumSDK.Views.ORIENTATION_PORTRAIT}
+ */
 ReadiumSDK.Helpers.getOrientation = function($viewport) {
 
     var viewportWidth = $viewport.width();
@@ -324,6 +408,12 @@ ReadiumSDK.Helpers.getOrientation = function($viewport) {
     return viewportWidth >= viewportHeight ? ReadiumSDK.Views.ORIENTATION_LANDSCAPE : ReadiumSDK.Views.ORIENTATION_PORTRAIT;
 };
 
+/**
+ *
+ * @param item
+ * @param orientation
+ * @returns {boolean}
+ */
 ReadiumSDK.Helpers.isRenditionSpreadPermittedForItem = function(item, orientation) {
 
     return  !item.rendition_spread
@@ -335,6 +425,11 @@ ReadiumSDK.Helpers.isRenditionSpreadPermittedForItem = function(item, orientatio
         && orientation == ReadiumSDK.Views.ORIENTATION_PORTRAIT );
 };
 
+/**
+ *
+ * @param sel
+ * @returns {string}
+ */
 ReadiumSDK.Helpers.escapeJQuerySelector = function(sel) {
         //http://api.jquery.com/category/selectors/
         //!"#$%&'()*+,./:;<=>?@[\]^`{|}~
@@ -391,7 +486,16 @@ ReadiumSDK.Helpers.escapeJQuerySelector = function(sel) {
     // escapeSelector('~');
 
 
+/**
+ *
+ * @type {{getMatrix: getMatrix, getScaleFromMatrix: getScaleFromMatrix}}
+ */
 ReadiumSDK.Helpers.CSSTransformMatrix = {
+    /**
+     *
+     * @param $obj
+     * @returns {undefined}
+     */
     getMatrix: function ($obj) {
         var matrix = $obj.css("-webkit-transform") ||
             $obj.css("-moz-transform") ||
@@ -400,13 +504,22 @@ ReadiumSDK.Helpers.CSSTransformMatrix = {
             $obj.css("transform");
         return matrix === "none" ? undefined : matrix;
     },
+    /**
+     *
+     * @param matrix
+     * @returns {*}
+     */
     getScaleFromMatrix: function (matrix) {
         var matrixRegex = /matrix\((-?\d*\.?\d+),\s*0,\s*0,\s*(-?\d*\.?\d+),\s*0,\s*0\)/,
             matches = matrix.match(matrixRegex);
         return matches[1];
     }
 };
-//use triggerLayout helper instead
+
+/**
+ * @deprecated use triggerLayout helper instead
+ * @param $iframe
+ */
 ReadiumSDK.Helpers.waitForRendering = function($iframe) {
 
     var doc = $iframe[0].contentDocument;
