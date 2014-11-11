@@ -24,7 +24,8 @@
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /**
- @class ReadiumSDK.Models.NodeRangeInfo
+ * @class ReadiumSDK.Models.NodeRangeInfo
+ * @constructor
  */
 ReadiumSDK.Models.NodeRangeInfo = function(clientRect, startInfo, endInfo) {
 
@@ -63,7 +64,8 @@ ReadiumSDK.Models.NodeRangeInfo = function(clientRect, startInfo, endInfo) {
 };
 
 /**
- @class ReadiumSDK.Models.NodeRangePositionInfo
+ * @class ReadiumSDK.Models.NodeRangePositionInfo
+ * @constructor
  */
 ReadiumSDK.Models.NodeRangePositionInfo = function(node, offset) {
 

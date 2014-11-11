@@ -23,16 +23,16 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/*
-Used to report pagination state back to the host application
-
-@class ReadiumSDK.Models.CurrentPagesInfo
-
-@constructor
-
-@param {ReadiumSDK.Models.Spine} spine
-@param {boolean} isFixedLayout is fixed or reflowable spine item
-@param {string} pageProgressionDirection ltr | rtl
+/**
+ * Used to report pagination state back to the host application
+ *
+ * @class ReadiumSDK.Models.CurrentPagesInfo
+ *
+ * @constructor
+ *
+ * @param {ReadiumSDK.Models.Spine} spine
+ * @param {boolean} isFixedLayout is fixed or reflowable spine item
+ * @param {string} pageProgressionDirection ltr | rtl
 */
 
 ReadiumSDK.Models.CurrentPagesInfo = function(spine, isFixedLayout) {

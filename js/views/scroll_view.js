@@ -24,6 +24,12 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/**
+ * Renders content inside a scrollable view port
+ * @param options
+ * @param isContinuousScroll
+ * @constructor
+ */
 ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
 
     var _DEBUG = false;
@@ -1090,11 +1096,11 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         return spineItems;
     };
 
-    this.getElement = function(spineItem, selector) {
+    this.getElement = function(spineItemIdref, selector) {
         var element = undefined;
 
         forEachItemView(function(pageView){
-            if(pageView.currentSpineItem() == spineItem) {
+            if(pageView.currentSpineItem().idref == spineItemIdref) {
 
                 element = pageView.getNavigator().getElement(selector);
 
@@ -1108,12 +1114,12 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         return element;
     };
 
-    this.getElementById = function(spineItem, id) {
+    this.getElementById = function(spineItemIdref, id) {
 
         var found = undefined;
 
         forEachItemView(function(pageView){
-            if(pageView.currentSpineItem() == spineItem) {
+            if(pageView.currentSpineItem().idref == spineItemIdref) {
 
                 found = pageView.getNavigator().getElementById(id);
                 return false;
@@ -1129,6 +1135,29 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         }
 
         return found;
+    };
+
+    this.getElementByCfi = function (spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
+        var found = undefined;
+
+        forEachItemView(function (pageView) {
+            if (pageView.currentSpineItem().idref == spineItemIdref) {
+
+                found = pageView.getNavigator().getElementByCfi(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist);
+                return false;
+            }
+
+            return true;
+
+        }, false);
+
+        if (!found) {
+            console.error("spine item is not loaded");
+            return undefined;
+        }
+
+        return found;
+
     };
 
     this.getFirstVisibleMediaOverlayElement =  function() {
@@ -1307,7 +1336,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         console.warn('isElementVisible: Not implemented yet for scroll_view');
     };
 
-    this.getElements = function(spineItem, selector) {
+    this.getElements = function(spineItemIdref, selector) {
 
         console.warn('getElements: Not implemented yet for scroll_view');
     };

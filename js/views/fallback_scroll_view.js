@@ -29,6 +29,11 @@
  * Based on Reflowable view.
  */
 
+/**
+ *
+ * @param options
+ * @constructor
+ */
 ReadiumSDK.Views.FallbackScrollView = function(options){
 
     _.extend(this, Backbone.Events);
@@ -504,9 +509,9 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
         return [_currentSpineItem];
     };
 
-    this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
+    this.getElementByCfi = function(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
-        if(spineItem != _currentSpineItem) {
+        if(spineItemIdref != _currentSpineItem.idref) {
             console.error("spine item is not loaded");
             return undefined;
         }
@@ -514,9 +519,9 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
         return _navigationLogic.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
     };
 
-    this.getElement = function(spineItem, selector) {
+    this.getElement = function(spineItemIdref, selector) {
 
-        if(spineItem != _currentSpineItem) {
+        if(spineItemIdref != _currentSpineItem.idref) {
             console.error("spine item is not loaded");
             return undefined;
         }
@@ -574,9 +579,9 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
         console.warn('isElementVisible: Not implemented for IE9 fallback view');
     };
 
-    this.getElements = function(spineItem, selector) {
+    this.getElements = function(spineItemIdref, selector) {
 
-        if(spineItem != _currentSpineItem) {
+        if(spineItemIdref != _currentSpineItem.idref) {
             console.error("spine item is not loaded");
             return undefined;
         }
@@ -595,8 +600,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
         if (_navigationLogic.isRangeCfi(partialCfi)) {
             return this.isNodeFromRangeCfiVisible(spineIdRef, partialCfi);
         }
-        var spineItem = _spine.getItemById(spineIdRef);
-        var $elementFromCfi = this.getElementByCfi(spineItem, partialCfi);
+        var $elementFromCfi = this.getElementByCfi(spineIdRef, partialCfi);
         return ($elementFromCfi && this.isElementVisible($elementFromCfi));
     };
 
