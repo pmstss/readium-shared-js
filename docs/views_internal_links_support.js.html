@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: views/internal_links_support.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: views/internal_links_support.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>//  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
+// 
+//  Redistribution and use in source and binary forms, with or without modification, 
+//  are permitted provided that the following conditions are met:
+//  1. Redistributions of source code must retain the above copyright notice, this 
+//  list of conditions and the following disclaimer.
+//  2. Redistributions in binary form must reproduce the above copyright notice, 
+//  this list of conditions and the following disclaimer in the documentation and/or 
+//  other materials provided with the distribution.
+//  3. Neither the name of the organization nor the names of its contributors may be 
+//  used to endorse or promote products derived from this software without specific 
+//  prior written permission.
+//  
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//  OF THE POSSIBILITY OF SUCH DAMAGE.
+
+/**
+ *
+ * @param reader
+ * @constructor
+ */
+ReadiumSDK.Views.InternalLinksSupport = function(reader) {
+
+    var self = this;
+
+    function splitCfi(fullCfi) {
+
+        var startIx = fullCfi.indexOf("(");
+        var bungIx = fullCfi.indexOf("!");
+        var endIx = fullCfi.indexOf(")");
+
+        if(bungIx == -1) {
+            return undefined;
+        }
+
+        if(endIx == -1) {
+            endIx = fullCfi.length;
+        }
+
+        return {
+
+            spineItemCfi: fullCfi.substring(startIx + 1, bungIx),
+            elementCfi: fullCfi.substring(bungIx + 1, endIx)
+        }
+    }
+
+    function getAbsoluteUriRelativeToSpineItem(hrefUri, spineItem) {
+
+        var fullPath = reader.package().resolveRelativeUrl(spineItem.href);
+
+        var absUrl = hrefUri.absoluteTo(fullPath);
+
+        return absUrl;
+    }
+
+    function processDeepLink(hrefUri, spineItem) {
+
+        var absoluteOpfUri = getAbsoluteUriRelativeToSpineItem(hrefUri, spineItem);
+
+        if(!absoluteOpfUri) {
+            console.error("Unable to resolve " + hrefUri.href())
+            return;
+        }
+
+        var fullCfi = hrefUri.fragment();
+
+        var absPath = absoluteOpfUri.toString();
+
+        absPath = ReadiumSDK.Helpers.RemoveFromString(absPath, "#" +  fullCfi);
+
+        readOpfFile(absPath, function(opfText) {
+
+            if(!opfText) {
+                return;
+            }
+
+            var parser = new window.DOMParser;
+            var packageDom = parser.parseFromString(opfText, 'text/xml');
+            var cfi = splitCfi(fullCfi);
+
+            if(!cfi) {
+                console.warn("Unable to split cfi:" + fullCfi);
+                return;
+            }
+
+            var contentDocRef = EPUBcfi.Interpreter.getContentDocHref("epubcfi(" + cfi.spineItemCfi + ")", packageDom);
+
+            if(contentDocRef) {
+
+                var newSpineItem = reader.spine().getItemByHref(contentDocRef);
+                if(newSpineItem) {
+
+                    reader.openSpineItemElementCfi(newSpineItem.idref, cfi.elementCfi, self);
+                }
+                else {
+                    console.warn("Unable to find spineItem with href=" + contentDocRef);
+                }
+
+            }
+            else {
+                console.warn("Unable to find document ref from " +  fullCfi +" cfi");
+            }
+
+        });
+
+    }
+
+    function readOpfFile(path, callback) {
+
+        $.ajax({
+            // encoding: "UTF-8",
+            // mimeType: "text/plain; charset=UTF-8",
+            // beforeSend: function( xhr ) {
+            //     xhr.overrideMimeType("text/plain; charset=UTF-8");
+            // },
+            isLocal: path.indexOf("http") === 0 ? false : true,
+            url: path,
+            dataType: 'text',
+            async: true,
+            success: function (result) {
+                callback(result);
+            },
+            error: function (xhr, status, errorThrown) {
+                console.error('Error when AJAX fetching ' + path);
+                console.error(status);
+                console.error(errorThrown);
+                callback();
+            }
+        });
+    }
+
+    //checks if href includes path to opf file and full cfi
+    function isDeepLikHref(uri) {
+
+        var fileName = uri.filename();
+        return fileName &amp;&amp; ReadiumSDK.Helpers.EndsWith(fileName, ".opf");
+    }
+
+    function processLinkWithHash(hrefUri, spineItem) {
+
+        var fileName = hrefUri.filename();
+
+        var idref;
+
+        //reference to another file
+        if(fileName) {
+            var normalizedUri = new URI(hrefUri, spineItem.href);
+            var newSpineItem = reader.spine().getItemByHref(normalizedUri.pathname());
+
+            if(!newSpineItem) {
+                console.error("spine item with href=" + normalizedUri.pathname() + " not found");
+                return;
+            }
+
+            idref = newSpineItem.idref;
+        }
+        else { //hush in the same file
+            idref = spineItem.idref;
+        }
+
+        var hashFrag = hrefUri.fragment();
+
+        reader.openSpineItemElementId(idref, hashFrag, self);
+
+    }
+
+    this.processLinkElements = function($iframe, spineItem) {
+
+        var epubContentDocument = $iframe[0].contentDocument;
+
+        $('a', epubContentDocument).click(function (clickEvent) {
+            // Check for both href and xlink:href attribute and get value
+            var href;
+            if (clickEvent.currentTarget.attributes["xlink:href"]) {
+                
+                href = clickEvent.currentTarget.attributes["xlink:href"].value;
+            }
+            else {
+                href = clickEvent.currentTarget.attributes["href"].value;
+            }
+
+            var overrideClickEvent = false;
+            var hrefUri = new URI(href);
+            var hrefIsRelative = hrefUri.is('relative');
+
+            if (hrefIsRelative) {
+
+                if(isDeepLikHref(hrefUri)) {
+                    processDeepLink(hrefUri, spineItem);
+                    overrideClickEvent = true;
+                }
+                else {
+                    processLinkWithHash(hrefUri, spineItem);
+                    overrideClickEvent = true;
+                }
+
+            } else {
+                // It's an absolute URL to a remote site - open it in a separate window outside the reader
+                window.open(href, '_blank');
+                overrideClickEvent = true;
+            }
+
+            if (overrideClickEvent) {
+                clickEvent.preventDefault();
+                clickEvent.stopPropagation();
+            }
+        });
+
+    }
+
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Index</a></h2><h3>Classes</h3><ul><li><a href="ReadiumSDK.Collections.StyleCollection.html">StyleCollection</a></li><li><a href="ReadiumSDK.Helpers.Margins.html">Margins</a></li><li><a href="ReadiumSDK.Helpers.Rect.html">Rect</a></li><li><a href="ReadiumSDK.Helpers.ResolveContentRef.html">ResolveContentRef</a></li><li><a href="ReadiumSDK.Models.BookmarkData.html">BookmarkData</a></li><li><a href="ReadiumSDK.Models.CurrentPagesInfo.html">CurrentPagesInfo</a></li><li><a href="ReadiumSDK.Models.MediaOverlay.html">MediaOverlay</a></li><li><a href="ReadiumSDK.Models.NodeRangeInfo.html">NodeRangeInfo</a></li><li><a href="ReadiumSDK.Models.NodeRangePositionInfo.html">NodeRangePositionInfo</a></li><li><a href="ReadiumSDK.Models.Package.html">Package</a></li><li><a href="ReadiumSDK.Models.PackageData.html">PackageData</a></li><li><a href="ReadiumSDK.Models.PageOpenRequest.html">PageOpenRequest</a></li><li><a href="ReadiumSDK.Models.Smil.SmilNode.html">SmilNode</a></li><li><a href="ReadiumSDK.Models.SmilIterator.html">SmilIterator</a></li><li><a href="ReadiumSDK.Models.Spine.html">Spine</a></li><li><a href="ReadiumSDK.Models.SpineItem.html">SpineItem</a></li><li><a href="ReadiumSDK.Models.Spread.html">Spread</a></li><li><a href="ReadiumSDK.Models.Style.html">Style</a></li><li><a href="ReadiumSDK.Models.Switches.html">Switches</a></li><li><a href="ReadiumSDK.Models.ViewerSettings.html">ViewerSettings</a></li><li><a href="ReadiumSDK.Views.AnnotationsManager.html">AnnotationsManager</a></li><li><a href="ReadiumSDK.Views.AudioPlayer.html">AudioPlayer</a></li><li><a href="ReadiumSDK.Views.CfiNavigationLogic.html">CfiNavigationLogic</a></li><li><a href="ReadiumSDK.Views.FallbackScrollView.html">FallbackScrollView</a></li><li><a href="ReadiumSDK.Views.FixedView.html">FixedView</a></li><li><a href="ReadiumSDK.Views.IFrameLoader.html">IFrameLoader</a></li><li><a href="ReadiumSDK.Views.InternalLinksSupport.html">InternalLinksSupport</a></li><li><a href="ReadiumSDK.Views.MediaOverlayDataInjector.html">MediaOverlayDataInjector</a></li><li><a href="ReadiumSDK.Views.MediaOverlayElementHighlighter.html">MediaOverlayElementHighlighter</a></li><li><a href="ReadiumSDK.Views.MediaOverlayPlayer.html">MediaOverlayPlayer</a></li><li><a href="ReadiumSDK.Views.OnePageView.html">OnePageView</a></li><li><a href="ReadiumSDK.Views.ReaderView.html">ReaderView</a></li><li><a href="ReadiumSDK.Views.ReflowableView.html">ReflowableView</a></li><li><a href="ReadiumSDK.Views.ScrollView.html">ScrollView</a></li></ul><h3>Events</h3><ul><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOAD_START">CONTENT_DOCUMENT_LOAD_START</a></li><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOADED">CONTENT_DOCUMENT_LOADED</a></li><li><a href="ReadiumSDK.Events.html#event:FXL_VIEW_RESIZED">FXL_VIEW_RESIZED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_STATUS_CHANGED">MEDIA_OVERLAY_STATUS_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_SPEAK">MEDIA_OVERLAY_TTS_SPEAK</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_STOP">MEDIA_OVERLAY_TTS_STOP</a></li><li><a href="ReadiumSDK.Events.html#event:PAGINATION_CHANGED">PAGINATION_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_INITIALIZED">READER_INITIALIZED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_CREATED">READER_VIEW_CREATED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_DESTROYED">READER_VIEW_DESTROYED</a></li><li><a href="ReadiumSDK.Events.html#event:SETTINGS_APPLIED">SETTINGS_APPLIED</a></li><li><a href="ReadiumSDK.InternalEvents.html#event:CURRENT_VIEW_PAGINATION_CHANGED">CURRENT_VIEW_PAGINATION_CHANGED</a></li></ul><h3>Namespaces</h3><ul><li><a href="ReadiumSDK.html">ReadiumSDK</a></li><li><a href="ReadiumSDK.Collections.html">Collections</a></li><li><a href="ReadiumSDK.Events.html">Events</a></li><li><a href="ReadiumSDK.Helpers.html">Helpers</a></li><li><a href="ReadiumSDK.InternalEvents.html">InternalEvents</a></li><li><a href="ReadiumSDK.Models.html">Models</a></li><li><a href="ReadiumSDK.Overrides.html">Overrides</a></li><li><a href="ReadiumSDK.Routers.html">Routers</a></li><li><a href="ReadiumSDK.Views.html">Views</a></li></ul><h3><a href="global.html">Global</a></h3>
+</nav>
+
+<br clear="both">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha10</a> on Wed Nov 12 2014 16:29:53 GMT-0800 (PST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

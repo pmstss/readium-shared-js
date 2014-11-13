@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: models/media_overlay.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: models/media_overlay.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>//  LauncherOSX
+//
+//  Created by Boris Schneiderman.
+// Modified by Daniel Weck
+//  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
+//  
+//  Redistribution and use in source and binary forms, with or without modification, 
+//  are permitted provided that the following conditions are met:
+//  1. Redistributions of source code must retain the above copyright notice, this 
+//  list of conditions and the following disclaimer.
+//  2. Redistributions in binary form must reproduce the above copyright notice, 
+//  this list of conditions and the following disclaimer in the documentation and/or 
+//  other materials provided with the distribution.
+//  3. Neither the name of the organization nor the names of its contributors may be 
+//  used to endorse or promote products derived from this software without specific 
+//  prior written permission.
+//  
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//  OF THE POSSIBILITY OF SUCH DAMAGE.
+
+/**
+ *
+ * @param package
+ * @constructor
+ */
+ReadiumSDK.Models.MediaOverlay = function(package) {
+
+    this.package = package;
+    
+
+    this.parallelAt = function(timeMilliseconds)
+    {
+        var offset = 0;
+        
+        for (var i = 0; i &lt; this.smil_models.length; i++)
+        {
+            var smilData = this.smil_models[i];
+            
+            var timeAdjusted = timeMilliseconds - offset;
+
+            var para = smilData.parallelAt(timeAdjusted);
+            if (para)
+            {
+                return para;
+            }
+
+            offset += smilData.durationMilliseconds_Calculated();
+        }
+
+        return undefined;
+    };
+    
+    this.percentToPosition = function(percent, smilData, par, milliseconds)
+    {
+        if (percent &lt; 0.0 || percent > 100.0)
+        {
+            percent = 0.0;
+        }
+            
+        var total = this.durationMilliseconds_Calculated();
+
+        var timeMs = total * (percent / 100.0);
+
+        par.par = this.parallelAt(timeMs);
+        if (!par.par)
+        {
+            return;
+        }
+        
+        var smilDataPar = par.par.getSmil();
+        if (!smilDataPar)
+        {
+            return;
+        }
+        
+        var smilDataOffset = 0;
+        
+        for (var i = 0; i &lt; this.smil_models.length; i++)
+        {
+            smilData.smilData = this.smil_models[i];
+            if (smilData.smilData == smilDataPar)
+            {
+                break;
+            }
+            smilDataOffset += smilData.smilData.durationMilliseconds_Calculated();
+        }
+
+        milliseconds.milliseconds = timeMs - (smilDataOffset + smilData.smilData.clipOffset(par.par));
+    };
+
+    this.durationMilliseconds_Calculated = function()
+    {
+        var total = 0;
+        
+        for (var i = 0; i &lt; this.smil_models.length; i++)
+        {
+            var smilData = this.smil_models[i];
+
+            total += smilData.durationMilliseconds_Calculated();
+        }
+        
+        return total;
+    };
+    
+    this.positionToPercent = function(smilIndex, parIndex, milliseconds)
+    {
+// console.log(">>>>>>>>>>");
+// console.log(milliseconds);
+// console.log(smilIndex);
+// console.log(parIndex);
+// console.log("-------");
+                
+        if (smilIndex >= this.smil_models.length)
+        {
+            return -1.0;
+        }
+
+        var smilDataOffset = 0;
+        for (var i = 0; i &lt; smilIndex; i++)
+        {
+            var sd = this.smil_models[i];
+            smilDataOffset += sd.durationMilliseconds_Calculated();
+        }
+
+//console.log(smilDataOffset);
+        
+        var smilData = this.smil_models[smilIndex];
+
+        var par = smilData.nthParallel(parIndex);
+        if (!par)
+        {
+            return -1.0;
+        }
+
+        var offset = smilDataOffset + smilData.clipOffset(par) + milliseconds;
+
+//console.log(offset);
+        
+        var total = this.durationMilliseconds_Calculated();
+
+///console.log(total);
+
+        var percent = (offset / total) * 100;
+
+//console.log("&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt; " + percent);
+        
+        return percent;
+      };
+      
+    this.smil_models = [];
+
+    this.skippables = [];
+    this.escapables = [];
+
+    this.duration = undefined;
+    this.narrator = undefined;
+
+
+    this.activeClass = undefined;
+    this.playbackActiveClass = undefined;
+
+    this.DEBUG = false;
+
+
+    this.getSmilBySpineItem = function (spineItem) {
+        if (!spineItem) return undefined;
+
+        for(var i = 0, count = this.smil_models.length; i &lt; count; i++)
+        {
+            var smil = this.smil_models[i];
+            if(smil.spineItemId === spineItem.idref) {
+                if (spineItem.media_overlay_id !== smil.id)
+                {
+                    console.error("SMIL INCORRECT ID?? " + spineItem.media_overlay_id + " /// " + smil.id);
+                }
+                return smil;
+            }
+        }
+
+        return undefined;
+    };
+
+    /*
+    this.getSmilById = function (id) {
+
+        for(var i = 0, count = this.smil_models.length; i &lt; count; i++) {
+
+            var smil = this.smil_models[i];
+            if(smil.id === id) {
+                return smil;
+            }
+        }
+
+        return undefined;
+    };
+    */
+
+    this.getNextSmil = function(smil) {
+
+        var index = this.smil_models.indexOf(smil);
+        if(index == -1 || index == this.smil_models.length - 1) {
+            return undefined;
+        }
+
+        return this.smil_models[index + 1];
+    }
+
+    this.getPreviousSmil = function(smil) {
+
+        var index = this.smil_models.indexOf(smil);
+        if(index == -1 || index == 0) {
+            return undefined;
+        }
+
+        return this.smil_models[index - 1];
+    }
+};
+
+ReadiumSDK.Models.MediaOverlay.fromDTO = function(moDTO, package) {
+
+    var mo = new ReadiumSDK.Models.MediaOverlay(package);
+
+    if(!moDTO) {
+        console.debug("No Media Overlay.");
+        return mo;
+    }
+
+    console.debug("Media Overlay INIT...");
+
+    // if (mo.DEBUG)
+    //     console.debug(JSON.stringify(moDTO));
+        
+    mo.duration = moDTO.duration;
+    if (mo.duration &amp;&amp; mo.duration.length &amp;&amp; mo.duration.length > 0)
+    {
+        console.error("SMIL total duration is string, parsing float... (" + mo.duration + ")");
+        mo.duration = parseFloat(mo.duration);
+    }
+    if (mo.DEBUG)
+        console.debug("Media Overlay Duration (TOTAL): " + mo.duration);
+
+    mo.narrator = moDTO.narrator;
+    if (mo.DEBUG)
+        console.debug("Media Overlay Narrator: " + mo.narrator);
+
+    mo.activeClass = moDTO.activeClass;
+    if (mo.DEBUG)
+        console.debug("Media Overlay Active-Class: " + mo.activeClass);
+
+    mo.playbackActiveClass = moDTO.playbackActiveClass;
+    if (mo.DEBUG)
+        console.debug("Media Overlay Playback-Active-Class: " + mo.playbackActiveClass);
+
+    var count = moDTO.smil_models.length;
+    if (mo.DEBUG)
+        console.debug("Media Overlay SMIL count: " + count);
+
+    for(var i = 0; i &lt; count; i++) {
+        var smilModel = ReadiumSDK.Models.SmilModel.fromSmilDTO(moDTO.smil_models[i], mo);
+        mo.smil_models.push(smilModel);
+
+        if (mo.DEBUG)
+            console.debug("Media Overlay Duration (SPINE ITEM): " + smilModel.duration);
+    }
+
+    count = moDTO.skippables.length;
+    if (mo.DEBUG)
+        console.debug("Media Overlay SKIPPABLES count: " + count);
+
+    for(var i = 0; i &lt; count; i++) {
+        mo.skippables.push(moDTO.skippables[i]);
+
+        //if (mo.DEBUG)
+        //    console.debug("Media Overlay SKIPPABLE: " + mo.skippables[i]);
+    }
+
+    count = moDTO.escapables.length;
+    if (mo.DEBUG)
+        console.debug("Media Overlay ESCAPABLES count: " + count);
+
+    for(var i = 0; i &lt; count; i++) {
+        mo.escapables.push(moDTO.escapables[i]);
+
+        //if (mo.DEBUG)
+        //    console.debug("Media Overlay ESCAPABLE: " + mo.escapables[i]);
+    }
+
+    return mo;
+};
+
+
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Index</a></h2><h3>Classes</h3><ul><li><a href="ReadiumSDK.Collections.StyleCollection.html">StyleCollection</a></li><li><a href="ReadiumSDK.Helpers.Margins.html">Margins</a></li><li><a href="ReadiumSDK.Helpers.Rect.html">Rect</a></li><li><a href="ReadiumSDK.Helpers.ResolveContentRef.html">ResolveContentRef</a></li><li><a href="ReadiumSDK.Models.BookmarkData.html">BookmarkData</a></li><li><a href="ReadiumSDK.Models.CurrentPagesInfo.html">CurrentPagesInfo</a></li><li><a href="ReadiumSDK.Models.MediaOverlay.html">MediaOverlay</a></li><li><a href="ReadiumSDK.Models.NodeRangeInfo.html">NodeRangeInfo</a></li><li><a href="ReadiumSDK.Models.NodeRangePositionInfo.html">NodeRangePositionInfo</a></li><li><a href="ReadiumSDK.Models.Package.html">Package</a></li><li><a href="ReadiumSDK.Models.PackageData.html">PackageData</a></li><li><a href="ReadiumSDK.Models.PageOpenRequest.html">PageOpenRequest</a></li><li><a href="ReadiumSDK.Models.Smil.SmilNode.html">SmilNode</a></li><li><a href="ReadiumSDK.Models.SmilIterator.html">SmilIterator</a></li><li><a href="ReadiumSDK.Models.Spine.html">Spine</a></li><li><a href="ReadiumSDK.Models.SpineItem.html">SpineItem</a></li><li><a href="ReadiumSDK.Models.Spread.html">Spread</a></li><li><a href="ReadiumSDK.Models.Style.html">Style</a></li><li><a href="ReadiumSDK.Models.Switches.html">Switches</a></li><li><a href="ReadiumSDK.Models.ViewerSettings.html">ViewerSettings</a></li><li><a href="ReadiumSDK.Views.AnnotationsManager.html">AnnotationsManager</a></li><li><a href="ReadiumSDK.Views.AudioPlayer.html">AudioPlayer</a></li><li><a href="ReadiumSDK.Views.CfiNavigationLogic.html">CfiNavigationLogic</a></li><li><a href="ReadiumSDK.Views.FallbackScrollView.html">FallbackScrollView</a></li><li><a href="ReadiumSDK.Views.FixedView.html">FixedView</a></li><li><a href="ReadiumSDK.Views.IFrameLoader.html">IFrameLoader</a></li><li><a href="ReadiumSDK.Views.InternalLinksSupport.html">InternalLinksSupport</a></li><li><a href="ReadiumSDK.Views.MediaOverlayDataInjector.html">MediaOverlayDataInjector</a></li><li><a href="ReadiumSDK.Views.MediaOverlayElementHighlighter.html">MediaOverlayElementHighlighter</a></li><li><a href="ReadiumSDK.Views.MediaOverlayPlayer.html">MediaOverlayPlayer</a></li><li><a href="ReadiumSDK.Views.OnePageView.html">OnePageView</a></li><li><a href="ReadiumSDK.Views.ReaderView.html">ReaderView</a></li><li><a href="ReadiumSDK.Views.ReflowableView.html">ReflowableView</a></li><li><a href="ReadiumSDK.Views.ScrollView.html">ScrollView</a></li></ul><h3>Events</h3><ul><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOAD_START">CONTENT_DOCUMENT_LOAD_START</a></li><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOADED">CONTENT_DOCUMENT_LOADED</a></li><li><a href="ReadiumSDK.Events.html#event:FXL_VIEW_RESIZED">FXL_VIEW_RESIZED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_STATUS_CHANGED">MEDIA_OVERLAY_STATUS_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_SPEAK">MEDIA_OVERLAY_TTS_SPEAK</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_STOP">MEDIA_OVERLAY_TTS_STOP</a></li><li><a href="ReadiumSDK.Events.html#event:PAGINATION_CHANGED">PAGINATION_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_INITIALIZED">READER_INITIALIZED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_CREATED">READER_VIEW_CREATED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_DESTROYED">READER_VIEW_DESTROYED</a></li><li><a href="ReadiumSDK.Events.html#event:SETTINGS_APPLIED">SETTINGS_APPLIED</a></li><li><a href="ReadiumSDK.InternalEvents.html#event:CURRENT_VIEW_PAGINATION_CHANGED">CURRENT_VIEW_PAGINATION_CHANGED</a></li></ul><h3>Namespaces</h3><ul><li><a href="ReadiumSDK.html">ReadiumSDK</a></li><li><a href="ReadiumSDK.Collections.html">Collections</a></li><li><a href="ReadiumSDK.Events.html">Events</a></li><li><a href="ReadiumSDK.Helpers.html">Helpers</a></li><li><a href="ReadiumSDK.InternalEvents.html">InternalEvents</a></li><li><a href="ReadiumSDK.Models.html">Models</a></li><li><a href="ReadiumSDK.Overrides.html">Overrides</a></li><li><a href="ReadiumSDK.Routers.html">Routers</a></li><li><a href="ReadiumSDK.Views.html">Views</a></li></ul><h3><a href="global.html">Global</a></h3>
+</nav>
+
+<br clear="both">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha10</a> on Wed Nov 12 2014 16:29:50 GMT-0800 (PST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
