@@ -134,6 +134,11 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
                 {
                     var contentDocumentFrame = args[5];
                     var jQueryEvent = args[4];
+                    if (typeof jQueryEvent.clientX === 'undefined') {
+                        jQueryEvent.clientX = jQueryEvent.pageX;
+                        jQueryEvent.clientY = jQueryEvent.pageY;
+                    }
+
                     var annotationId = args[3];
                     var fullFakeCfi = args[2];
                     var type = args[1];
@@ -146,6 +151,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
             }
         }
         mangleEvent('annotationClicked');
+        mangleEvent('annotationTouched');
         mangleEvent('annotationRightClicked');
         mangleEvent('annotationHoverIn');
         mangleEvent('annotationHoverOut');
