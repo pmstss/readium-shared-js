@@ -646,14 +646,14 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             columnFullWidth *= -1; // horizontal shifts are reverted in RTL mode
         }
 
-        // Do not adjust if the element is close to being 100% in one column
-        if (rect.left < 0 && (rect.left * -1) >= rect.width) {
-            return;
-        }
-
         // first we go left/right (rebasing onto the very first column available)
         while (rect.top < 0) {
             offsetRectangle(rect, -columnFullWidth, frameDimensions.height);
+        }
+
+        // Do not adjust if the element is close to being 100% in one column
+        if (rect.left < 0 && (rect.left * -1) >= rect.width) {
+            return;
         }
 
         // ... then, if necessary (for visibility offset checks),
