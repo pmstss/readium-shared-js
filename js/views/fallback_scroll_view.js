@@ -58,6 +58,8 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
     var _$epubHtml;
     var _pageRequest;
 
+    var _isViewReady = false;
+
 
     this.render = function(){
 
@@ -125,6 +127,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
     };
 
     function renderIframe() {
+        _isViewReady = false;
         if (_$contentFrame) {
             //destroy old contentFrame
             _$contentFrame.remove();
@@ -230,6 +233,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
         setTimeout(function(){
             resizeIFrameToContent();
             openDeferredElement();
+            _isViewReady = true;
             onPaginationChanged(self, _currentSpineItem);
             _$iframe.css('opacity',1);
         }, 50);
@@ -369,7 +373,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
     }
 
     function onPaginationChanged(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
-
+        if (!_isViewReady) return;
         self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
     }
 
@@ -512,7 +516,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
     this.getElementByCfi = function(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         if(spineItemIdref != _currentSpineItem.idref) {
-            console.error("spine item is not loaded");
+            console.warn("spine item is not loaded");
             return undefined;
         }
 
@@ -522,7 +526,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
     this.getElement = function(spineItemIdref, selector) {
 
         if(spineItemIdref != _currentSpineItem.idref) {
-            console.error("spine item is not loaded");
+            console.warn("spine item is not loaded");
             return undefined;
         }
 

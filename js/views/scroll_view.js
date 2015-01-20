@@ -24,19 +24,11 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/**
- * Renders content inside a scrollable view port
- * @param options
- * @param isContinuousScroll
- * @constructor
- */
-ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
+ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
 
     var _DEBUG = false;
 
     _.extend(this, Backbone.Events);
-
-    options.enablePageTransitions = false; // force (not fixed layout!)
 
     var SCROLL_MARGIN_TO_SHOW_LAST_VISBLE_LINE = 5;
     var ITEM_LOAD_SCROLL_BUFFER = 2000;
@@ -81,6 +73,20 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         _$contentFrame.css("height", "100%");
         _$contentFrame.css("position", "relative");
 
+        var settings = reader.viewerSettings();
+        if (!settings || typeof settings.enableGPUHardwareAccelerationCSS3D === "undefined")
+        {
+            //defaults
+            settings = new ReadiumSDK.Models.ViewerSettings({});
+        }
+        if (settings.enableGPUHardwareAccelerationCSS3D) {
+            // This is a necessary counterpart for the same CSS GPU hardware acceleration trick in one_page_view.js
+            // This affects the stacking order and re-enables the scrollbar in Safari (works fine in Chrome otherwise)
+            _$contentFrame.css("transform", "translateZ(0)");
+        }
+        
+        // _$contentFrame.css("box-sizing", "border-box");
+        // _$contentFrame.css("border", "20px solid red");
 
         self.applyStyles();
 
@@ -88,6 +94,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
 
         _$contentFrame.on('scroll', function(e){
             lazyScroll(e);
+            onScrollDirect();
         });
 
         return self;
@@ -220,14 +227,45 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         }, assertScrollPosition);
     }
 
-    function onScroll(e) {
+    var _mediaOverlaysWasPlayingLastTimeScrollStarted = false;
 
+    function onScrollDirect(e)
+    {
+        var settings = reader.viewerSettings();
+        if (!settings.mediaOverlaysPreservePlaybackWhenScroll)
+        {
+            if (!_mediaOverlaysWasPlayingLastTimeScrollStarted && reader.isMediaOverlayAvailable())
+            {
+                _mediaOverlaysWasPlayingLastTimeScrollStarted = reader.isPlayingMediaOverlay();
+                if (_mediaOverlaysWasPlayingLastTimeScrollStarted)
+                {
+                    reader.pauseMediaOverlay();
+                }
+            }
+        }
+    }
+    
+    function onScroll(e)
+    {
         if(    !_isPerformingLayoutModifications
             && !_isSettingScrollPosition
             && !_isLoadingNewSpineItemOnPageRequest) {
 
             updateTransientViews();
             onPaginationChanged(self);
+
+            var settings = reader.viewerSettings();
+            if (!settings.mediaOverlaysPreservePlaybackWhenScroll)
+            {
+                if (_mediaOverlaysWasPlayingLastTimeScrollStarted)
+                {
+                    setTimeout(function()
+                    {
+                        reader.playMediaOverlay();
+                        _mediaOverlaysWasPlayingLastTimeScrollStarted = false;
+                    }, 100);
+                }
+            }
         }
     }
 
@@ -282,7 +320,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
 
         var w = iframe.contentWindow;
         var d = iframe.contentDocument;
-
+        
         var previousPolledContentHeight = parseInt(Math.round(parseFloat(w.getComputedStyle(d.documentElement).height))); //body can be shorter!;
 
         var initialContentHeight = previousPolledContentHeight;
@@ -325,15 +363,9 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
                         var doc = iframe.contentDocument;
 
                         var iframeHeight = parseInt(Math.round(parseFloat(window.getComputedStyle(iframe).height)));
-
-                        var scale = 1;
-                        if (fixedLayout) {
-                            //var iframeWidth = parseInt(Math.round(parseFloat(window.getComputedStyle(iframe).width)));
-                            scale = _$contentFrame.width() / metaWidth;
-                        }
-
-                        var docHeight = parseInt(Math.round(parseFloat(win.getComputedStyle(doc.documentElement).height) * scale)); //body can be shorter!
-
+                    
+                        var docHeight = parseInt(Math.round(parseFloat(win.getComputedStyle(doc.documentElement).height))); //body can be shorter!
+                        
                         if (previousPolledContentHeight !== docHeight)
                         {
                             previousPolledContentHeight = docHeight;
@@ -366,8 +398,8 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
                             {
                                 var win = iframe.contentWindow;
                                 var doc = iframe.contentDocument;
-
-                                var docHeightAfter = parseInt(Math.round(parseFloat(win.getComputedStyle(doc.documentElement).height) * scale)); //body can be shorter!
+                                
+                                var docHeightAfter = parseInt(Math.round(parseFloat(win.getComputedStyle(doc.documentElement).height))); //body can be shorter!
                                 var iframeHeightAfter = parseInt(Math.round(parseFloat(window.getComputedStyle(iframe).height)));
 
                                 var newdiff = iframeHeightAfter-docHeightAfter;
@@ -612,11 +644,14 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
 
     function createPageViewForSpineItem(isTemporaryView) {
 
+        options.disablePageTransitions = true; // force
+
         var pageView = new ReadiumSDK.Views.OnePageView(
             options,
             ["content-doc-frame"],
-            true); //enableBookStyleOverrides
-
+            true, //enableBookStyleOverrides
+            reader);
+            
         pageView.render();
         if (_viewSettings) pageView.setViewSettings(_viewSettings);
 
@@ -1024,7 +1059,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         var range = {top: 0, bottom: 0};
 
         range.top = pageView.element().position().top + scrollTop();
-        range.bottom = range.top + pageView.element().height();
+        range.bottom = range.top + pageView.getCalculatedPageHeight();
 
         return range;
     }
@@ -1051,7 +1086,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
         var viewPortRange = getVisibleRange();
         var viewPortHeight = viewPortRange.bottom - viewPortRange.top;
 
-        var paginationInfo = new ReadiumSDK.Models.CurrentPagesInfo(_spine, false, _spine.direction);
+        var paginationInfo = new ReadiumSDK.Models.CurrentPagesInfo(_spine, false);
 
         var visibleViews = getVisiblePageViews();
 
@@ -1115,7 +1150,6 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll){
     };
 
     this.getElementById = function(spineItemIdref, id) {
-
         var found = undefined;
 
         forEachItemView(function(pageView){

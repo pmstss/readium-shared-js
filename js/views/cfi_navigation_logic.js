@@ -226,10 +226,34 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 console.error("Error! No visible textnode fragment found!");
             }
         }
-        //create an optimized range to return based on the fragment results
-        var resultRangeData = {start: found.end > 3 ? (found.end - 2) : 0, end: found.end};
-        var resultRangeRect = getNodeRangeClientRect(textNode, resultRangeData.start, textNode, resultRangeData.end);
-        return {start: resultRangeData.start, end: resultRangeData.end, rect: resultRangeRect};
+
+        //if the found fragment is small enough return it outright
+        if (found.end > 3) {
+            //create an optimized range to return based on the fragment results
+
+            //find the last printable character of the textnode fragment:
+            var lastPrintableIndex = found.start;
+            for (var i = found.end - 1; i < found.end && i >= found.start; i--) {
+                /* <- debug
+                console.log(i + " :: " + textNode.nodeValue.charAt(i) + " :: " + textNode.nodeValue.charCodeAt(i));
+                //debug -> */
+                if (textNode.nodeValue.charCodeAt(i) > 32) {
+                    lastPrintableIndex = i;
+                    break;
+                }
+            }
+            var resultRangeData = {start: lastPrintableIndex, end: lastPrintableIndex + 1};
+            var resultRangeRect = getNodeRangeClientRect(textNode, resultRangeData.start, textNode, resultRangeData.end);
+            if (isNodeClientRectVisible(resultRangeRect)) {
+                return {start: resultRangeData.start, end: resultRangeData.end, rect: resultRangeRect};
+            } else {
+                return found;
+            }
+        } else {
+            return found;
+        }
+
+
     }
 
 
@@ -244,8 +268,19 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
      * @returns {boolean}
      */
     function isPageProgressionRightToLeft() {
-        return !!options.paginationInfo.rightToLeft;
+        return options.paginationInfo && !!options.paginationInfo.rightToLeft;
     }
+
+    /**
+     * @private
+     * Checks whether or not pages are rendered with vertical writing mode
+     *
+     * @returns {boolean}
+     */
+    function isVerticalWritingMode() {
+        return options.paginationInfo && !!options.paginationInfo.isVerticalWritingMode;
+    }
+
 
     /**
      * @private
@@ -253,9 +288,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
      *
      * @param {Object} rect
      * @param {Object} frameDimensions
+     * @param {boolean} [isVwm]           isVerticalWritingMode
      * @returns {boolean}
      */
-    function isRectVisible(rect, frameDimensions) {
+    function isRectVisible(rect, frameDimensions, isVwm) {
+        if (isVwm) {
+            return rect.top >= 0 && rect.top < frameDimensions.height;
+        }
         return rect.left >= 0 && rect.left < frameDimensions.width;
     }
 
@@ -266,6 +305,12 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
      * @returns {number} Full width of a column in pixels
      */
     function getColumnFullWidth() {
+        
+        if (!options.paginationInfo || isVerticalWritingMode())
+        {
+            return $iframe.width();
+        }
+        
         return options.paginationInfo.columnWidth + options.paginationInfo.columnGap;
     }
 
@@ -278,8 +323,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
      * @returns {Object}
      */
     function getVisibleContentOffsets() {
+        if(isVerticalWritingMode()){
+            return {
+                top: (options.paginationInfo ? options.paginationInfo.pageOffset : 0)
+            };
+        }
         return {
-            left: options.paginationInfo.pageOffset
+            left: (options.paginationInfo ? options.paginationInfo.pageOffset : 0)
                 * (isPageProgressionRightToLeft() ? -1 : 1)
         };
     }
@@ -347,6 +397,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         }
 
         var isRtl = isPageProgressionRightToLeft();
+        var isVwm = isVerticalWritingMode();
         var columnFullWidth = getColumnFullWidth();
         var frameDimensions = {
             width: $iframe.width(),
@@ -357,7 +408,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             // because of webkit inconsistency, that single rectangle should be adjusted
             // until it hits the end OR will be based on the FIRST column that is visible
             adjustRectangle(clientRectangles[0], frameDimensions, columnFullWidth,
-                isRtl, true);
+                    isRtl, isVwm, true);
         }
 
         // for an element split between several CSS columns,
@@ -365,7 +416,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         // each of those should be checked
         var visibilityPercentage = 0;
         for (var i = 0, l = clientRectangles.length; i < l; ++i) {
-            if (isRectVisible(clientRectangles[i], frameDimensions)) {
+            if (isRectVisible(clientRectangles[i], frameDimensions, isVwm)) {
                 visibilityPercentage = shouldCalculateVisibilityPercentage
                     ? measureVisibilityPercentageByRectangles(clientRectangles, i)
                     : 100;
@@ -404,32 +455,42 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
      */
     function calculatePageIndexByRectangles(clientRectangles, spatialVerticalOffset) {
         var isRtl = isPageProgressionRightToLeft();
+        var isVwm = isVerticalWritingMode();
         var columnFullWidth = getColumnFullWidth();
+
         var frameHeight = $iframe.height();
         var frameWidth = $iframe.width();
 
         if (spatialVerticalOffset) {
             trimRectanglesByVertOffset(clientRectangles, spatialVerticalOffset,
-                frameHeight, columnFullWidth, isRtl);
+                frameHeight, columnFullWidth, isRtl, isVwm);
         }
 
         var firstRectangle = _.first(clientRectangles);
         if (clientRectangles.length === 1) {
             adjustRectangle(firstRectangle, {
                 height: frameHeight, width: frameWidth
-            }, columnFullWidth, isRtl);
+            }, columnFullWidth, isRtl, isVwm);
         }
 
-        var leftOffset = firstRectangle.left;
-        if (isRtl) {
-            leftOffset = columnFullWidth * options.paginationInfo.visibleColumnCount - leftOffset;
+        var pageIndex;
+
+        if (isVwm) {
+            var topOffset = firstRectangle.top;
+            pageIndex = Math.floor(topOffset / frameHeight);
+        } else {
+            var leftOffset = firstRectangle.left;
+            if (isRtl) {
+                leftOffset = (columnFullWidth * (options.paginationInfo ? options.paginationInfo.visibleColumnCount : 1)) - leftOffset;
+            }
+            pageIndex = Math.floor(leftOffset / columnFullWidth);
         }
 
-        var pageIndex = Math.floor(leftOffset / columnFullWidth);
-
-        // fix for the glitch with first opening of the book with RTL dir and lang
-        if (pageIndex < 0 || pageIndex >= options.paginationInfo.columnCount) {
-            pageIndex = options.paginationInfo.visibleColumnCount - pageIndex;
+        if (pageIndex < 0) {
+            pageIndex = 0;
+        }
+        else if (pageIndex >= (options.paginationInfo ? options.paginationInfo.columnCount : 1)) {
+            pageIndex = (options.paginationInfo ? (options.paginationInfo.columnCount - 1) : 0);
         }
 
         return pageIndex;
@@ -591,11 +652,19 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
      * @param {Object} frameDimensions
      * @param {number} columnFullWidth
      * @param {boolean} isRtl
+     * @param {boolean} isVwm               isVerticalWritingMode
      * @param {boolean} shouldLookForFirstVisibleColumn
      *      If set, there'll be two-phase adjustment
      *      (to align a rectangle with a viewport)
+
      */
-    function adjustRectangle(rect, frameDimensions, columnFullWidth, isRtl, shouldLookForFirstVisibleColumn) {
+    function adjustRectangle(rect, frameDimensions, columnFullWidth, isRtl, isVwm,
+            shouldLookForFirstVisibleColumn) {
+
+        // Rectangle adjustment is not needed in VWM since it does not deal with columns
+        if (isVwm) {
+            return;
+        }
 
         if (isRtl) {
             columnFullWidth *= -1; // horizontal shifts are reverted in RTL mode
@@ -606,13 +675,18 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             offsetRectangle(rect, -columnFullWidth, frameDimensions.height);
         }
 
+        // Do not adjust if the element is close to being 100% in one column
+        if (rect.left < 0 && (rect.left * -1) >= rect.width) {
+            return;
+        }
+
         // ... then, if necessary (for visibility offset checks),
         // each column is tried again (now in reverse order)
         // the loop will be stopped when the column is aligned with a viewport
         // (i.e., is the first visible one).
         if (shouldLookForFirstVisibleColumn) {
             while (rect.bottom >= frameDimensions.height) {
-                if (isRectVisible(rect, frameDimensions)) {
+                if (isRectVisible(rect, frameDimensions, isVwm)) {
                     break;
                 }
                 offsetRectangle(rect, columnFullWidth, -frameDimensions.height);
@@ -629,10 +703,17 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
      * @param {number} frameHeight
      * @param {number} columnFullWidth
      * @param {boolean} isRtl
+     * @param {boolean} isVwm               isVerticalWritingMode
      */
-    function trimRectanglesByVertOffset(rects, verticalOffset, frameHeight, columnFullWidth, isRtl) {
+    function trimRectanglesByVertOffset(
+            rects, verticalOffset, frameHeight, columnFullWidth, isRtl, isVwm) {
 
-        var totalHeight = _.reduce(rects, function (prev, cur) {
+        //TODO: Support vertical writing mode
+        if (isVwm) {
+            return;
+        }
+        
+        var totalHeight = _.reduce(rects, function(prev, cur) {
             return prev + cur.height;
         }, 0);
 

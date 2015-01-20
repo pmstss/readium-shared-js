@@ -96,6 +96,59 @@ ReadiumSDK.Helpers.Rect.fromElement = function($element) {
     return new ReadiumSDK.Helpers.Rect(offsetLeft, offsetTop, offsetWidth, offsetHeight);
 };
 
+ReadiumSDK.Helpers.UpdateHtmlFontSize = function($epubHtml, fontSize){
+
+    
+    var factor = fontSize/100;
+    var win = $epubHtml[0].ownerDocument.defaultView;
+    var $textblocks = $('p, div, span, h1, h2, h3, h4, h5, h6, li, blockquote, td, pre', $epubHtml);
+    var originalLineHeight;
+
+
+    // need to do two passes because it is possible to have nested text blocks. 
+    // If you change the font size of the parent this will then create an inaccurate
+    // font size for any children. 
+    for (var i = 0; i < $textblocks.length; i++){
+        var ele = $textblocks[i],
+            fontSizeAttr = ele.getAttribute('data-original-font-size');
+
+        if (!fontSizeAttr){
+            var style = win.getComputedStyle(ele);
+            var originalFontSize = parseInt(style.fontSize);
+            originalLineHeight = parseInt(style.lineHeight);
+            
+            ele.setAttribute('data-original-font-size', originalFontSize);
+            // getComputedStyle will not calculate the line-height if the value is 'normal'. In this case parseInt will return NaN
+            if (originalLineHeight){
+                ele.setAttribute('data-original-line-height', originalLineHeight);
+            }
+        }
+    }
+
+    // reset variable so the below logic works. All variables in JS are function scoped. 
+    originalLineHeight = 0;
+    for (var i = 0; i < $textblocks.length; i++){
+        var ele = $textblocks[i],
+            fontSizeAttr = ele.getAttribute('data-original-font-size'),
+            lineHeightAttr = ele.getAttribute('data-original-line-height'),
+            originalFontSize = Number(fontSizeAttr);
+
+        if (lineHeightAttr){
+            originalLineHeight = Number(lineHeightAttr);
+        }
+        else{
+            originalLineHeight = 0;
+        }
+
+        ele.style.fontSize = (originalFontSize * factor) + 'px';
+        if (originalLineHeight){
+            ele.style.lineHeight = (originalLineHeight * factor) + 'px';
+        }
+
+    }
+    $epubHtml.css("font-size", fontSize + "%");
+}
+
 
 /**
  *
@@ -257,49 +310,66 @@ ReadiumSDK.Helpers.triggerLayout = function($iframe) {
  * @returns {boolean}
  */
 //Based on https://docs.google.com/spreadsheet/ccc?key=0AoPMUkQhc4wcdDI0anFvWm96N0xRT184ZE96MXFRdFE&usp=drive_web#gid=0 doc
+// Returns falsy and truthy
+// true and false mean that the synthetic-spread or single-page is "forced" (to be respected whatever the external conditions)
+// 1 and 0 mean that the synthetic-spread or single-page is "not forced" (is allowed to be overriden by external conditions, such as optimum column width / text line number of characters, etc.)
 ReadiumSDK.Helpers.deduceSyntheticSpread = function($viewport, spineItem, settings) {
 
     if(!$viewport || $viewport.length == 0) {
-        return false;
+        return 0; // non-forced
     }
 
-    if(spineItem && spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_NONE) {
-        return false;
+    //http://www.idpf.org/epub/fxl/#property-spread-values
+
+    var rendition_spread = spineItem ? spineItem.getRenditionSpread() : undefined;
+
+    if(rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_NONE) {
+        return false; // forced
+        
+        //"Reading Systems must not incorporate this spine item in a synthetic spread."
     }
 
     if(settings.syntheticSpread == "double") {
-        return true;
+        return true; // forced
     }
     else if(settings.syntheticSpread == "single") {
-        return false;
+        return false; // forced
     }
 
     if(!spineItem) {
-        return false;
+        return 0; // non-forced
     }
 
-    if(spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_BOTH) {
-        return true;
+    if(rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_BOTH) {
+        return true; // forced
+        
+        //"Reading Systems should incorporate this spine item in a synthetic spread regardless of device orientation."
     }
 
     var orientation = ReadiumSDK.Helpers.getOrientation($viewport);
 
-    if(spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_LANDSCAPE) {
-        return orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE;
+    if(rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_LANDSCAPE) {
+        return orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE; // forced
+        
+        //"Reading Systems should incorporate this spine item in a synthetic spread only when the device is in landscape orientation."
     }
 
-    if(spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_PORTRAIT) {
-        return orientation === ReadiumSDK.Views.ORIENTATION_PORTRAIT;
+    if(rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_PORTRAIT) {
+        return orientation === ReadiumSDK.Views.ORIENTATION_PORTRAIT; // forced
+        
+        //"Reading Systems should incorporate this spine item in a synthetic spread only when the device is in portrait orientation."
     }
 
-    if(!spineItem.rendition_spread || spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_AUTO) {
+    if(!rendition_spread || rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_AUTO) {
         // if no spread set in document and user didn't set in in setting we will do double for landscape
-        return orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE;
+        var landscape = orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE;
+        return landscape ? 1 : 0; // non-forced
+
+        //"Reading Systems may use synthetic spreads in specific or all device orientations as part of a display area utilization optimization process."
     }
 
-    console.warn("Unexpected spread properties condition!");
-    return false;
-
+    console.warn("ReadiumSDK.Helpers.deduceSyntheticSpread: spread properties?!");
+    return 0; // non-forced
 };
 
 /**
@@ -335,11 +405,13 @@ ReadiumSDK.Helpers.loadTemplate = function(name, params) {
  * @type {{fixed_book_frame: string, single_page_frame: string, scrolled_book_frame: string, reflowable_book_frame: string, reflowable_book_page_frame: string}}
  */
 ReadiumSDK.Helpers.loadTemplate.cache = {
-
-    "fixed_book_frame" : '<div id="fixed-book-frame" class="book-frame fixed-book-frame"></div>',
-    "single_page_frame" : '<div class="single-page-frame"><iframe scrolling="no" class="iframe-fixed"></iframe></div>',
-    "scrolled_book_frame" : '<div id="reflowable-book-frame" class="book-frame reflowable-book-frame"><div id="scrolled-content-frame"></div></div>',
-    "reflowable_book_frame" : '<div id="reflowable-book-frame" class="book-frame reflowable-book-frame"></div>',
+    "fixed_book_frame" : '<div id="fixed-book-frame" class="clearfix book-frame fixed-book-frame"></div>',
+    
+    "single_page_frame" : '<div><div id="scaler"><iframe scrolling="no" class="iframe-fixed"></iframe></div></div>',
+    //"single_page_frame" : '<div><iframe scrolling="no" class="iframe-fixed" id="scaler"></iframe></div>',
+    
+    "scrolled_book_frame" : '<div id="reflowable-book-frame" class="clearfix book-frame reflowable-book-frame"><div id="scrolled-content-frame"></div></div>',
+    "reflowable_book_frame" : '<div id="reflowable-book-frame" class="clearfix book-frame reflowable-book-frame"></div>',
     "reflowable_book_page_frame": '<div id="reflowable-content-frame" class="reflowable-content-frame"><iframe scrolling="no" id="epubContentIframe"></iframe></div>'
 };
 
@@ -416,20 +488,103 @@ ReadiumSDK.Helpers.getOrientation = function($viewport) {
  */
 ReadiumSDK.Helpers.isRenditionSpreadPermittedForItem = function(item, orientation) {
 
-    return  !item.rendition_spread
-        ||  item.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_BOTH
-        ||  item.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_AUTO
-        ||  (item.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_LANDSCAPE
+    var rendition_spread = item.getRenditionSpread();
+
+    return  !rendition_spread
+        ||  rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_BOTH
+        ||  rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_AUTO
+        ||  (rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_LANDSCAPE
         && orientation == ReadiumSDK.Views.ORIENTATION_LANDSCAPE)
-        ||  (item.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_PORTRAIT
+        ||  (rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_PORTRAIT
         && orientation == ReadiumSDK.Views.ORIENTATION_PORTRAIT );
 };
 
-/**
- *
- * @param sel
- * @returns {string}
- */
+ReadiumSDK.Helpers.CSSTransition = function($el, trans) {
+    
+    // does not work!
+    //$el.css('transition', trans);
+    
+    var css={};
+    // empty '' prefix FIRST!
+    _.each(['', '-webkit-', '-moz-', '-ms-'], function(prefix) {
+        css[prefix + 'transition'] = prefix + trans;
+    });
+    $el.css(css);
+}
+
+//scale, left, top, angle, origin
+ReadiumSDK.Helpers.CSSTransformString = function(options) {
+    var enable3D = options.enable3D ? true : false;
+    
+    var translate, scale, rotation,
+        origin = options.origin;
+
+    if (options.left || options.top){
+        var left = options.left || 0, 
+            top = options.top || 0;
+
+        translate = enable3D ? ("translate3D(" + left + "px, " + top + "px, 0)") : ("translate(" + left + "px, " + top + "px)");
+    }
+    if (options.scale){
+        scale = enable3D ? ("scale3D(" + options.scale + ", " + options.scale + ", 0)") : ("scale(" + options.scale + ")");
+    }
+    if (options.angle){
+        rotation =  enable3D ? ("rotate3D(0,0," + options.angle + "deg)") : ("rotate(" + options.angle + "deg)");
+    }
+    
+    if (!(translate || scale || rotation)){
+        return {};
+    }
+
+    var transformString = (translate && scale) ? (translate + " " + scale) : (translate ? translate : scale); // the order is important!
+    if (rotation)
+    {
+        transformString = transformString + " " + rotation;
+        //transformString = rotation + " " + transformString;
+    }
+
+    var css = {};
+    css['transform'] = transformString;
+    css['transform-origin'] = origin ? origin : (enable3D ? '0 0 0' : '0 0');
+    return css;
+};
+
+ReadiumSDK.Helpers.extendedThrottle = function (startCb, tickCb, endCb, tickRate, waitThreshold, context) {
+    if (!tickRate) tickRate = 250;
+    if (!waitThreshold) waitThreshold = tickRate;
+
+    var first = true,
+        last,
+        deferTimer;
+
+    return function () {
+        var ctx = context || this,
+            now = (Date.now && Date.now()) || new Date().getTime(),
+            args = arguments;
+
+        if (!(last && now < last + tickRate)) {
+            last = now;
+            if (first) {
+                startCb.apply(ctx, args);
+                first = false;
+            } else {
+                tickCb.apply(ctx, args);
+            }
+        }
+
+        clearTimeout(deferTimer);
+        deferTimer = setTimeout(function () {
+            last = now;
+            first = true;
+            endCb.apply(ctx, args);
+        }, waitThreshold);
+    };
+};
+
+
+//TODO: consider using CSSOM escape() or polyfill
+//https://github.com/mathiasbynens/CSS.escape/blob/master/css.escape.js
+//http://mathiasbynens.be/notes/css-escapes
 ReadiumSDK.Helpers.escapeJQuerySelector = function(sel) {
         //http://api.jquery.com/category/selectors/
         //!"#$%&'()*+,./:;<=>?@[\]^`{|}~

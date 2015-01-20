@@ -26,12 +26,7 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-/**
- *
- * @constructor
- */
-ReadiumSDK.Views.IFrameLoader = function() {
+ReadiumSDK.Views.IFrameLoader = function () {
 
     var self = this;
     var eventListeners = {};
@@ -39,107 +34,109 @@ ReadiumSDK.Views.IFrameLoader = function() {
 
     this.addIFrameEventListener = function(eventName, callback, context, options) {
 
-        if(eventListeners[eventName] == undefined) {
+        if (eventListeners[eventName] == undefined) {
             eventListeners[eventName] = [];
         }
 
         eventListeners[eventName].push({callback: callback, context: context, options: options});
     };
 
-    this.loadIframe = function(iframe, src, callback, context) {
+    this.updateIframeEvents = function (iframe) {
 
-        $(iframe).hide();
-        //iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
-        
-        var isWaitingForFrameLoad = true;
+        _.each(eventListeners, function(eventHandlerList, eventName){
+            _.each(eventHandlerList,function(eventHandler){
+                var options = eventHandler.options;
+                var callback = eventHandler.callback;
+                var context = eventHandler.context;
 
-        iframe.onload = function() {
+                function addJqueryEvent(obj) {
+                    obj.on(eventName, callback, context);
+                }
 
-            iframe.onload = undefined;
+                function addNativeEvent(obj) {
+                    obj.addEventListener(eventName, callback, context);
+                }
 
-            isWaitingForFrameLoad = false;
-            
-            _.each(eventListeners, function(eventHandlerList, eventName){
-                _.each(eventHandlerList,function(eventHandler){
-                    var options = eventHandler.options;
-                    var callback = eventHandler.callback;
-                    var context = eventHandler.context;
+                if (!iframe.contentWindow) {
+                    return;
+                }
 
-                    function addJqueryEvent(obj) {
-                        obj.on(eventName, callback, context);
-                    }
-
-                    function addNativeEvent(obj) {
-                        obj.addEventListener(eventName, callback, context);
-                    }
-
-                    if (!iframe.contentWindow) {
-                        return;
-                    }
-
-                    if (!options) {
-                        addNativeEvent(iframe.contentWindow);
-                    } else {
-                        if (options.onWindow) {
-                            if (options.jqueryEvent) {
-                                addJqueryEvent($(iframe.contentWindow));
-                            } else {
-                                addNativeEvent(iframe.contentWindow);
-                            }
-                        } else if (options.onDocument) {
-                            if (options.jqueryEvent) {
-                                addJqueryEvent($(iframe.contentDocument));
-                            } else {
-                                addNativeEvent(iframe.contentDocument);
-                            }
-                        } else if (options.onBody) {
-                            if (options.jqueryEvent) {
-                                addJqueryEvent($(iframe.contentDocument.body));
-                            } else {
-                                addNativeEvent(iframe.contentDocument.body);
-                            }
-                        } else if (options.onSelector) {
-                            if (options.jqueryEvent) {
-                                addJqueryEvent($(options.onSelector));
-                            } else {
-                                addNativeEvent($(options.onSelector)[0]);
-                            }
+                if (!options) {
+                    addNativeEvent(iframe.contentWindow);
+                } else {
+                    if (options.onWindow) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(iframe.contentWindow));
+                        } else {
+                            addNativeEvent(iframe.contentWindow);
+                        }
+                    } else if (options.onDocument) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(iframe.contentDocument));
+                        } else {
+                            addNativeEvent(iframe.contentDocument);
+                        }
+                    } else if (options.onBody) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(iframe.contentDocument.body));
+                        } else {
+                            addNativeEvent(iframe.contentDocument.body);
+                        }
+                    } else if (options.onSelector) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(options.onSelector));
+                        } else {
+                            addNativeEvent($(options.onSelector)[0]);
                         }
                     }
-                });
+                }
             });
+        });
+    };
+    
+    this.loadIframe = function (iframe, src, callback, context, attachedData) {
 
-            try
-            {
-                iframe.contentWindow.navigator.epubReadingSystem = navigator.epubReadingSystem;
-                // console.debug("epubReadingSystem name:"
-                //     + iframe.contentWindow.navigator.epubReadingSystem.name
-                //     + " version:"
-                //     + iframe.contentWindow.navigator.epubReadingSystem.version
-                //     + " is loaded to iframe");
-            }
-            catch(ex)
-            {
-                console.log("epubReadingSystem INJECTION ERROR! " + ex.message);
-            }
+        iframe.setAttribute("data-baseUri", iframe.baseURI);
+        iframe.setAttribute("data-src", src);
 
-            $(iframe).show();
-            callback.call(context, true);
+        $(iframe).hide();
+        
+        var loadedDocumentUri = new URI(src).absoluteTo(iframe.baseURI).toString();
+
+        self._loadIframeWithUri(iframe, attachedData, loadedDocumentUri, function () {
+            var doc = iframe.contentDocument || iframe.contentWindow.document;
+            $('svg', doc).load(function(){
+                console.log('loaded');
+            });
+            callback.call(context, true, attachedData);
+        });
+    };
+
+    this._loadIframeWithUri = function (iframe, attachedData, contentUri, callback) {
+
+        iframe.onload = function () {
+
+
+            self.updateIframeEvents(iframe);
+
+            var mathJax = iframe.contentWindow.MathJax;
+            if (mathJax) {
+                // If MathJax is being used, delay the callback until it has completed rendering
+                var mathJaxCallback = _.once(callback);
+                try {
+                    mathJax.Hub.Queue(mathJaxCallback);
+                } catch (err) {
+                    console.error("MathJax fail!");
+                    callback();
+                }
+                // Or at an 8 second timeout, which ever comes first
+                //window.setTimeout(mathJaxCallback, 8000);
+            } else {
+                callback();
+            }
 
         };
-
-        //yucks! iframe doesn't trigger onerror event - there is no reliable way to know that iframe finished
-        // attempt tot load resource (successfully or not;
-        window.setTimeout(function(){
-
-            if(isWaitingForFrameLoad) {
-
-                isWaitingForFrameLoad = false;
-                callback.call(context, false);
-            }
-
-        }, 8000);
-
+        
         if (window.location.protocol
             && window.location.protocol === 'http:'
             || window.location.protocol === 'https:') {
@@ -152,12 +149,16 @@ ReadiumSDK.Views.IFrameLoader = function() {
                 && iframe.contentWindow.location.replace
                 && (typeof iframe.contentWindow.location.replace) === "function") {
 
-                iframe.contentWindow.location.replace(src);
+                iframe.contentWindow.location.replace(contentUri);
             } else {
-                iframe.src = src;
+                iframe.setAttribute("src", contentUri);
             }
         } else {
-            iframe.src = src;
+            iframe.setAttribute("src", contentUri);
         }
+        
     };
+
+    
+
 };
