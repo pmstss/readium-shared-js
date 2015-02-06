@@ -1231,6 +1231,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * Returns current selection partial Cfi, useful for workflows that need to check whether the user has selected something.
      *
      * @returns {object | undefined} partial cfi object or undefined if nothing is selected
+     *
      */
     this.getCurrentSelectionCfi =  function() {
         return _annotationsManager.getCurrentSelectionCfi();
@@ -1239,10 +1240,13 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Creates a higlight based on given parameters
      *
-     * @param {string} spineIdRef    spine idref that defines the partial Cfi
-     * @param {string} cfi           partial CFI (withouth the indirection step) relative to the spine index
-     * @param {string} id            id of the highlight. must be unique
-     * @param {string} type          currently "highlight" only
+     * @param {string} spineIdRef spine idref that defines the partial Cfi
+     * @param {string} CFI partial CFI (withouth the indirection step) relative to the spine index
+     * @param {string} id id of the highlight. must be unique
+     * @param {string} type - name of the class selector rule in annotations.css file. 
+     * The style of the class will be applied to the created hightlight
+     * @param {object} styles - object representing CSS properties to be applied to the highlight.
+     * e.g., to apply background color pass this {'background-color': 'green'}. 
      *
      * @returns {object | undefined} partial cfi object of the created highlight
      */
@@ -1255,12 +1259,15 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * Creates a higlight based on the current selection
      *
      * @param {string} id id of the highlight. must be unique
-     * @param {string} type currently "highlight" only
+     * @param {string} type - name of the class selector rule in annotations.css file. 
+     * The style of the class will be applied to the created hightlight
+     * @param {object} styles - object representing CSS properties to be applied to the highlight.
+     * e.g., to apply background color pass this {'background-color': 'green'}
      *
      * @returns {object | undefined} partial cfi object of the created highlight
      */
-    this.addSelectionHighlight =  function(id, type) {
-        return _annotationsManager.addSelectionHighlight(id,type);
+    this.addSelectionHighlight =  function(id, type, styles) {
+        return _annotationsManager.addSelectionHighlight(id, type, styles);
     };
 
     /**
@@ -1269,7 +1276,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * @param {string} id  The id associated with the highlight.
      *
      * @returns {undefined} 
-    *
+     *
      */
     this.removeHighlight = function(id) {
         return _annotationsManager.removeHighlight(id);

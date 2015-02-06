@@ -188,11 +188,11 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
-    this.addSelectionHighlight = function(id, type) {
+    this.addSelectionHighlight = function(id, type, styles) {
         for(var spine in liveAnnotations) {
             var annotationsForView = liveAnnotations[spine]; 
             if (annotationsForView.getCurrentSelectionCFI()) {
-                var annotation = annotationsForView.addSelectionHighlight(id, type);
+                var annotation = annotationsForView.addSelectionHighlight(id, type, styles);
                 annotation.idref = spines[spine].idref;
                 return annotation;
             }
