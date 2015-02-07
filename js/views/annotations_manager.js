@@ -1,32 +1,30 @@
 //  Created by Dmitry Markushevich (dmitrym@evidentpoint.com)
-// 
+//
 //  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
-//  
-//  Redistribution and use in source and binary forms, with or without modification, 
+//
+//  Redistribution and use in source and binary forms, with or without modification,
 //  are permitted provided that the following conditions are met:
-//  1. Redistributions of source code must retain the above copyright notice, this 
+//  1. Redistributions of source code must retain the above copyright notice, this
 //  list of conditions and the following disclaimer.
-//  2. Redistributions in binary form must reproduce the above copyright notice, 
-//  this list of conditions and the following disclaimer in the documentation and/or 
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//  this list of conditions and the following disclaimer in the documentation and/or
 //  other materials provided with the distribution.
-//  3. Neither the name of the organization nor the names of its contributors may be 
-//  used to endorse or promote products derived from this software without specific 
+//  3. Neither the name of the organization nor the names of its contributors may be
+//  used to endorse or promote products derived from this software without specific
 //  prior written permission.
-//  
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*
-
-
 
 # Highlighting in Readium - A primer
 
@@ -52,7 +50,7 @@ Before proceeding with the highlighting workflow it is sometimes necessary to de
 	> RReader.getCurrentSelectionCfi()
 	Object {idref: "id-id2604743", cfi: "/4/2/6,/1:74,/1:129"}
 
-The response contains a partial CFI that is sufficient to create a highlight based on selection. If nothing is selected *undefined* is returned. 
+The response contains a partial CFI that is sufficient to create a highlight based on selection. If nothing is selected *undefined* is returned.
 
 You can also use partial Cfi with `openSpineItemElementCfi()` to navigate to where this selection is later.
 
@@ -80,7 +78,7 @@ Alternatively, you can call addSelectionHighlight(). It combines both getCurrent
 Note that it provides no validation. If nothing is selected, `undefined` is returned.
 
 
-## Removing highlights 
+## Removing highlights
 
 To remove the highlight, call `removeHighlight`:
 
@@ -100,21 +98,20 @@ When a user clicks on a highlight `annotationClicked` event is dispatched with t
 
 	> RReader.on('annotationClicked', function(type, idref, cfi, annotationId) { console.log (type, idref, cfi, annotationId)});
 	ReadiumSDK.Views.ReaderView {on: function, once: function, off: function, trigger: function, listenTo: function???}
-	
+
 Then when the user clicks on the highlight the following will show up in the console:
 
-	highlight id-id2604743 /4/2/6,/1:74,/1:129 123 
-	
+	highlight id-id2604743 /4/2/6,/1:74,/1:129 123
+
 
 */
-
 
 ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
 
     var self = this;
     var liveAnnotations = {};
     var spines = {};
-    var proxy = proxyObj; 
+    var proxy = proxyObj;
     var annotationCSSUrl = options.annotationCSSUrl;
 
     if (!annotationCSSUrl) {
@@ -126,7 +123,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
     // we want to bubble up all of the events that annotations module may trigger up.
     this.on("all", function(eventName) {
         var args = Array.prototype.slice.call(arguments);
-        // mangle annotationClicked event. What really needs to happen is, the annotation_module needs to return a 
+        // mangle annotationClicked event. What really needs to happen is, the annotation_module needs to return a
         // bare Cfi, and this class should append the idref.
         var mangleEvent = function(annotationEvent){
             if (args.length && args[0] === annotationEvent) {
@@ -174,7 +171,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
 
     this.getCurrentSelectionCfi = function() {
         for(var spine in liveAnnotations) {
-            var annotationsForView = liveAnnotations[spine]; 
+            var annotationsForView = liveAnnotations[spine];
             var partialCfi = annotationsForView.getCurrentSelectionCFI();
             if (partialCfi) {
                 return new ReadiumSDK.Models.BookmarkData(spines[spine].idref,partialCfi);
@@ -185,7 +182,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
 
     this.addSelectionHighlight = function(id, type, styles) {
         for(var spine in liveAnnotations) {
-            var annotationsForView = liveAnnotations[spine]; 
+            var annotationsForView = liveAnnotations[spine];
             if (annotationsForView.getCurrentSelectionCFI()) {
                 var annotation = annotationsForView.addSelectionHighlight(id, type, styles);
                 annotation.idref = spines[spine].idref;
@@ -199,7 +196,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         for(var spine in liveAnnotations) {
             if (spines[spine].idref === spineIdRef) {
                 var fakeCfi = "epubcfi(/99!" + partialCfi + ")";
-                var annotationsForView = liveAnnotations[spine]; 
+                var annotationsForView = liveAnnotations[spine];
                 var annotation = annotationsForView.addHighlight(fakeCfi, id, type, styles);
                 if (annotation) {
                     annotation.idref = spineIdRef;
@@ -214,8 +211,17 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
     this.removeHighlight = function(id) {
         var result = undefined;
         for(var spine in liveAnnotations) {
-            var annotationsForView = liveAnnotations[spine]; 
+            var annotationsForView = liveAnnotations[spine];
             result  = annotationsForView.removeHighlight(id);
+        }
+        return result;
+    };
+
+    this.getHighlight = function(id) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result  = annotationsForView.getHighlight(id);
         }
         return result;
     };
