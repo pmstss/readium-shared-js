@@ -1219,7 +1219,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * @returns {object | undefined} partial cfi object or undefined if nothing is selected
      *
      */
-
     this.getCurrentSelectionCfi =  function() {
         return _annotationsManager.getCurrentSelectionCfi();
     };
@@ -1266,7 +1265,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * @returns {undefined}
      *
      */
-
     this.removeHighlight = function(id) {
         return _annotationsManager.removeHighlight(id);
     };
@@ -1276,10 +1274,14 @@ ReadiumSDK.Views.ReaderView = function(options) {
      *
      * @param {string} id id of the highlight.
      *
-     * @returns {object describing highlight}
+     * @returns {object describing highlight} In particular the folloeing is returned:
+     * id: unique id of the highlight
+     * type: highlight type
+     * CFI: partial CFI range of the highlight
+     * rectangleArray: array of rectangles consituting the highlight 
+     * selectedText: catenation of text nodes of highlight
      *
      */
-
     this.getHighlight = function(id) {
         return _annotationsManager.getHighlight(id);
     };

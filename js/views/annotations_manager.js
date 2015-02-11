@@ -32,23 +32,22 @@ Please note:
 
 - only simple text highlighting is currently supported
 - it's the job of the reading system to keep track of annotations. readium-js simply displays your annotations.
-- full CFIs for annotations are not currently available. We use so called "partial CFI"s, a tuple containing idref of the spine item and the CFI definition relative to the root of the spine item.
+- full CFIs for annotations are not currently available. We use so called "partial CFI"s, a tuple containing idref of the spine item 
+  and the CFI definition relative to the root of the spine item.
 
-Currently, the API exposed via `ReaderView` exposes 4 functions and 1 even which should be sufficient for a simple highlighting workflow.
-
+Currently, the API exposed via `ReaderView` exposes 4 functions and 1 event which should be sufficient for a simple highlighting workflow.
 
 # API
 
 For the purposes of the examples below, `RReader` is a previously instantiated `ReaderView` instance.
 
-
 ## Is anything selected (getCurrentSelectionCfi())
 
-Before proceeding with the highlighting workflow it is sometimes necessary to determine whether the user has in fact selected anything. This can be accomplished with the following:
-
+Before proceeding with the highlighting workflow it is sometimes necessary to determine whether the user has in fact selected anything. 
+This can be accomplished with the following:
 
 	> RReader.getCurrentSelectionCfi()
-	Object {idref: "id-id2604743", cfi: "/4/2/6,/1:74,/1:129"}
+        ReadiumSDK.Models.BookmarkData {idref: "id-id2635343", contentCFI: "/4/2[building_a_better_epub]/10,/4/1:12,/6/1:429", toString: function}
 
 The response contains a partial CFI that is sufficient to create a highlight based on selection. If nothing is selected *undefined* is returned.
 
@@ -56,7 +55,8 @@ You can also use partial Cfi with `openSpineItemElementCfi()` to navigate to whe
 
 ## Highlighting (addHighlight and addSelectionHighlight)
 
-Once we've determined what needs to be highlighted (by generating a partial CFI from a selection, or having an existing partial CFI stored externally) we can add it to the reader by calling `addHighlight()`:
+Once we've determined what needs to be highlighted (by generating a partial CFI from a selection, or having an existing partial CFI stored externally) 
+we can add it to the reader by calling `addHighlight()`:
 
 	> RReader.addHighlight('id-id2604743', "/4/2/6,/1:74,/1:129", 123, "highlight")
 	Object {CFI: "/4/2/6,/1:74,/1:129", selectedElements: Array[1], idref: "id-id2604743"}
@@ -66,7 +66,7 @@ Once we've determined what needs to be highlighted (by generating a partial CFI 
 - *id-id2604743* - `idref` is the idref value from `getCurrentSelectionCfi()
 - * /4/2/6,/1:74,/1:129* - `cfi` is the cfi value from `getCurrentSelectionCfi()
 - *123* - `id` is the unique id that defines this annotation
-- *highlight* - 'type' of annotation. only 'highlight' is currently supported.
+- *highlight* - 'type' of annotation.
 
 ### addSelectioHighlight
 
@@ -102,8 +102,6 @@ When a user clicks on a highlight `annotationClicked` event is dispatched with t
 Then when the user clicks on the highlight the following will show up in the console:
 
 	highlight id-id2604743 /4/2/6,/1:74,/1:129 123
-
-
 */
 
 ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
@@ -174,7 +172,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
             var annotationsForView = liveAnnotations[spine];
             var partialCfi = annotationsForView.getCurrentSelectionCFI();
             if (partialCfi) {
-                return new ReadiumSDK.Models.BookmarkData(spines[spine].idref,partialCfi);
+                return new ReadiumSDK.Models.BookmarkData(spines[spine].idref, partialCfi);
             }
         }
         return undefined;
@@ -195,12 +193,10 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
     this.addHighlight = function(spineIdRef, partialCfi, id, type, styles) {
         for(var spine in liveAnnotations) {
             if (spines[spine].idref === spineIdRef) {
-                var fakeCfi = "epubcfi(/99!" + partialCfi + ")";
                 var annotationsForView = liveAnnotations[spine];
-                var annotation = annotationsForView.addHighlight(fakeCfi, id, type, styles);
+                var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles);
                 if (annotation) {
                     annotation.idref = spineIdRef;
-                    annotation.CFI = getPartialCfi(annotation.CFI);
                     return annotation;
                 }
             }
