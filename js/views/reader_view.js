@@ -1310,6 +1310,23 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Gets given highlight
+     *
+     * @param {string} id id of the highlight.
+     *
+     * @returns {object describing highlight} In particular the folloeing is returned:
+     * id: unique id of the highlight
+     * type: highlight type
+     * CFI: partial CFI range of the highlight
+     * rectangleArray: array of rectangles consituting the highlight 
+     * selectedText: catenation of text nodes of highlight
+     *
+     */
+    this.getHighlight = function(id) {
+        return _annotationsManager.getHighlight(id);
+    };
+
+    /**
      * Allows the subscription of events that trigger inside the epub content iframe
      *
      * @param {string} eventName    Event name.
