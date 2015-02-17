@@ -346,7 +346,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * @property {ReadiumSDK.Models.Package} package - packageData (required)
      * @property {ReadiumSDK.Models.PageOpenRequest} openPageRequest - openPageRequestData, (optional) data related to open page request
      * @property {ReadiumSDK.Views.ReaderView.SettingsData} [settings]
-     * @property {ReadiumSDK.Collections.StyleCollection} styles: [cssStyles]
+     * @property {ReadiumSDK.Collections.StyleCollection} [styles]
      * @todo Define missing types
      */
 
@@ -1310,17 +1310,31 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Client Rectangle
+     * @typedef {object} ReadiumSDK.Views.ReaderView.ClientRect
+     * @property {number} top
+     * @property {number} left
+     * @property {number} height
+     * @property {number} width
+     */ 
+
+    /**
+     * Highlight Info
+     *
+     * @typedef {object} ReadiumSDK.Views.ReaderView.HighlightInfo
+     * @property {string} id - unique id of the highlight
+     * @property {string} type - highlight type (css class)
+     * @property {string} CFI - partial CFI range of the highlight
+     * @property {ReadiumSDK.Views.ReaderView.ClientRect[]} rectangleArray - array of rectangles consituting the highlight
+     * @property {string} selectedText - concatenation of highlight nodes' text
+     */
+
+    /**
      * Gets given highlight
      *
      * @param {string} id id of the highlight.
      *
-     * @returns {object describing highlight} In particular the folloeing is returned:
-     * id: unique id of the highlight
-     * type: highlight type
-     * CFI: partial CFI range of the highlight
-     * rectangleArray: array of rectangles consituting the highlight 
-     * selectedText: catenation of text nodes of highlight
-     *
+     * @returns {ReadiumSDK.Views.ReaderView.HighlightInfo} Object describing the highlight
      */
     this.getHighlight = function(id) {
         return _annotationsManager.getHighlight(id);
