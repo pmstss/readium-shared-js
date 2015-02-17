@@ -190,7 +190,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
             if (annotationsForView.getCurrentSelectionCFI()) {
                 var annotation = annotationsForView.addSelectionHighlight(id, type, styles);
                 annotation.idref = spines[spine].idref;
-                return annotation;
+                return new ReadiumSDK.Models.BookmarkData(annotation.idref, annotation.CFI);
             }
         }
         return undefined;
@@ -203,7 +203,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
                 var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles);
                 if (annotation) {
                     annotation.idref = spineIdRef;
-                    return annotation;
+                    return new ReadiumSDK.Models.BookmarkData(annotation.idref, annotation.CFI);
                 }
             }
         }
