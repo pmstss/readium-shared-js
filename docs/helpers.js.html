@@ -124,6 +124,59 @@ ReadiumSDK.Helpers.Rect.fromElement = function($element) {
     return new ReadiumSDK.Helpers.Rect(offsetLeft, offsetTop, offsetWidth, offsetHeight);
 };
 
+ReadiumSDK.Helpers.UpdateHtmlFontSize = function($epubHtml, fontSize){
+
+    
+    var factor = fontSize/100;
+    var win = $epubHtml[0].ownerDocument.defaultView;
+    var $textblocks = $('p, div, span, h1, h2, h3, h4, h5, h6, li, blockquote, td, pre', $epubHtml);
+    var originalLineHeight;
+
+
+    // need to do two passes because it is possible to have nested text blocks. 
+    // If you change the font size of the parent this will then create an inaccurate
+    // font size for any children. 
+    for (var i = 0; i &lt; $textblocks.length; i++){
+        var ele = $textblocks[i],
+            fontSizeAttr = ele.getAttribute('data-original-font-size');
+
+        if (!fontSizeAttr){
+            var style = win.getComputedStyle(ele);
+            var originalFontSize = parseInt(style.fontSize);
+            originalLineHeight = parseInt(style.lineHeight);
+            
+            ele.setAttribute('data-original-font-size', originalFontSize);
+            // getComputedStyle will not calculate the line-height if the value is 'normal'. In this case parseInt will return NaN
+            if (originalLineHeight){
+                ele.setAttribute('data-original-line-height', originalLineHeight);
+            }
+        }
+    }
+
+    // reset variable so the below logic works. All variables in JS are function scoped. 
+    originalLineHeight = 0;
+    for (var i = 0; i &lt; $textblocks.length; i++){
+        var ele = $textblocks[i],
+            fontSizeAttr = ele.getAttribute('data-original-font-size'),
+            lineHeightAttr = ele.getAttribute('data-original-line-height'),
+            originalFontSize = Number(fontSizeAttr);
+
+        if (lineHeightAttr){
+            originalLineHeight = Number(lineHeightAttr);
+        }
+        else{
+            originalLineHeight = 0;
+        }
+
+        ele.style.fontSize = (originalFontSize * factor) + 'px';
+        if (originalLineHeight){
+            ele.style.lineHeight = (originalLineHeight * factor) + 'px';
+        }
+
+    }
+    $epubHtml.css("font-size", fontSize + "%");
+}
+
 
 /**
  *
@@ -285,49 +338,66 @@ ReadiumSDK.Helpers.triggerLayout = function($iframe) {
  * @returns {boolean}
  */
 //Based on https://docs.google.com/spreadsheet/ccc?key=0AoPMUkQhc4wcdDI0anFvWm96N0xRT184ZE96MXFRdFE&amp;usp=drive_web#gid=0 doc
+// Returns falsy and truthy
+// true and false mean that the synthetic-spread or single-page is "forced" (to be respected whatever the external conditions)
+// 1 and 0 mean that the synthetic-spread or single-page is "not forced" (is allowed to be overriden by external conditions, such as optimum column width / text line number of characters, etc.)
 ReadiumSDK.Helpers.deduceSyntheticSpread = function($viewport, spineItem, settings) {
 
     if(!$viewport || $viewport.length == 0) {
-        return false;
+        return 0; // non-forced
     }
 
-    if(spineItem &amp;&amp; spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_NONE) {
-        return false;
+    //http://www.idpf.org/epub/fxl/#property-spread-values
+
+    var rendition_spread = spineItem ? spineItem.getRenditionSpread() : undefined;
+
+    if(rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_NONE) {
+        return false; // forced
+        
+        //"Reading Systems must not incorporate this spine item in a synthetic spread."
     }
 
     if(settings.syntheticSpread == "double") {
-        return true;
+        return true; // forced
     }
     else if(settings.syntheticSpread == "single") {
-        return false;
+        return false; // forced
     }
 
     if(!spineItem) {
-        return false;
+        return 0; // non-forced
     }
 
-    if(spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_BOTH) {
-        return true;
+    if(rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_BOTH) {
+        return true; // forced
+        
+        //"Reading Systems should incorporate this spine item in a synthetic spread regardless of device orientation."
     }
 
     var orientation = ReadiumSDK.Helpers.getOrientation($viewport);
 
-    if(spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_LANDSCAPE) {
-        return orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE;
+    if(rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_LANDSCAPE) {
+        return orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE; // forced
+        
+        //"Reading Systems should incorporate this spine item in a synthetic spread only when the device is in landscape orientation."
     }
 
-    if(spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_PORTRAIT) {
-        return orientation === ReadiumSDK.Views.ORIENTATION_PORTRAIT;
+    if(rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_PORTRAIT) {
+        return orientation === ReadiumSDK.Views.ORIENTATION_PORTRAIT; // forced
+        
+        //"Reading Systems should incorporate this spine item in a synthetic spread only when the device is in portrait orientation."
     }
 
-    if(!spineItem.rendition_spread || spineItem.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_AUTO) {
+    if(!rendition_spread || rendition_spread === ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_AUTO) {
         // if no spread set in document and user didn't set in in setting we will do double for landscape
-        return orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE;
+        var landscape = orientation === ReadiumSDK.Views.ORIENTATION_LANDSCAPE;
+        return landscape ? 1 : 0; // non-forced
+
+        //"Reading Systems may use synthetic spreads in specific or all device orientations as part of a display area utilization optimization process."
     }
 
-    console.warn("Unexpected spread properties condition!");
-    return false;
-
+    console.warn("ReadiumSDK.Helpers.deduceSyntheticSpread: spread properties?!");
+    return 0; // non-forced
 };
 
 /**
@@ -363,11 +433,13 @@ ReadiumSDK.Helpers.loadTemplate = function(name, params) {
  * @type {{fixed_book_frame: string, single_page_frame: string, scrolled_book_frame: string, reflowable_book_frame: string, reflowable_book_page_frame: string}}
  */
 ReadiumSDK.Helpers.loadTemplate.cache = {
-
-    "fixed_book_frame" : '&lt;div id="fixed-book-frame" class="book-frame fixed-book-frame">&lt;/div>',
-    "single_page_frame" : '&lt;div class="single-page-frame">&lt;iframe scrolling="no" class="iframe-fixed">&lt;/iframe>&lt;/div>',
-    "scrolled_book_frame" : '&lt;div id="reflowable-book-frame" class="book-frame reflowable-book-frame">&lt;div id="scrolled-content-frame">&lt;/div>&lt;/div>',
-    "reflowable_book_frame" : '&lt;div id="reflowable-book-frame" class="book-frame reflowable-book-frame">&lt;/div>',
+    "fixed_book_frame" : '&lt;div id="fixed-book-frame" class="clearfix book-frame fixed-book-frame">&lt;/div>',
+    
+    "single_page_frame" : '&lt;div>&lt;div id="scaler">&lt;iframe scrolling="no" class="iframe-fixed">&lt;/iframe>&lt;/div>&lt;/div>',
+    //"single_page_frame" : '&lt;div>&lt;iframe scrolling="no" class="iframe-fixed" id="scaler">&lt;/iframe>&lt;/div>',
+    
+    "scrolled_book_frame" : '&lt;div id="reflowable-book-frame" class="clearfix book-frame reflowable-book-frame">&lt;div id="scrolled-content-frame">&lt;/div>&lt;/div>',
+    "reflowable_book_frame" : '&lt;div id="reflowable-book-frame" class="clearfix book-frame reflowable-book-frame">&lt;/div>',
     "reflowable_book_page_frame": '&lt;div id="reflowable-content-frame" class="reflowable-content-frame">&lt;iframe scrolling="no" id="epubContentIframe">&lt;/iframe>&lt;/div>'
 };
 
@@ -444,15 +516,103 @@ ReadiumSDK.Helpers.getOrientation = function($viewport) {
  */
 ReadiumSDK.Helpers.isRenditionSpreadPermittedForItem = function(item, orientation) {
 
-    return  !item.rendition_spread
-        ||  item.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_BOTH
-        ||  item.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_AUTO
-        ||  (item.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_LANDSCAPE
+    var rendition_spread = item.getRenditionSpread();
+
+    return  !rendition_spread
+        ||  rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_BOTH
+        ||  rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_AUTO
+        ||  (rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_LANDSCAPE
         &amp;&amp; orientation == ReadiumSDK.Views.ORIENTATION_LANDSCAPE)
-        ||  (item.rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_PORTRAIT
+        ||  (rendition_spread == ReadiumSDK.Models.SpineItem.RENDITION_SPREAD_PORTRAIT
         &amp;&amp; orientation == ReadiumSDK.Views.ORIENTATION_PORTRAIT );
 };
 
+ReadiumSDK.Helpers.CSSTransition = function($el, trans) {
+    
+    // does not work!
+    //$el.css('transition', trans);
+    
+    var css={};
+    // empty '' prefix FIRST!
+    _.each(['', '-webkit-', '-moz-', '-ms-'], function(prefix) {
+        css[prefix + 'transition'] = prefix + trans;
+    });
+    $el.css(css);
+}
+
+//scale, left, top, angle, origin
+ReadiumSDK.Helpers.CSSTransformString = function(options) {
+    var enable3D = options.enable3D ? true : false;
+    
+    var translate, scale, rotation,
+        origin = options.origin;
+
+    if (options.left || options.top){
+        var left = options.left || 0, 
+            top = options.top || 0;
+
+        translate = enable3D ? ("translate3D(" + left + "px, " + top + "px, 0)") : ("translate(" + left + "px, " + top + "px)");
+    }
+    if (options.scale){
+        scale = enable3D ? ("scale3D(" + options.scale + ", " + options.scale + ", 0)") : ("scale(" + options.scale + ")");
+    }
+    if (options.angle){
+        rotation =  enable3D ? ("rotate3D(0,0," + options.angle + "deg)") : ("rotate(" + options.angle + "deg)");
+    }
+    
+    if (!(translate || scale || rotation)){
+        return {};
+    }
+
+    var transformString = (translate &amp;&amp; scale) ? (translate + " " + scale) : (translate ? translate : scale); // the order is important!
+    if (rotation)
+    {
+        transformString = transformString + " " + rotation;
+        //transformString = rotation + " " + transformString;
+    }
+
+    var css = {};
+    css['transform'] = transformString;
+    css['transform-origin'] = origin ? origin : (enable3D ? '0 0 0' : '0 0');
+    return css;
+};
+
+ReadiumSDK.Helpers.extendedThrottle = function (startCb, tickCb, endCb, tickRate, waitThreshold, context) {
+    if (!tickRate) tickRate = 250;
+    if (!waitThreshold) waitThreshold = tickRate;
+
+    var first = true,
+        last,
+        deferTimer;
+
+    return function () {
+        var ctx = context || this,
+            now = (Date.now &amp;&amp; Date.now()) || new Date().getTime(),
+            args = arguments;
+
+        if (!(last &amp;&amp; now &lt; last + tickRate)) {
+            last = now;
+            if (first) {
+                startCb.apply(ctx, args);
+                first = false;
+            } else {
+                tickCb.apply(ctx, args);
+            }
+        }
+
+        clearTimeout(deferTimer);
+        deferTimer = setTimeout(function () {
+            last = now;
+            first = true;
+            endCb.apply(ctx, args);
+        }, waitThreshold);
+    };
+};
+
+
+//TODO: consider using CSSOM escape() or polyfill
+//https://github.com/mathiasbynens/CSS.escape/blob/master/css.escape.js
+//http://mathiasbynens.be/notes/css-escapes
 /**
  *
  * @param sel
@@ -514,16 +674,7 @@ ReadiumSDK.Helpers.escapeJQuerySelector = function(sel) {
     // escapeSelector('~');
 
 
-/**
- *
- * @type {{getMatrix: getMatrix, getScaleFromMatrix: getScaleFromMatrix}}
- */
 ReadiumSDK.Helpers.CSSTransformMatrix = {
-    /**
-     *
-     * @param $obj
-     * @returns {undefined}
-     */
     getMatrix: function ($obj) {
         var matrix = $obj.css("-webkit-transform") ||
             $obj.css("-moz-transform") ||
@@ -532,22 +683,13 @@ ReadiumSDK.Helpers.CSSTransformMatrix = {
             $obj.css("transform");
         return matrix === "none" ? undefined : matrix;
     },
-    /**
-     *
-     * @param matrix
-     * @returns {*}
-     */
     getScaleFromMatrix: function (matrix) {
         var matrixRegex = /matrix\((-?\d*\.?\d+),\s*0,\s*0,\s*(-?\d*\.?\d+),\s*0,\s*0\)/,
             matches = matrix.match(matrixRegex);
         return matches[1];
     }
 };
-
-/**
- * @deprecated use triggerLayout helper instead
- * @param $iframe
- */
+//use triggerLayout helper instead
 ReadiumSDK.Helpers.waitForRendering = function($iframe) {
 
     var doc = $iframe[0].contentDocument;
@@ -572,13 +714,13 @@ ReadiumSDK.Helpers.waitForRendering = function($iframe) {
 </div>
 
 <nav>
-    <h2><a href="index.html">Index</a></h2><h3>Classes</h3><ul><li><a href="ReadiumSDK.Collections.StyleCollection.html">StyleCollection</a></li><li><a href="ReadiumSDK.Helpers.Margins.html">Margins</a></li><li><a href="ReadiumSDK.Helpers.Rect.html">Rect</a></li><li><a href="ReadiumSDK.Helpers.ResolveContentRef.html">ResolveContentRef</a></li><li><a href="ReadiumSDK.Models.BookmarkData.html">BookmarkData</a></li><li><a href="ReadiumSDK.Models.CurrentPagesInfo.html">CurrentPagesInfo</a></li><li><a href="ReadiumSDK.Models.MediaOverlay.html">MediaOverlay</a></li><li><a href="ReadiumSDK.Models.NodeRangeInfo.html">NodeRangeInfo</a></li><li><a href="ReadiumSDK.Models.NodeRangePositionInfo.html">NodeRangePositionInfo</a></li><li><a href="ReadiumSDK.Models.Package.html">Package</a></li><li><a href="ReadiumSDK.Models.PackageData.html">PackageData</a></li><li><a href="ReadiumSDK.Models.PageOpenRequest.html">PageOpenRequest</a></li><li><a href="ReadiumSDK.Models.Smil.SmilNode.html">SmilNode</a></li><li><a href="ReadiumSDK.Models.SmilIterator.html">SmilIterator</a></li><li><a href="ReadiumSDK.Models.Spine.html">Spine</a></li><li><a href="ReadiumSDK.Models.SpineItem.html">SpineItem</a></li><li><a href="ReadiumSDK.Models.Spread.html">Spread</a></li><li><a href="ReadiumSDK.Models.Style.html">Style</a></li><li><a href="ReadiumSDK.Models.Switches.html">Switches</a></li><li><a href="ReadiumSDK.Models.ViewerSettings.html">ViewerSettings</a></li><li><a href="ReadiumSDK.Views.AnnotationsManager.html">AnnotationsManager</a></li><li><a href="ReadiumSDK.Views.AudioPlayer.html">AudioPlayer</a></li><li><a href="ReadiumSDK.Views.CfiNavigationLogic.html">CfiNavigationLogic</a></li><li><a href="ReadiumSDK.Views.FallbackScrollView.html">FallbackScrollView</a></li><li><a href="ReadiumSDK.Views.FixedView.html">FixedView</a></li><li><a href="ReadiumSDK.Views.IFrameLoader.html">IFrameLoader</a></li><li><a href="ReadiumSDK.Views.InternalLinksSupport.html">InternalLinksSupport</a></li><li><a href="ReadiumSDK.Views.MediaOverlayDataInjector.html">MediaOverlayDataInjector</a></li><li><a href="ReadiumSDK.Views.MediaOverlayElementHighlighter.html">MediaOverlayElementHighlighter</a></li><li><a href="ReadiumSDK.Views.MediaOverlayPlayer.html">MediaOverlayPlayer</a></li><li><a href="ReadiumSDK.Views.OnePageView.html">OnePageView</a></li><li><a href="ReadiumSDK.Views.ReaderView.html">ReaderView</a></li><li><a href="ReadiumSDK.Views.ReflowableView.html">ReflowableView</a></li><li><a href="ReadiumSDK.Views.ScrollView.html">ScrollView</a></li></ul><h3>Events</h3><ul><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOAD_START">CONTENT_DOCUMENT_LOAD_START</a></li><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOADED">CONTENT_DOCUMENT_LOADED</a></li><li><a href="ReadiumSDK.Events.html#event:FXL_VIEW_RESIZED">FXL_VIEW_RESIZED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_STATUS_CHANGED">MEDIA_OVERLAY_STATUS_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_SPEAK">MEDIA_OVERLAY_TTS_SPEAK</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_STOP">MEDIA_OVERLAY_TTS_STOP</a></li><li><a href="ReadiumSDK.Events.html#event:PAGINATION_CHANGED">PAGINATION_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_INITIALIZED">READER_INITIALIZED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_CREATED">READER_VIEW_CREATED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_DESTROYED">READER_VIEW_DESTROYED</a></li><li><a href="ReadiumSDK.Events.html#event:SETTINGS_APPLIED">SETTINGS_APPLIED</a></li><li><a href="ReadiumSDK.InternalEvents.html#event:CURRENT_VIEW_PAGINATION_CHANGED">CURRENT_VIEW_PAGINATION_CHANGED</a></li></ul><h3>Namespaces</h3><ul><li><a href="ReadiumSDK.html">ReadiumSDK</a></li><li><a href="ReadiumSDK.Collections.html">Collections</a></li><li><a href="ReadiumSDK.Events.html">Events</a></li><li><a href="ReadiumSDK.Helpers.html">Helpers</a></li><li><a href="ReadiumSDK.InternalEvents.html">InternalEvents</a></li><li><a href="ReadiumSDK.Models.html">Models</a></li><li><a href="ReadiumSDK.Overrides.html">Overrides</a></li><li><a href="ReadiumSDK.Routers.html">Routers</a></li><li><a href="ReadiumSDK.Views.html">Views</a></li></ul><h3><a href="global.html">Global</a></h3>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="ReadiumSDK.Collections.StyleCollection.html">StyleCollection</a></li><li><a href="ReadiumSDK.Helpers.Margins.html">Margins</a></li><li><a href="ReadiumSDK.Helpers.Rect.html">Rect</a></li><li><a href="ReadiumSDK.Helpers.ResolveContentRef.html">ResolveContentRef</a></li><li><a href="ReadiumSDK.Models.BookmarkData.html">BookmarkData</a></li><li><a href="ReadiumSDK.Models.CurrentPagesInfo.html">CurrentPagesInfo</a></li><li><a href="ReadiumSDK.Models.MediaOverlay.html">MediaOverlay</a></li><li><a href="ReadiumSDK.Models.NodeRangeInfo.html">NodeRangeInfo</a></li><li><a href="ReadiumSDK.Models.NodeRangePositionInfo.html">NodeRangePositionInfo</a></li><li><a href="ReadiumSDK.Models.Package.html">Package</a></li><li><a href="ReadiumSDK.Models.PackageData.html">PackageData</a></li><li><a href="ReadiumSDK.Models.PageOpenRequest.html">PageOpenRequest</a></li><li><a href="ReadiumSDK.Models.Smil.SmilNode.html">SmilNode</a></li><li><a href="ReadiumSDK.Models.SmilIterator.html">SmilIterator</a></li><li><a href="ReadiumSDK.Models.Spine.html">Spine</a></li><li><a href="ReadiumSDK.Models.SpineItem.html">SpineItem</a></li><li><a href="ReadiumSDK.Models.Spread.html">Spread</a></li><li><a href="ReadiumSDK.Models.Style.html">Style</a></li><li><a href="ReadiumSDK.Models.Switches.html">Switches</a></li><li><a href="ReadiumSDK.Models.ViewerSettings.html">ViewerSettings</a></li><li><a href="ReadiumSDK.Views.AnnotationsManager.html">AnnotationsManager</a></li><li><a href="ReadiumSDK.Views.AudioPlayer.html">AudioPlayer</a></li><li><a href="ReadiumSDK.Views.CfiNavigationLogic.html">CfiNavigationLogic</a></li><li><a href="ReadiumSDK.Views.FixedView.html">FixedView</a></li><li><a href="ReadiumSDK.Views.IFrameLoader.html">IFrameLoader</a></li><li><a href="ReadiumSDK.Views.InternalLinksSupport.html">InternalLinksSupport</a></li><li><a href="ReadiumSDK.Views.MediaOverlayDataInjector.html">MediaOverlayDataInjector</a></li><li><a href="ReadiumSDK.Views.MediaOverlayElementHighlighter.html">MediaOverlayElementHighlighter</a></li><li><a href="ReadiumSDK.Views.MediaOverlayPlayer.html">MediaOverlayPlayer</a></li><li><a href="ReadiumSDK.Views.OnePageView.html">OnePageView</a></li><li><a href="ReadiumSDK.Views.ReaderView.html">ReaderView</a></li><li><a href="ReadiumSDK.Views.ReflowableView.html">ReflowableView</a></li><li><a href="ReadiumSDK.Views.ScrollView.html">ScrollView</a></li></ul><h3>Events</h3><ul><li><a href="ReadiumSDK.Events.html#.event:CONTENT_DOCUMENT_LOAD_START">CONTENT_DOCUMENT_LOAD_START</a></li><li><a href="ReadiumSDK.Events.html#.event:CONTENT_DOCUMENT_LOADED">CONTENT_DOCUMENT_LOADED</a></li><li><a href="ReadiumSDK.Events.html#.event:FXL_VIEW_RESIZED">FXL_VIEW_RESIZED</a></li><li><a href="ReadiumSDK.Events.html#.event:MEDIA_OVERLAY_STATUS_CHANGED">MEDIA_OVERLAY_STATUS_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#.event:MEDIA_OVERLAY_TTS_SPEAK">MEDIA_OVERLAY_TTS_SPEAK</a></li><li><a href="ReadiumSDK.Events.html#.event:MEDIA_OVERLAY_TTS_STOP">MEDIA_OVERLAY_TTS_STOP</a></li><li><a href="ReadiumSDK.Events.html#.event:PAGINATION_CHANGED">PAGINATION_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#.event:READER_INITIALIZED">READER_INITIALIZED</a></li><li><a href="ReadiumSDK.Events.html#.event:READER_VIEW_CREATED">READER_VIEW_CREATED</a></li><li><a href="ReadiumSDK.Events.html#.event:READER_VIEW_DESTROYED">READER_VIEW_DESTROYED</a></li><li><a href="ReadiumSDK.Events.html#.event:SETTINGS_APPLIED">SETTINGS_APPLIED</a></li><li><a href="ReadiumSDK.InternalEvents.html#.event:CURRENT_VIEW_PAGINATION_CHANGED">CURRENT_VIEW_PAGINATION_CHANGED</a></li></ul><h3>Namespaces</h3><ul><li><a href="ReadiumSDK.html">ReadiumSDK</a></li><li><a href="ReadiumSDK.Collections.html">Collections</a></li><li><a href="ReadiumSDK.Events.html">Events</a></li><li><a href="ReadiumSDK.Helpers.html">Helpers</a></li><li><a href="ReadiumSDK.InternalEvents.html">InternalEvents</a></li><li><a href="ReadiumSDK.Models.html">Models</a></li><li><a href="ReadiumSDK.Overrides.html">Overrides</a></li><li><a href="ReadiumSDK.Routers.html">Routers</a></li><li><a href="ReadiumSDK.Views.html">Views</a></li></ul><h3>Global</h3><ul><li><a href="global.html#updateIFrameEvents">updateIFrameEvents</a></li></ul>
 </nav>
 
-<br clear="both">
+<br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha10</a> on Wed Nov 12 2014 16:29:49 GMT-0800 (PST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-beta1</a> on Mon Feb 16 2015 14:36:35 GMT-0800 (PST)
 </footer>
 
 <script> prettyPrint(); </script>

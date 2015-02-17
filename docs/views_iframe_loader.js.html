@@ -67,107 +67,109 @@ ReadiumSDK.Views.IFrameLoader = function() {
 
     this.addIFrameEventListener = function(eventName, callback, context, options) {
 
-        if(eventListeners[eventName] == undefined) {
+        if (eventListeners[eventName] == undefined) {
             eventListeners[eventName] = [];
         }
 
         eventListeners[eventName].push({callback: callback, context: context, options: options});
     };
 
-    this.loadIframe = function(iframe, src, callback, context) {
+    this.updateIframeEvents = function (iframe) {
 
-        $(iframe).hide();
-        //iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
-        
-        var isWaitingForFrameLoad = true;
+        _.each(eventListeners, function(eventHandlerList, eventName){
+            _.each(eventHandlerList,function(eventHandler){
+                var options = eventHandler.options;
+                var callback = eventHandler.callback;
+                var context = eventHandler.context;
 
-        iframe.onload = function() {
+                function addJqueryEvent(obj) {
+                    obj.on(eventName, callback, context);
+                }
 
-            iframe.onload = undefined;
+                function addNativeEvent(obj) {
+                    obj.addEventListener(eventName, callback, context);
+                }
 
-            isWaitingForFrameLoad = false;
-            
-            _.each(eventListeners, function(eventHandlerList, eventName){
-                _.each(eventHandlerList,function(eventHandler){
-                    var options = eventHandler.options;
-                    var callback = eventHandler.callback;
-                    var context = eventHandler.context;
+                if (!iframe.contentWindow) {
+                    return;
+                }
 
-                    function addJqueryEvent(obj) {
-                        obj.on(eventName, callback, context);
-                    }
-
-                    function addNativeEvent(obj) {
-                        obj.addEventListener(eventName, callback, context);
-                    }
-
-                    if (!iframe.contentWindow) {
-                        return;
-                    }
-
-                    if (!options) {
-                        addNativeEvent(iframe.contentWindow);
-                    } else {
-                        if (options.onWindow) {
-                            if (options.jqueryEvent) {
-                                addJqueryEvent($(iframe.contentWindow));
-                            } else {
-                                addNativeEvent(iframe.contentWindow);
-                            }
-                        } else if (options.onDocument) {
-                            if (options.jqueryEvent) {
-                                addJqueryEvent($(iframe.contentDocument));
-                            } else {
-                                addNativeEvent(iframe.contentDocument);
-                            }
-                        } else if (options.onBody) {
-                            if (options.jqueryEvent) {
-                                addJqueryEvent($(iframe.contentDocument.body));
-                            } else {
-                                addNativeEvent(iframe.contentDocument.body);
-                            }
-                        } else if (options.onSelector) {
-                            if (options.jqueryEvent) {
-                                addJqueryEvent($(options.onSelector));
-                            } else {
-                                addNativeEvent($(options.onSelector)[0]);
-                            }
+                if (!options) {
+                    addNativeEvent(iframe.contentWindow);
+                } else {
+                    if (options.onWindow) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(iframe.contentWindow));
+                        } else {
+                            addNativeEvent(iframe.contentWindow);
+                        }
+                    } else if (options.onDocument) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(iframe.contentDocument));
+                        } else {
+                            addNativeEvent(iframe.contentDocument);
+                        }
+                    } else if (options.onBody) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(iframe.contentDocument.body));
+                        } else {
+                            addNativeEvent(iframe.contentDocument.body);
+                        }
+                    } else if (options.onSelector) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(options.onSelector));
+                        } else {
+                            addNativeEvent($(options.onSelector)[0]);
                         }
                     }
-                });
+                }
             });
+        });
+    };
+    
+    this.loadIframe = function (iframe, src, callback, context, attachedData) {
 
-            try
-            {
-                iframe.contentWindow.navigator.epubReadingSystem = navigator.epubReadingSystem;
-                // console.debug("epubReadingSystem name:"
-                //     + iframe.contentWindow.navigator.epubReadingSystem.name
-                //     + " version:"
-                //     + iframe.contentWindow.navigator.epubReadingSystem.version
-                //     + " is loaded to iframe");
-            }
-            catch(ex)
-            {
-                console.log("epubReadingSystem INJECTION ERROR! " + ex.message);
-            }
+        iframe.setAttribute("data-baseUri", iframe.baseURI);
+        iframe.setAttribute("data-src", src);
 
-            $(iframe).show();
-            callback.call(context, true);
+        $(iframe).hide();
+        
+        var loadedDocumentUri = new URI(src).absoluteTo(iframe.baseURI).toString();
+
+        self._loadIframeWithUri(iframe, attachedData, loadedDocumentUri, function () {
+            var doc = iframe.contentDocument || iframe.contentWindow.document;
+            $('svg', doc).load(function(){
+                console.log('loaded');
+            });
+            callback.call(context, true, attachedData);
+        });
+    };
+
+    this._loadIframeWithUri = function (iframe, attachedData, contentUri, callback) {
+
+        iframe.onload = function () {
+
+
+            self.updateIframeEvents(iframe);
+
+            var mathJax = iframe.contentWindow.MathJax;
+            if (mathJax) {
+                // If MathJax is being used, delay the callback until it has completed rendering
+                var mathJaxCallback = _.once(callback);
+                try {
+                    mathJax.Hub.Queue(mathJaxCallback);
+                } catch (err) {
+                    console.error("MathJax fail!");
+                    callback();
+                }
+                // Or at an 8 second timeout, which ever comes first
+                //window.setTimeout(mathJaxCallback, 8000);
+            } else {
+                callback();
+            }
 
         };
-
-        //yucks! iframe doesn't trigger onerror event - there is no reliable way to know that iframe finished
-        // attempt tot load resource (successfully or not;
-        window.setTimeout(function(){
-
-            if(isWaitingForFrameLoad) {
-
-                isWaitingForFrameLoad = false;
-                callback.call(context, false);
-            }
-
-        }, 8000);
-
+        
         if (window.location.protocol
             &amp;&amp; window.location.protocol === 'http:'
             || window.location.protocol === 'https:') {
@@ -180,14 +182,18 @@ ReadiumSDK.Views.IFrameLoader = function() {
                 &amp;&amp; iframe.contentWindow.location.replace
                 &amp;&amp; (typeof iframe.contentWindow.location.replace) === "function") {
 
-                iframe.contentWindow.location.replace(src);
+                iframe.contentWindow.location.replace(contentUri);
             } else {
-                iframe.src = src;
+                iframe.setAttribute("src", contentUri);
             }
         } else {
-            iframe.src = src;
+            iframe.setAttribute("src", contentUri);
         }
+        
     };
+
+    
+
 };
 </code></pre>
         </article>
@@ -199,13 +205,13 @@ ReadiumSDK.Views.IFrameLoader = function() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Index</a></h2><h3>Classes</h3><ul><li><a href="ReadiumSDK.Collections.StyleCollection.html">StyleCollection</a></li><li><a href="ReadiumSDK.Helpers.Margins.html">Margins</a></li><li><a href="ReadiumSDK.Helpers.Rect.html">Rect</a></li><li><a href="ReadiumSDK.Helpers.ResolveContentRef.html">ResolveContentRef</a></li><li><a href="ReadiumSDK.Models.BookmarkData.html">BookmarkData</a></li><li><a href="ReadiumSDK.Models.CurrentPagesInfo.html">CurrentPagesInfo</a></li><li><a href="ReadiumSDK.Models.MediaOverlay.html">MediaOverlay</a></li><li><a href="ReadiumSDK.Models.NodeRangeInfo.html">NodeRangeInfo</a></li><li><a href="ReadiumSDK.Models.NodeRangePositionInfo.html">NodeRangePositionInfo</a></li><li><a href="ReadiumSDK.Models.Package.html">Package</a></li><li><a href="ReadiumSDK.Models.PackageData.html">PackageData</a></li><li><a href="ReadiumSDK.Models.PageOpenRequest.html">PageOpenRequest</a></li><li><a href="ReadiumSDK.Models.Smil.SmilNode.html">SmilNode</a></li><li><a href="ReadiumSDK.Models.SmilIterator.html">SmilIterator</a></li><li><a href="ReadiumSDK.Models.Spine.html">Spine</a></li><li><a href="ReadiumSDK.Models.SpineItem.html">SpineItem</a></li><li><a href="ReadiumSDK.Models.Spread.html">Spread</a></li><li><a href="ReadiumSDK.Models.Style.html">Style</a></li><li><a href="ReadiumSDK.Models.Switches.html">Switches</a></li><li><a href="ReadiumSDK.Models.ViewerSettings.html">ViewerSettings</a></li><li><a href="ReadiumSDK.Views.AnnotationsManager.html">AnnotationsManager</a></li><li><a href="ReadiumSDK.Views.AudioPlayer.html">AudioPlayer</a></li><li><a href="ReadiumSDK.Views.CfiNavigationLogic.html">CfiNavigationLogic</a></li><li><a href="ReadiumSDK.Views.FallbackScrollView.html">FallbackScrollView</a></li><li><a href="ReadiumSDK.Views.FixedView.html">FixedView</a></li><li><a href="ReadiumSDK.Views.IFrameLoader.html">IFrameLoader</a></li><li><a href="ReadiumSDK.Views.InternalLinksSupport.html">InternalLinksSupport</a></li><li><a href="ReadiumSDK.Views.MediaOverlayDataInjector.html">MediaOverlayDataInjector</a></li><li><a href="ReadiumSDK.Views.MediaOverlayElementHighlighter.html">MediaOverlayElementHighlighter</a></li><li><a href="ReadiumSDK.Views.MediaOverlayPlayer.html">MediaOverlayPlayer</a></li><li><a href="ReadiumSDK.Views.OnePageView.html">OnePageView</a></li><li><a href="ReadiumSDK.Views.ReaderView.html">ReaderView</a></li><li><a href="ReadiumSDK.Views.ReflowableView.html">ReflowableView</a></li><li><a href="ReadiumSDK.Views.ScrollView.html">ScrollView</a></li></ul><h3>Events</h3><ul><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOAD_START">CONTENT_DOCUMENT_LOAD_START</a></li><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOADED">CONTENT_DOCUMENT_LOADED</a></li><li><a href="ReadiumSDK.Events.html#event:FXL_VIEW_RESIZED">FXL_VIEW_RESIZED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_STATUS_CHANGED">MEDIA_OVERLAY_STATUS_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_SPEAK">MEDIA_OVERLAY_TTS_SPEAK</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_STOP">MEDIA_OVERLAY_TTS_STOP</a></li><li><a href="ReadiumSDK.Events.html#event:PAGINATION_CHANGED">PAGINATION_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_INITIALIZED">READER_INITIALIZED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_CREATED">READER_VIEW_CREATED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_DESTROYED">READER_VIEW_DESTROYED</a></li><li><a href="ReadiumSDK.Events.html#event:SETTINGS_APPLIED">SETTINGS_APPLIED</a></li><li><a href="ReadiumSDK.InternalEvents.html#event:CURRENT_VIEW_PAGINATION_CHANGED">CURRENT_VIEW_PAGINATION_CHANGED</a></li></ul><h3>Namespaces</h3><ul><li><a href="ReadiumSDK.html">ReadiumSDK</a></li><li><a href="ReadiumSDK.Collections.html">Collections</a></li><li><a href="ReadiumSDK.Events.html">Events</a></li><li><a href="ReadiumSDK.Helpers.html">Helpers</a></li><li><a href="ReadiumSDK.InternalEvents.html">InternalEvents</a></li><li><a href="ReadiumSDK.Models.html">Models</a></li><li><a href="ReadiumSDK.Overrides.html">Overrides</a></li><li><a href="ReadiumSDK.Routers.html">Routers</a></li><li><a href="ReadiumSDK.Views.html">Views</a></li></ul><h3><a href="global.html">Global</a></h3>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="ReadiumSDK.Collections.StyleCollection.html">StyleCollection</a></li><li><a href="ReadiumSDK.Helpers.Margins.html">Margins</a></li><li><a href="ReadiumSDK.Helpers.Rect.html">Rect</a></li><li><a href="ReadiumSDK.Helpers.ResolveContentRef.html">ResolveContentRef</a></li><li><a href="ReadiumSDK.Models.BookmarkData.html">BookmarkData</a></li><li><a href="ReadiumSDK.Models.CurrentPagesInfo.html">CurrentPagesInfo</a></li><li><a href="ReadiumSDK.Models.MediaOverlay.html">MediaOverlay</a></li><li><a href="ReadiumSDK.Models.NodeRangeInfo.html">NodeRangeInfo</a></li><li><a href="ReadiumSDK.Models.NodeRangePositionInfo.html">NodeRangePositionInfo</a></li><li><a href="ReadiumSDK.Models.Package.html">Package</a></li><li><a href="ReadiumSDK.Models.PackageData.html">PackageData</a></li><li><a href="ReadiumSDK.Models.PageOpenRequest.html">PageOpenRequest</a></li><li><a href="ReadiumSDK.Models.Smil.SmilNode.html">SmilNode</a></li><li><a href="ReadiumSDK.Models.SmilIterator.html">SmilIterator</a></li><li><a href="ReadiumSDK.Models.Spine.html">Spine</a></li><li><a href="ReadiumSDK.Models.SpineItem.html">SpineItem</a></li><li><a href="ReadiumSDK.Models.Spread.html">Spread</a></li><li><a href="ReadiumSDK.Models.Style.html">Style</a></li><li><a href="ReadiumSDK.Models.Switches.html">Switches</a></li><li><a href="ReadiumSDK.Models.ViewerSettings.html">ViewerSettings</a></li><li><a href="ReadiumSDK.Views.AnnotationsManager.html">AnnotationsManager</a></li><li><a href="ReadiumSDK.Views.AudioPlayer.html">AudioPlayer</a></li><li><a href="ReadiumSDK.Views.CfiNavigationLogic.html">CfiNavigationLogic</a></li><li><a href="ReadiumSDK.Views.FixedView.html">FixedView</a></li><li><a href="ReadiumSDK.Views.IFrameLoader.html">IFrameLoader</a></li><li><a href="ReadiumSDK.Views.InternalLinksSupport.html">InternalLinksSupport</a></li><li><a href="ReadiumSDK.Views.MediaOverlayDataInjector.html">MediaOverlayDataInjector</a></li><li><a href="ReadiumSDK.Views.MediaOverlayElementHighlighter.html">MediaOverlayElementHighlighter</a></li><li><a href="ReadiumSDK.Views.MediaOverlayPlayer.html">MediaOverlayPlayer</a></li><li><a href="ReadiumSDK.Views.OnePageView.html">OnePageView</a></li><li><a href="ReadiumSDK.Views.ReaderView.html">ReaderView</a></li><li><a href="ReadiumSDK.Views.ReflowableView.html">ReflowableView</a></li><li><a href="ReadiumSDK.Views.ScrollView.html">ScrollView</a></li></ul><h3>Events</h3><ul><li><a href="ReadiumSDK.Events.html#.event:CONTENT_DOCUMENT_LOAD_START">CONTENT_DOCUMENT_LOAD_START</a></li><li><a href="ReadiumSDK.Events.html#.event:CONTENT_DOCUMENT_LOADED">CONTENT_DOCUMENT_LOADED</a></li><li><a href="ReadiumSDK.Events.html#.event:FXL_VIEW_RESIZED">FXL_VIEW_RESIZED</a></li><li><a href="ReadiumSDK.Events.html#.event:MEDIA_OVERLAY_STATUS_CHANGED">MEDIA_OVERLAY_STATUS_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#.event:MEDIA_OVERLAY_TTS_SPEAK">MEDIA_OVERLAY_TTS_SPEAK</a></li><li><a href="ReadiumSDK.Events.html#.event:MEDIA_OVERLAY_TTS_STOP">MEDIA_OVERLAY_TTS_STOP</a></li><li><a href="ReadiumSDK.Events.html#.event:PAGINATION_CHANGED">PAGINATION_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#.event:READER_INITIALIZED">READER_INITIALIZED</a></li><li><a href="ReadiumSDK.Events.html#.event:READER_VIEW_CREATED">READER_VIEW_CREATED</a></li><li><a href="ReadiumSDK.Events.html#.event:READER_VIEW_DESTROYED">READER_VIEW_DESTROYED</a></li><li><a href="ReadiumSDK.Events.html#.event:SETTINGS_APPLIED">SETTINGS_APPLIED</a></li><li><a href="ReadiumSDK.InternalEvents.html#.event:CURRENT_VIEW_PAGINATION_CHANGED">CURRENT_VIEW_PAGINATION_CHANGED</a></li></ul><h3>Namespaces</h3><ul><li><a href="ReadiumSDK.html">ReadiumSDK</a></li><li><a href="ReadiumSDK.Collections.html">Collections</a></li><li><a href="ReadiumSDK.Events.html">Events</a></li><li><a href="ReadiumSDK.Helpers.html">Helpers</a></li><li><a href="ReadiumSDK.InternalEvents.html">InternalEvents</a></li><li><a href="ReadiumSDK.Models.html">Models</a></li><li><a href="ReadiumSDK.Overrides.html">Overrides</a></li><li><a href="ReadiumSDK.Routers.html">Routers</a></li><li><a href="ReadiumSDK.Views.html">Views</a></li></ul><h3>Global</h3><ul><li><a href="global.html#updateIFrameEvents">updateIFrameEvents</a></li></ul>
 </nav>
 
-<br clear="both">
+<br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha10</a> on Wed Nov 12 2014 16:29:53 GMT-0800 (PST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-beta1</a> on Mon Feb 16 2015 14:36:35 GMT-0800 (PST)
 </footer>
 
 <script> prettyPrint(); </script>

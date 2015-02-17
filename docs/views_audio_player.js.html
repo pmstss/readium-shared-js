@@ -153,6 +153,12 @@
                 console.debug("Y) timeupdate");
             }
         );
+
+        _audioElement.addEventListener("seeking", function()
+            {
+                console.debug("Z) seeking");
+            }
+        );
     }
 
     /**
@@ -304,7 +310,7 @@
                     {
                         if (DEBUG)
                         {
-                            console.debug("interval timer skipped (still seeking...)");
+//console.debug("interval timer skipped (still seeking...)");
                         }
                                          
                         _intervalTimerSkips++;
@@ -315,15 +321,26 @@
                         }
                         return;
                     }
-    
-                    var currentTime = _audioElement.currentTime;
+                    
+                    var currentTime = undefined;
+                    try
+                    {
+                        currentTime = _audioElement.currentTime;
+                    }
+                    catch (ex)
+                    {
+                        console.error(ex.message);
+                    }
     
     //                if (DEBUG)
     //                {
     //                    console.debug("currentTime: " + currentTime);
     //                }
     
-                    onPositionChanged(currentTime, 1);
+                    if (currentTime)
+                    {
+                        onPositionChanged(currentTime, 1);
+                    }
                 }, 20);
         }
     
@@ -531,15 +548,36 @@
         };
     
         var _readyEvent = _Android ? "canplaythrough" : "canplay";
-        function onReadyToSeek(event)
+        function onReadyToSeek_(event)
         {
-            $(_audioElement).off(_readyEvent, onReadyToSeek);
-            
             if (DEBUG)
             {
                 console.debug("onReadyToSeek #" + event.data.playId);
             }
             playSeekCurrentTime(event.data.seekBegin, event.data.playId, true);
+        }
+        function onReadyToSeek(event)
+        {
+            $(_audioElement).off(_readyEvent, onReadyToSeek);
+            
+            if (!_Android)
+            {
+                onReadyToSeek_(event);
+            }
+            else
+            {
+                if (DEBUG)
+                {
+                    console.debug("onReadyToSeek ANDROID ... waiting a bit ... #" + event.data.playId);
+                }
+                
+                //self.play();
+                playToForcePreload();
+                
+                setTimeout(function() {
+                    onReadyToSeek_(event);
+                }, 1000);
+            }
         }
     
         function playSeekCurrentTime(newCurrentTime, playId, isNewSrc)
@@ -598,7 +636,7 @@
                 }, 5);
             }
         }
-    
+        
         var MAX_SEEK_RETRIES = 10;
         var _seekedEvent1 = _iOS ? "canplaythrough" : "seeked"; //"progress"
         var _seekedEvent2 = _iOS ? "timeupdate" : "seeked";
@@ -654,18 +692,15 @@
                     setTimeout(function()
                     {
                         onSeeked(event);
-                    }, 50);
+                    }, _Android ? 1000 : 200);
                 }
     
                 setTimeout(function()
                 {
+                    _audioElement.pause();
                     try
                     {
-                        _audioElement.pause();
-                        setTimeout(function()
-                        {
-                            _audioElement.currentTime = event.data.newCurrentTime;
-                        }, 0);
+                        _audioElement.currentTime = event.data.newCurrentTime;
                     }
                     catch (ex)
                     {
@@ -675,11 +710,7 @@
                         {
                             try
                             {
-                                _audioElement.pause();
-                                setTimeout(function()
-                                {
-                                    _audioElement.currentTime = event.data.newCurrentTime;
-                                }, 0);
+                                _audioElement.currentTime = event.data.newCurrentTime;
                             }
                             catch (ex)
                             {
@@ -745,13 +776,13 @@
 </div>
 
 <nav>
-    <h2><a href="index.html">Index</a></h2><h3>Classes</h3><ul><li><a href="ReadiumSDK.Collections.StyleCollection.html">StyleCollection</a></li><li><a href="ReadiumSDK.Helpers.Margins.html">Margins</a></li><li><a href="ReadiumSDK.Helpers.Rect.html">Rect</a></li><li><a href="ReadiumSDK.Helpers.ResolveContentRef.html">ResolveContentRef</a></li><li><a href="ReadiumSDK.Models.BookmarkData.html">BookmarkData</a></li><li><a href="ReadiumSDK.Models.CurrentPagesInfo.html">CurrentPagesInfo</a></li><li><a href="ReadiumSDK.Models.MediaOverlay.html">MediaOverlay</a></li><li><a href="ReadiumSDK.Models.NodeRangeInfo.html">NodeRangeInfo</a></li><li><a href="ReadiumSDK.Models.NodeRangePositionInfo.html">NodeRangePositionInfo</a></li><li><a href="ReadiumSDK.Models.Package.html">Package</a></li><li><a href="ReadiumSDK.Models.PackageData.html">PackageData</a></li><li><a href="ReadiumSDK.Models.PageOpenRequest.html">PageOpenRequest</a></li><li><a href="ReadiumSDK.Models.Smil.SmilNode.html">SmilNode</a></li><li><a href="ReadiumSDK.Models.SmilIterator.html">SmilIterator</a></li><li><a href="ReadiumSDK.Models.Spine.html">Spine</a></li><li><a href="ReadiumSDK.Models.SpineItem.html">SpineItem</a></li><li><a href="ReadiumSDK.Models.Spread.html">Spread</a></li><li><a href="ReadiumSDK.Models.Style.html">Style</a></li><li><a href="ReadiumSDK.Models.Switches.html">Switches</a></li><li><a href="ReadiumSDK.Models.ViewerSettings.html">ViewerSettings</a></li><li><a href="ReadiumSDK.Views.AnnotationsManager.html">AnnotationsManager</a></li><li><a href="ReadiumSDK.Views.AudioPlayer.html">AudioPlayer</a></li><li><a href="ReadiumSDK.Views.CfiNavigationLogic.html">CfiNavigationLogic</a></li><li><a href="ReadiumSDK.Views.FallbackScrollView.html">FallbackScrollView</a></li><li><a href="ReadiumSDK.Views.FixedView.html">FixedView</a></li><li><a href="ReadiumSDK.Views.IFrameLoader.html">IFrameLoader</a></li><li><a href="ReadiumSDK.Views.InternalLinksSupport.html">InternalLinksSupport</a></li><li><a href="ReadiumSDK.Views.MediaOverlayDataInjector.html">MediaOverlayDataInjector</a></li><li><a href="ReadiumSDK.Views.MediaOverlayElementHighlighter.html">MediaOverlayElementHighlighter</a></li><li><a href="ReadiumSDK.Views.MediaOverlayPlayer.html">MediaOverlayPlayer</a></li><li><a href="ReadiumSDK.Views.OnePageView.html">OnePageView</a></li><li><a href="ReadiumSDK.Views.ReaderView.html">ReaderView</a></li><li><a href="ReadiumSDK.Views.ReflowableView.html">ReflowableView</a></li><li><a href="ReadiumSDK.Views.ScrollView.html">ScrollView</a></li></ul><h3>Events</h3><ul><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOAD_START">CONTENT_DOCUMENT_LOAD_START</a></li><li><a href="ReadiumSDK.Events.html#event:CONTENT_DOCUMENT_LOADED">CONTENT_DOCUMENT_LOADED</a></li><li><a href="ReadiumSDK.Events.html#event:FXL_VIEW_RESIZED">FXL_VIEW_RESIZED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_STATUS_CHANGED">MEDIA_OVERLAY_STATUS_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_SPEAK">MEDIA_OVERLAY_TTS_SPEAK</a></li><li><a href="ReadiumSDK.Events.html#event:MEDIA_OVERLAY_TTS_STOP">MEDIA_OVERLAY_TTS_STOP</a></li><li><a href="ReadiumSDK.Events.html#event:PAGINATION_CHANGED">PAGINATION_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_INITIALIZED">READER_INITIALIZED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_CREATED">READER_VIEW_CREATED</a></li><li><a href="ReadiumSDK.Events.html#event:READER_VIEW_DESTROYED">READER_VIEW_DESTROYED</a></li><li><a href="ReadiumSDK.Events.html#event:SETTINGS_APPLIED">SETTINGS_APPLIED</a></li><li><a href="ReadiumSDK.InternalEvents.html#event:CURRENT_VIEW_PAGINATION_CHANGED">CURRENT_VIEW_PAGINATION_CHANGED</a></li></ul><h3>Namespaces</h3><ul><li><a href="ReadiumSDK.html">ReadiumSDK</a></li><li><a href="ReadiumSDK.Collections.html">Collections</a></li><li><a href="ReadiumSDK.Events.html">Events</a></li><li><a href="ReadiumSDK.Helpers.html">Helpers</a></li><li><a href="ReadiumSDK.InternalEvents.html">InternalEvents</a></li><li><a href="ReadiumSDK.Models.html">Models</a></li><li><a href="ReadiumSDK.Overrides.html">Overrides</a></li><li><a href="ReadiumSDK.Routers.html">Routers</a></li><li><a href="ReadiumSDK.Views.html">Views</a></li></ul><h3><a href="global.html">Global</a></h3>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="ReadiumSDK.Collections.StyleCollection.html">StyleCollection</a></li><li><a href="ReadiumSDK.Helpers.Margins.html">Margins</a></li><li><a href="ReadiumSDK.Helpers.Rect.html">Rect</a></li><li><a href="ReadiumSDK.Helpers.ResolveContentRef.html">ResolveContentRef</a></li><li><a href="ReadiumSDK.Models.BookmarkData.html">BookmarkData</a></li><li><a href="ReadiumSDK.Models.CurrentPagesInfo.html">CurrentPagesInfo</a></li><li><a href="ReadiumSDK.Models.MediaOverlay.html">MediaOverlay</a></li><li><a href="ReadiumSDK.Models.NodeRangeInfo.html">NodeRangeInfo</a></li><li><a href="ReadiumSDK.Models.NodeRangePositionInfo.html">NodeRangePositionInfo</a></li><li><a href="ReadiumSDK.Models.Package.html">Package</a></li><li><a href="ReadiumSDK.Models.PackageData.html">PackageData</a></li><li><a href="ReadiumSDK.Models.PageOpenRequest.html">PageOpenRequest</a></li><li><a href="ReadiumSDK.Models.Smil.SmilNode.html">SmilNode</a></li><li><a href="ReadiumSDK.Models.SmilIterator.html">SmilIterator</a></li><li><a href="ReadiumSDK.Models.Spine.html">Spine</a></li><li><a href="ReadiumSDK.Models.SpineItem.html">SpineItem</a></li><li><a href="ReadiumSDK.Models.Spread.html">Spread</a></li><li><a href="ReadiumSDK.Models.Style.html">Style</a></li><li><a href="ReadiumSDK.Models.Switches.html">Switches</a></li><li><a href="ReadiumSDK.Models.ViewerSettings.html">ViewerSettings</a></li><li><a href="ReadiumSDK.Views.AnnotationsManager.html">AnnotationsManager</a></li><li><a href="ReadiumSDK.Views.AudioPlayer.html">AudioPlayer</a></li><li><a href="ReadiumSDK.Views.CfiNavigationLogic.html">CfiNavigationLogic</a></li><li><a href="ReadiumSDK.Views.FixedView.html">FixedView</a></li><li><a href="ReadiumSDK.Views.IFrameLoader.html">IFrameLoader</a></li><li><a href="ReadiumSDK.Views.InternalLinksSupport.html">InternalLinksSupport</a></li><li><a href="ReadiumSDK.Views.MediaOverlayDataInjector.html">MediaOverlayDataInjector</a></li><li><a href="ReadiumSDK.Views.MediaOverlayElementHighlighter.html">MediaOverlayElementHighlighter</a></li><li><a href="ReadiumSDK.Views.MediaOverlayPlayer.html">MediaOverlayPlayer</a></li><li><a href="ReadiumSDK.Views.OnePageView.html">OnePageView</a></li><li><a href="ReadiumSDK.Views.ReaderView.html">ReaderView</a></li><li><a href="ReadiumSDK.Views.ReflowableView.html">ReflowableView</a></li><li><a href="ReadiumSDK.Views.ScrollView.html">ScrollView</a></li></ul><h3>Events</h3><ul><li><a href="ReadiumSDK.Events.html#.event:CONTENT_DOCUMENT_LOAD_START">CONTENT_DOCUMENT_LOAD_START</a></li><li><a href="ReadiumSDK.Events.html#.event:CONTENT_DOCUMENT_LOADED">CONTENT_DOCUMENT_LOADED</a></li><li><a href="ReadiumSDK.Events.html#.event:FXL_VIEW_RESIZED">FXL_VIEW_RESIZED</a></li><li><a href="ReadiumSDK.Events.html#.event:MEDIA_OVERLAY_STATUS_CHANGED">MEDIA_OVERLAY_STATUS_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#.event:MEDIA_OVERLAY_TTS_SPEAK">MEDIA_OVERLAY_TTS_SPEAK</a></li><li><a href="ReadiumSDK.Events.html#.event:MEDIA_OVERLAY_TTS_STOP">MEDIA_OVERLAY_TTS_STOP</a></li><li><a href="ReadiumSDK.Events.html#.event:PAGINATION_CHANGED">PAGINATION_CHANGED</a></li><li><a href="ReadiumSDK.Events.html#.event:READER_INITIALIZED">READER_INITIALIZED</a></li><li><a href="ReadiumSDK.Events.html#.event:READER_VIEW_CREATED">READER_VIEW_CREATED</a></li><li><a href="ReadiumSDK.Events.html#.event:READER_VIEW_DESTROYED">READER_VIEW_DESTROYED</a></li><li><a href="ReadiumSDK.Events.html#.event:SETTINGS_APPLIED">SETTINGS_APPLIED</a></li><li><a href="ReadiumSDK.InternalEvents.html#.event:CURRENT_VIEW_PAGINATION_CHANGED">CURRENT_VIEW_PAGINATION_CHANGED</a></li></ul><h3>Namespaces</h3><ul><li><a href="ReadiumSDK.html">ReadiumSDK</a></li><li><a href="ReadiumSDK.Collections.html">Collections</a></li><li><a href="ReadiumSDK.Events.html">Events</a></li><li><a href="ReadiumSDK.Helpers.html">Helpers</a></li><li><a href="ReadiumSDK.InternalEvents.html">InternalEvents</a></li><li><a href="ReadiumSDK.Models.html">Models</a></li><li><a href="ReadiumSDK.Overrides.html">Overrides</a></li><li><a href="ReadiumSDK.Routers.html">Routers</a></li><li><a href="ReadiumSDK.Views.html">Views</a></li></ul><h3>Global</h3><ul><li><a href="global.html#updateIFrameEvents">updateIFrameEvents</a></li></ul>
 </nav>
 
-<br clear="both">
+<br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha10</a> on Wed Nov 12 2014 16:29:52 GMT-0800 (PST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-beta1</a> on Mon Feb 16 2015 14:36:35 GMT-0800 (PST)
 </footer>
 
 <script> prettyPrint(); </script>

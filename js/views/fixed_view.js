@@ -26,9 +26,9 @@
 /**
  * View for rendering fixed layout page spread
  * @param options
+ * @param reader
  * @constructor
  */
-
 ReadiumSDK.Views.FixedView = function(options, reader){
 
     _.extend(this, Backbone.Events);
