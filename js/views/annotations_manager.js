@@ -220,6 +220,15 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    this.removeHighlightsByType = function(type) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result  = annotationsForView.removeHighlightsByType(type);
+        }
+        return result;
+    };
+
     this.getHighlight = function(id) {
         var result = undefined;
         for(var spine in liveAnnotations) {

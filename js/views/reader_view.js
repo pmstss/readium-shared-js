@@ -1270,6 +1270,18 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Removes highlights of a given type
+     *
+     * @param {string} type type of the highlight.
+     *
+     * @returns {undefined}
+     *
+     */
+    this.removeHighlightsByType = function(type) {
+        return _annotationsManager.removeHighlightsByType(type);
+    };
+
+    /**
      * Gets given highlight
      *
      * @param {string} id id of the highlight.
