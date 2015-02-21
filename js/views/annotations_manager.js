@@ -173,7 +173,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         }
     };
 
-
     this.getCurrentSelectionCfi = function() {
         for(var spine in liveAnnotations) {
             var annotationsForView = liveAnnotations[spine];
@@ -190,8 +189,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
             var annotationsForView = liveAnnotations[spine];
             if (annotationsForView.getCurrentSelectionCFI()) {
                 var annotation = annotationsForView.addSelectionHighlight(id, type, styles);
-                annotation.idref = spines[spine].idref;
-                return new ReadiumSDK.Models.BookmarkData(annotation.idref, annotation.CFI);
+                return new ReadiumSDK.Models.BookmarkData(spines[spine].idref, annotation.CFI);
             }
         }
         return undefined;
@@ -203,9 +201,23 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
                 var annotationsForView = liveAnnotations[spine];
                 var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles);
                 if (annotation) {
-                    annotation.idref = spineIdRef;
-                    return new ReadiumSDK.Models.BookmarkData(annotation.idref, annotation.CFI);
+                    return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
                 }
+            }
+        }
+        return undefined;
+    };
+
+    this.addHighlightsForText = function(text, spineIdRef, type, styles) {
+        var bookmarks = [];
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                annotations = annotationsForView.addHighlightsForText(text, spineIdRef, type, styles);
+                _.each(annotations, function (partialCfi) {
+                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
+                });
+                return bookmarks;
             }
         }
         return undefined;
