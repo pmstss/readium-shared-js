@@ -1074,7 +1074,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
     this.getFirstVisibleElementCfi = function() {
         var visibleViewPage = getFirstVisiblePageView();
         if(visibleViewPage) {
-            return visibleViewPage.getNavigator().getFirstVisibleElementCfi(scrollTop());
+            return visibleViewPage.getNavigator().getFirstVisibleElementCfi();
         }
 
         return undefined;

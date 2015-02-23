@@ -77,10 +77,6 @@ ReadiumSDK = {
     /**
      * @namespace
      */
-    Overrides: {},
-    /**
-     * @namespace
-     */
     Events: {
         /**
          * @event
@@ -140,9 +136,7 @@ ReadiumSDK = {
          */
         CURRENT_VIEW_PAGINATION_CHANGED: "CurrentViewPaginationChanged",
     },
-    Overrides: {
-        TextNodeFragmentBuffer: 60
-    }
+
 
 };
 

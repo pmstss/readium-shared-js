@@ -727,8 +727,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
     this.getFirstVisibleElementCfi = function() {
 
-        var contentOffsets = getVisibleContentOffsets();
-        return _navigationLogic.getFirstVisibleElementCfi(contentOffsets);
+        return _navigationLogic.getFirstVisibleElementCfi();
     };
 
     this.getPaginationInfo = function() {
