@@ -1292,7 +1292,23 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
-     * Removes A given highlight
+     * Higlights all the occurences of the given text
+     *
+     * @param {string} text text occurences to be highlighted
+     * @param {string} spineIdRef spine idref where the text is searched for
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * The style of the class will be applied to the created hightlights
+     * @param {object} styles - object representing CSS properties to be applied to the highlights.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     *
+     * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the found text occurences
+     */
+    this.addHighlightsForText = function(text, spineIdRef, type, styles) {
+        return _annotationsManager.addHighlightsForText(text, spineIdRef, type, styles);
+    };
+
+    /**
+     * Removes a given highlight
      *
      * @param {string} id  The id associated with the highlight.
      *
@@ -1301,6 +1317,18 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
     this.removeHighlight = function(id) {
         return _annotationsManager.removeHighlight(id);
+    };
+
+    /**
+     * Removes highlights of a given type
+     *
+     * @param {string} type type of the highlight.
+     *
+     * @returns {undefined}
+     *
+     */
+    this.removeHighlightsByType = function(type) {
+        return _annotationsManager.removeHighlightsByType(type);
     };
 
     /**

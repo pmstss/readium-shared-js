@@ -102,6 +102,10 @@ When a user clicks on a highlight `annotationClicked` event is dispatched with t
 Then when the user clicks on the highlight the following will show up in the console:
 
 	highlight id-id2604743 /4/2/6,/1:74,/1:129 123
+
+Note that there are 2 more events that may be hadled in a similar manner - 'textSelection' and 'imgDblClicked'. 
+The set of arguments passed to the event handling function is different though.
+
 */
 
 /**
@@ -122,9 +126,13 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         console.warn("WARNING! Annotations CSS not supplied. Highlighting is not going to work.");
     }
 
+    // mix in Backbone Events to allow for named event handling
     _.extend(self, Backbone.Events);
 
     // we want to bubble up all of the events that annotations module may trigger up.
+    // Note that annotations module produces "annotation" related events (triggered on HighlightViews of HighlightGroup):
+    // that are mangled, i.e., a new set of arguments is produced in mangleEvent function
+    // as well as these 2 events:  "textSelectionEvent" and "imgDblClicked", that are not mangled and propogated "as is"
     this.on("all", function(eventName) {
         var args = Array.prototype.slice.call(arguments);
         // mangle annotationClicked event. What really needs to happen is, the annotation_module needs to return a
@@ -141,11 +149,10 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
                     }
 
                     var annotationId = args[3];
-                    var fullFakeCfi = args[2];
+                    var partialCfi = args[2];
                     var type = args[1];
                     if (liveAnnotations[spineIndex].getHighlight(annotationId)) {
                         var idref = spines[spineIndex].idref;
-                        var partialCfi = getPartialCfi(fullFakeCfi);
                         args = [annotationEvent, type, idref, partialCfi, annotationId, jQueryEvent, contentDocumentFrame];
                     }
                 }
@@ -172,7 +179,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         }
     };
 
-
     this.getCurrentSelectionCfi = function() {
         for(var spine in liveAnnotations) {
             var annotationsForView = liveAnnotations[spine];
@@ -189,8 +195,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
             var annotationsForView = liveAnnotations[spine];
             if (annotationsForView.getCurrentSelectionCFI()) {
                 var annotation = annotationsForView.addSelectionHighlight(id, type, styles);
-                annotation.idref = spines[spine].idref;
-                return annotation;
+                return new ReadiumSDK.Models.BookmarkData(spines[spine].idref, annotation.CFI);
             }
         }
         return undefined;
@@ -202,9 +207,23 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
                 var annotationsForView = liveAnnotations[spine];
                 var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles);
                 if (annotation) {
-                    annotation.idref = spineIdRef;
-                    return annotation;
+                    return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
                 }
+            }
+        }
+        return undefined;
+    };
+
+    this.addHighlightsForText = function(text, spineIdRef, type, styles) {
+        var bookmarks = [];
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                annotations = annotationsForView.addHighlightsForText(text, spineIdRef, type, styles);
+                _.each(annotations, function (partialCfi) {
+                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
+                });
+                return bookmarks;
             }
         }
         return undefined;
@@ -219,6 +238,15 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    this.removeHighlightsByType = function(type) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result  = annotationsForView.removeHighlightsByType(type);
+        }
+        return result;
+    };
+
     this.getHighlight = function(id) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -227,15 +255,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         }
         return result;
     };
-
-    function getPartialCfi(CFI) {
-        var cfiWrapperPattern = new RegExp("^.*!")
-        // remove epubcfi( and indirection step
-        var partiallyNakedCfi = CFI.replace(cfiWrapperPattern, "");
-        // remove last paren
-        var nakedCfi = partiallyNakedCfi.substring(0, partiallyNakedCfi.length -1);
-        return nakedCfi;
-    }
 
     this.redrawAnnotations = function(){
         for(var spine in liveAnnotations){
