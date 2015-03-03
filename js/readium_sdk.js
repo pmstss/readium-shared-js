@@ -77,6 +77,12 @@ ReadiumSDK = {
     /**
      * @namespace
      */
+    Overrides: {
+        TextNodeFragmentBuffer: 60
+    },
+    /**
+     * @namespace
+     */
     Events: {
         /**
          * @event

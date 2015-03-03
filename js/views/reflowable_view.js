@@ -142,7 +142,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         updateColumnGap();
         
         updateViewportSize();
-        updatePagination(_viewSettings.doNotTriggerPagination);
+        updatePagination();
     };
 
     function renderIframe() {
@@ -324,10 +324,10 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         updateColumnGap();
 
 
-        self.applyStyles(true);
+        self.applyStyles();
     }
 
-    this.applyStyles = function(doNotTriggerPagination) {
+    this.applyStyles = function() {
 
         ReadiumSDK.Helpers.setStyles(_userStyles.getStyles(), _$el.parent());
 
@@ -338,7 +338,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
 
         updateViewportSize();
-        updatePagination(doNotTriggerPagination);
+        updatePagination();
     };
 
     this.applyBookStyles = function() {
@@ -432,6 +432,8 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             _$epubHtml.css("left", ltr ? offsetVal : "");
             _$epubHtml.css("right", !ltr ? offsetVal : "");
         }
+
+        showBook(); // as it's no longer hidden by shifting the position
     }
 
     function updateViewportSize() {
@@ -450,12 +452,11 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     }
 
     function onPaginationChanged(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
-        console.log('onPaginationChanged!');
+
         _paginationInfo.pageOffset = (_paginationInfo.columnWidth + _paginationInfo.columnGap) * _paginationInfo.visibleColumnCount * _paginationInfo.currentSpreadIndex;
         
         redraw();
-        showBook();
-        self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId });
+        self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
     }
 
     this.openPagePrev = function (initiator) {
@@ -503,7 +504,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     };
 
 
-    function updatePagination(doNotTriggerPagination) {
+    function updatePagination() {
         
         // At 100% font-size = 16px (on HTML, not body or descendant markup!)
         var MAXW = 550; //TODO user/vendor-configurable?
@@ -641,8 +642,6 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
         _$epubHtml.css({left: "0", right: "0", top: "0"});
 
-        redraw();
-        resizeImages();
         ReadiumSDK.Helpers.triggerLayout(_$iframe);
 
         _paginationInfo.columnCount = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) + _paginationInfo.columnGap) / (_paginationInfo.columnWidth + _paginationInfo.columnGap);
@@ -667,20 +666,12 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             _paginationInfo.currentSpreadIndex = _paginationInfo.spreadCount - 1;
         }
 
-
         if(_deferredPageRequest) {
 
-            if (!doNotTriggerPagination) {
-                onPaginationChanged(_deferredPageRequest);
-            }
-
             //if there is a request for specific page we get here
-            setTimeout(function () {
-                openDeferredElement();
-            },50);
-
+            openDeferredElement();
         }
-        else if (!doNotTriggerPagination) {
+        else {
 
             //we get here on resizing the viewport
             
@@ -774,21 +765,16 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         var $elem;
         var height;
         var width;
-        var $body = $('body', _$epubHtml);
-        //maxHeight is (html el height) - (body el padding+margin+border)
-        //we add 3 to the maxHeight as a buffer, this fixes a strange scaling issue on IE11
-        // if we set max-width/max-height to 100% columnizing engine chops images embedded in the text
-        // (but not if we set it to 99-98%) go figure. (the magic +/-3 helps to do this)
-        var maxDimensions = {
-            maxHeight:_$epubHtml.height() - ($body.outerHeight(true) - $body.height() + 3),
-            maxWidth: $body[0].getClientRects()[0].width - 3
-        };
 
         $('img, svg', _$epubHtml).each(function(){
 
             $elem = $(this);
 
-            $elem.css(maxDimensions);
+            // if we set max-width/max-height to 100% columnizing engine chops images embedded in the text
+            // (but not if we set it to 99-98%) go figure.
+            // TODO: CSS min-w/h is content-box, not border-box (does not take into account padding + border)? => images may still overrun?
+            $elem.css('max-width', '98%');
+            $elem.css('max-height', '98%');
 
             if(!$elem.css('height')) {
                 $elem.css('height', 'auto');
@@ -901,13 +887,6 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         }
 
         self.openPage(openPageRequest);
-    };
-
-    this.isElementCfiVisible = function(spineIdRef, contentCfi) {
-        if (spineIdRef != _currentSpineItem.idref) {
-            return false;
-        }
-        return _navigationLogic.isElementCfiVisible(contentCfi);
     };
 
 };
