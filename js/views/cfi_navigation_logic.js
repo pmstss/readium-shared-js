@@ -41,7 +41,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     var self = this;
     options = options || {};
 
-    this.getRootElement = function () {
+    var debugMode = false;
+
+    this.getRootElement = function(){
 
         return $iframe[0].contentDocument.documentElement;
     };
@@ -50,64 +52,8 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return $iframe[0].contentDocument;
     };
 
-    /* <-debug
-     //used for visual debug atm
-     function getRandomColor() {
-     var letters = '0123456789ABCDEF'.split('');
-     var color = '#';
-     for (var i = 0; i < 6; i++) {
-     color += letters[Math.round(Math.random() * 15)];
-     }
-     return color;
-     }
+    // FIXED LAYOUT if (!options.rectangleBased) alert("!!!options.rectangleBased");
 
-     //used for visual debug atm
-     function addOverlayRect(rects, color, doc) {
-     var random = getRandomColor();
-     if (!(rects instanceof Array)) {
-     rects = [rects];
-     }
-     for (var i = 0; i != rects.length; i++) {
-     var rect = rects[i];
-     var tableRectDiv = doc.createElement('div');
-     tableRectDiv.style.position = 'absolute';
-     $(tableRectDiv).css('z-index', '-1');
-     $(tableRectDiv).css('opacity', '0.4');
-     tableRectDiv.style.border = '1px solid white';
-     if (!color && !random) {
-     tableRectDiv.style.background = 'purple';
-     } else if (random && !color) {
-     tableRectDiv.style.background = random;
-     } else {
-     if(color === true){
-     color ='red';
-     }
-     tableRectDiv.style.border = '1px solid '+color;
-     tableRectDiv.style.background = 'red';
-     }
-
-     tableRectDiv.style.margin = tableRectDiv.style.padding = '0';
-     tableRectDiv.style.top = (rect.top ) + 'px';
-     tableRectDiv.style.left = (rect.left ) + 'px';
-     // we want rect.width to be the border width, so content width is 2px less.
-     tableRectDiv.style.width = (rect.width - 2) + 'px';
-     tableRectDiv.style.height = (rect.height - 2) + 'px';
-     doc.body.appendChild(tableRectDiv);
-     }
-     }
-
-     function getPaginationLeftOffset() {
-
-     var $htmlElement = $("html", self.getRootDocument());
-     var offsetLeftPixels = $htmlElement.css("left");
-     var offsetLeft = parseInt(offsetLeftPixels.replace("px", ""));
-     if(isNaN(offsetLeft)){
-     //for fixed layouts, $htmlElement.css("left") has no numerical value
-     offsetLeft = 0;
-     }
-     return offsetLeft;
-     }
-     //debug -> */
 
     function createRange() {
         return self.getRootDocument().createRange();
@@ -164,8 +110,12 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
     function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset) {
         var range = createRange();
-        range.setStart(startNode, startOffset);
-        range.setEnd(endNode, endOffset);
+        range.setStart(startNode, startOffset ? startOffset : 0);
+        if (endNode.nodeType === Node.ELEMENT_NODE) {
+            range.setEnd(endNode, endOffset ? endOffset : endNode.childNodes.length);
+        } else if (endNode.nodeType === Node.TEXT_NODE) {
+            range.setEnd(endNode, endOffset ? endOffset : 0);
+        }
         return normalizeRectangle(range.getBoundingClientRect(),0,0);
     }
 
@@ -207,11 +157,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 //then this is the one we want
                 if (isNodeClientRectVisible(rect)) {
                     found = fragment;
-                    /* <- debug
-                     console.log("visible textnode fragment found:");
-                     console.log(fragment);
-                     console.log("------------");
-                     //debug -> */
+                    if (debugMode) {
+                        console.log("visible textnode fragment found:");
+                        console.log(fragment);
+                        console.log("------------");
+                    }
                 }
             }
         });
@@ -234,9 +184,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             //find the last printable character of the textnode fragment:
             var lastPrintableIndex = found.start;
             for (var i = found.end - 1; i < found.end && i >= found.start; i--) {
-                /* <- debug
-                console.log(i + " :: " + textNode.nodeValue.charAt(i) + " :: " + textNode.nodeValue.charCodeAt(i));
-                //debug -> */
+                if (debugMode) {
+                    console.log(i + " :: " + textNode.nodeValue.charAt(i) + " :: " + textNode.nodeValue.charCodeAt(i));
+                }
                 if (textNode.nodeValue.charCodeAt(i) > 32) {
                     lastPrintableIndex = i;
                     break;
@@ -796,8 +746,8 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         var foundElement = this.findFirstVisibleElement(topOffset);
         var $element = foundElement.$element;
 
-        // we may get a text node or an img element here. For a text node, we can generate a complete range CFI that 
-        // most specific. 
+        // we may get a text node or an img element here. For a text node, we can generate a complete range CFI that
+        // most specific.
         //
         // For an img node we generate an offset CFI
         var node = foundElement.foundTextNode;
@@ -846,7 +796,94 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         return cfi;
     };
-    
+
+
+    //function findFirstVisibleCaretRange(document) {
+    //    var range = document.caretRangeFromPoint(0,0);
+    //    if (typeof document.msElementsFromRect !== "undefined"){
+    //
+    //    } else {
+    //
+    //    }
+    //}
+
+    this.getFirstVisibleElementCfiX = function () {
+
+        var cfi;
+        ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(self.getRootDocument());
+        var firstVisibleCaretRange = self.getRootDocument().caretRangeFromPoint(0,0);
+
+
+        if (!firstVisibleCaretRange) {
+            console.error("Could not generate CFI no visible element on page");
+            return null;
+        }
+
+        var range = firstVisibleCaretRange;
+
+        //if we get a text node we need to get an approximate range for the first visible character offsets.
+        var node = firstVisibleCaretRange.startContainer;
+        var startOffset, endOffset;
+        if (node.nodeType === Node.TEXT_NODE) {
+            if (node.length === 1 && range.startOffset === 1) {
+                startOffset = 0;
+                endOffset = 1;
+            } else if (range.startOffset === node.length) {
+                startOffset = range.startOffset - 1;
+                endOffset = range.startOffset;
+            } else {
+                startOffset = range.startOffset;
+                endOffset = range.startOffset + 1;
+            }
+
+        } else {
+            console.error("Could not generate CFI: only text nodes are supported for now");
+            return null;
+        }
+
+        if (debugMode) {
+            ///* <- debug
+            var rect = getNodeRangeClientRect(node,startOffset,node,endOffset);
+            var leftOffset = -getPaginationLeftOffset();
+            addOverlayRect({
+                left: rect.left + leftOffset,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height
+            }, true, self.getRootDocument());
+            // debug -> */
+        }
+
+        cfi = EPUBcfi.Generator.generateCharOffsetRangeComponent(node, startOffset, node, endOffset,
+            ["cfi-marker"],
+            [],
+            ["MathJax_Message"]);
+
+        //} else if ($element) {
+        //    //noinspection JSUnresolvedVariable
+        //    cfi = EPUBcfi.Generator.generateElementCFIComponent(foundElement.$element[0],
+        //        ["cfi-marker"],
+        //        [],
+        //        ["MathJax_Message"]);
+        //
+        //    if (cfi[0] == "!") {
+        //        cfi = cfi.substring(1);
+        //    }
+        //
+        //    cfi = cfi + "@0:" + foundElement.percentY;
+        //} else {
+        //    console.log("Could not generate CFI no visible element on page");
+        //}
+
+        //This should not happen but if it does print some output, just in case
+        if (cfi && cfi.indexOf('NaN') !== -1) {
+            console.log('Did not generate a valid CFI:' + cfi);
+            return undefined;
+        }
+
+        return cfi;
+    };
+
     function getWrappedCfi(partialCfi) {
         return "epubcfi(" + partialCfi + ")";
     }
@@ -905,7 +942,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return $element;
     }
 
-    //TODO JC: refactor this
     this.getNodeRangeInfoFromCfi = function (cfi) {
         var contentDoc = self.getRootDocument();
         if (self.isRangeCfi(cfi)) {
@@ -917,9 +953,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                     ["cfi-marker"],
                     [],
                     ["MathJax_Message"]);
-                /* <- debug
-                 console.log(nodeResult);
-                 //*/
+
+                if (debugMode) {
+                    console.log(nodeResult);
+                }
             } catch (ex) {
                 //EPUBcfi.Interpreter can throw a SyntaxError
             }
@@ -929,20 +966,21 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 return undefined;
             }
 
-            var startRangeInfo = getRangeInfoFromNodeList(nodeResult.startNodes, nodeResult.startOffset);
-            var endRangeInfo = getRangeInfoFromNodeList(nodeResult.endNodes, nodeResult.endOffset);
+            var startRangeInfo = {node: nodeResult.startElement, offset: nodeResult.startOffset};
+            var endRangeInfo = {node: nodeResult.startElement, offset: nodeResult.startElement};
             var nodeRangeClientRect =
-                    startRangeInfo && endRangeInfo ?
-                        getNodeRangeClientRect(
-                            startRangeInfo.node,
-                            startRangeInfo.offset,
-                            endRangeInfo.node,
-                            endRangeInfo.offset)
-                        : null;
-            /* <- debug
-             console.log(nodeRangeClientRect);
-             addOverlayRect(nodeRangeClientRect,'purple',contentDoc);
-             //*/
+                startRangeInfo && endRangeInfo ?
+                    getNodeRangeClientRect(
+                        nodeResult.startElement,
+                        nodeResult.startOffset,
+                        nodeResult.startElement,
+                        nodeResult.endOffset)
+                    : null;
+
+            if (debugMode) {
+                console.log(nodeRangeClientRect);
+                addOverlayRect(nodeRangeClientRect, 'purple', contentDoc);
+            }
 
             return {startInfo: startRangeInfo, endInfo: endRangeInfo, clientRect: nodeRangeClientRect}
         } else {
@@ -1275,5 +1313,65 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         return undefined;
     };
+
+    if (debugMode) {
+        //used for visual debug atm
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF'.split('');
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.round(Math.random() * 15)];
+            }
+            return color;
+        }
+
+        //used for visual debug atm
+        function addOverlayRect(rects, color, doc) {
+            var random = getRandomColor();
+            if (!(rects instanceof Array)) {
+                rects = [rects];
+            }
+            for (var i = 0; i != rects.length; i++) {
+                var rect = rects[i];
+                var tableRectDiv = doc.createElement('div');
+                tableRectDiv.style.position = 'absolute';
+                $(tableRectDiv).css('z-index', '-1');
+                $(tableRectDiv).css('opacity', '0.4');
+                tableRectDiv.style.border = '1px solid white';
+                if (!color && !random) {
+                    tableRectDiv.style.background = 'purple';
+                } else if (random && !color) {
+                    tableRectDiv.style.background = random;
+                } else {
+                    if (color === true) {
+                        color = 'red';
+                    }
+                    tableRectDiv.style.border = '1px solid ' + color;
+                    tableRectDiv.style.background = 'red';
+                }
+
+                tableRectDiv.style.margin = tableRectDiv.style.padding = '0';
+                tableRectDiv.style.top = (rect.top ) + 'px';
+                tableRectDiv.style.left = (rect.left ) + 'px';
+                // we want rect.width to be the border width, so content width is 2px less.
+                tableRectDiv.style.width = (rect.width - 2) + 'px';
+                tableRectDiv.style.height = (rect.height - 2) + 'px';
+                doc.body.appendChild(tableRectDiv);
+            }
+        }
+
+        function getPaginationLeftOffset() {
+
+            var $htmlElement = $("html", self.getRootDocument());
+            var offsetLeftPixels = $htmlElement.css("left");
+            var offsetLeft = parseInt(offsetLeftPixels.replace("px", ""));
+            if (isNaN(offsetLeft)) {
+                //for fixed layouts, $htmlElement.css("left") has no numerical value
+                offsetLeft = 0;
+            }
+            return offsetLeft;
+        }
+
+    }
 
 };
