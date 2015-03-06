@@ -807,12 +807,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     //    }
     //}
 
-    this.getFirstVisibleElementCfiX = function () {
-
-        var cfi;
-        ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(self.getRootDocument());
-        var firstVisibleCaretRange = self.getRootDocument().caretRangeFromPoint(0,0);
-
+    function getVisibleCfiFromPoint(x, y) {
+        var document = self.getRootDocument();
+        ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(document);
+        var firstVisibleCaretRange = document.caretRangeFromPoint(x,y);
 
         if (!firstVisibleCaretRange) {
             console.error("Could not generate CFI no visible element on page");
@@ -822,7 +820,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         var range = firstVisibleCaretRange;
 
         //if we get a text node we need to get an approximate range for the first visible character offsets.
-        var node = firstVisibleCaretRange.startContainer;
+        var node = range.startContainer;
         var startOffset, endOffset;
         if (node.nodeType === Node.TEXT_NODE) {
             if (node.length === 1 && range.startOffset === 1) {
@@ -841,39 +839,19 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             return null;
         }
 
+        var wrappedRange = {
+            startContainer: node,
+            endContainer: node,
+            startOffset: startOffset,
+            endOffset: endOffset,
+            commonAncestorContainer: range.commonAncestorContainer
+        };
+
         if (debugMode) {
-            ///* <- debug
-            var rect = getNodeRangeClientRect(node,startOffset,node,endOffset);
-            var leftOffset = -getPaginationLeftOffset();
-            addOverlayRect({
-                left: rect.left + leftOffset,
-                top: rect.top,
-                width: rect.width,
-                height: rect.height
-            }, true, self.getRootDocument());
-            // debug -> */
+            drawDebugOverlayFromDomRange(wrappedRange);
         }
 
-        cfi = EPUBcfi.Generator.generateCharOffsetRangeComponent(node, startOffset, node, endOffset,
-            ["cfi-marker"],
-            [],
-            ["MathJax_Message"]);
-
-        //} else if ($element) {
-        //    //noinspection JSUnresolvedVariable
-        //    cfi = EPUBcfi.Generator.generateElementCFIComponent(foundElement.$element[0],
-        //        ["cfi-marker"],
-        //        [],
-        //        ["MathJax_Message"]);
-        //
-        //    if (cfi[0] == "!") {
-        //        cfi = cfi.substring(1);
-        //    }
-        //
-        //    cfi = cfi + "@0:" + foundElement.percentY;
-        //} else {
-        //    console.log("Could not generate CFI no visible element on page");
-        //}
+        var cfi = generateCfiFromDomRange(wrappedRange);
 
         //This should not happen but if it does print some output, just in case
         if (cfi && cfi.indexOf('NaN') !== -1) {
@@ -882,6 +860,52 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         }
 
         return cfi;
+    }
+
+    this.getFirstVisibleCfi = function () {
+        return getVisibleCfiFromPoint(0, 0);
+    };
+
+    this.getLastVisibleCfi = function () {
+        return getVisibleCfiFromPoint(
+            getRootDocumentClientWidth() - 1,
+            getRootDocumentClientHeight() - 1
+        );
+    };
+
+    function generateCfiFromDomRange(range) {
+        return EPUBcfi.generateMixedRangeComponent(
+            range.startContainer, range.startOffset,
+            range.endContainer, range.endOffset,
+            range.commonAncestorContainer,
+            ['cfi-marker'], [], ["MathJax_Message"]);
+    }
+
+    function getRangeTargetNodes(rangeCfi) {
+        return EPUBcfi.getRangeTargetNodes(
+            getWrappedCfiRelativeToContent(rangeCfi),
+            self.getRootDocument(),
+            ['cfi-marker'], [], ["MathJax_Message"]);
+    }
+
+    this.getDomRangeFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
+        var range = createRange();
+        if (!rangeCfi2) {
+            var rangeInfo = getRangeTargetNodes(rangeCfi);
+            range.setStart(rangeInfo.startNodes[0], rangeInfo.startOffset);
+            range.setEnd(rangeInfo.endNodes[0], rangeInfo.endOffset);
+            return range;
+        } else {
+            var rangeInfo1 = getRangeTargetNodes(rangeCfi);
+            var rangeInfo2 = getRangeTargetNodes(rangeCfi2);
+            range.setStart(rangeInfo1.startNodes[0], rangeInfo1.startOffset);
+            if (inclusive) {
+                range.setEnd(rangeInfo2.endNodes[0], rangeInfo2.endOffset);
+            } else {
+                range.setEnd(rangeInfo2.startNodes[0], rangeInfo2.startOffset);
+            }
+            return range;
+        }
     };
 
     function getWrappedCfi(partialCfi) {
@@ -966,15 +990,15 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 return undefined;
             }
 
-            var startRangeInfo = {node: nodeResult.startElement, offset: nodeResult.startOffset};
-            var endRangeInfo = {node: nodeResult.startElement, offset: nodeResult.startElement};
+            var startRangeInfo = {node: nodeResult.startNodes[0], offset: nodeResult.startOffset};
+            var endRangeInfo = {node: nodeResult.endNodes[0], offset: nodeResult.endOffset};
             var nodeRangeClientRect =
                 startRangeInfo && endRangeInfo ?
                     getNodeRangeClientRect(
-                        nodeResult.startElement,
-                        nodeResult.startOffset,
-                        nodeResult.startElement,
-                        nodeResult.endOffset)
+                        startRangeInfo.node,
+                        startRangeInfo.offset,
+                        endRangeInfo.node,
+                        endRangeInfo.offset)
                     : null;
 
             if (debugMode) {
@@ -1002,35 +1026,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             return undefined;
         }
     };
-
-    function getRangeInfoFromNodeList($textNodeList, textOffset) {
-
-        var nodeNum;
-
-        var currTextPosition = 0;
-        var nodeOffset;
-
-        for (nodeNum = 0; nodeNum < $textNodeList.length; nodeNum++) {
-
-            if ($textNodeList[nodeNum].nodeType === 3) {
-
-                currNodeMaxIndex = $textNodeList[nodeNum].nodeValue.length + currTextPosition;
-                nodeOffset = textOffset - currTextPosition;
-
-                if (currNodeMaxIndex > textOffset) {
-                    return {node: $textNodeList[nodeNum], offset: nodeOffset};
-                } else if (currNodeMaxIndex == textOffset) {
-                    return {node: $textNodeList[nodeNum], offset: $textNodeList[nodeNum].length};
-                }
-                else {
-
-                    currTextPosition = currNodeMaxIndex;
-                }
-            }
-        }
-
-        return undefined;
-    }
 
     this.getElementByCfi = function (cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
@@ -1358,6 +1353,22 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 tableRectDiv.style.height = (rect.height - 2) + 'px';
                 doc.body.appendChild(tableRectDiv);
             }
+        }
+
+        function drawDebugOverlayFromDomRange(range) {
+            var rect = getNodeRangeClientRect(
+                range.startContainer,
+                range.startOffset,
+                range.endContainer,
+                range.endOffset);
+
+            var leftOffset = -getPaginationLeftOffset();
+            addOverlayRect({
+                left: rect.left + leftOffset,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height
+            }, true, self.getRootDocument());
         }
 
         function getPaginationLeftOffset() {

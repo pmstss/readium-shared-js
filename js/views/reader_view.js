@@ -1862,7 +1862,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return self.doesPreviousPageExist();
     };
 
-    this.getRenderedSythenticSpread = function(){
+    this.getRenderedSythenticSpread = function () {
         return self.getPaginationInfo().openPages.length === 2 ? 'double' : 'single';
     };
 
@@ -1872,6 +1872,56 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
         return undefined;
     };
+
+    /**
+     *
+     * @returns {*}
+     */
+    this.getFirstVisibleCfi = function() {
+        if (_currentView) {
+            return _currentView.getFirstVisibleCfi();
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @returns {*}
+     */
+    this.getLastVisibleCfi = function() {
+        if (_currentView) {
+            return _currentView.getLastVisibleCfi();
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @param {string} rangeCfi
+     * @param {string} [rangeCfi2]
+     * @param {boolean} [inclusive]
+     * @returns {Range}
+     */
+    this.getDomRangeFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
+        if (_currentView) {
+            return _currentView.getDomRangeFromRangeCfi(rangeCfi, rangeCfi2, inclusive);
+        }
+        return undefined;
+    };
+
+    /**
+     * Generate
+     * @param {Range} domRange
+     * @returns {string}
+     */
+    this.getRangeCfiFromDomRange = function(domRange) {
+        if (_currentView) {
+            return _currentView.getRangeCfiFromDomRange(domRange);
+        }
+        return undefined;
+    };
+
+
 };
 
 /**

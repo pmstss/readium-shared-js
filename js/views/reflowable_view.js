@@ -985,4 +985,24 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         return [{spineItem: _currentSpineItem, $iframe: _$iframe}];
     };
 
+    this.getFirstVisibleCfi = function () {
+        return new ReadiumSDK.Models.BookmarkData(_currentSpineItem.idref, _navigationLogic.getFirstVisibleCfi());
+    };
+
+    this.getLastVisibleCfi = function () {
+        return new ReadiumSDK.Models.BookmarkData(_currentSpineItem.idref, _navigationLogic.getLastVisibleCfi());
+    };
+
+    this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
+        if (rangeCfi2 && rangeCfi.idref !== rangeCfi2.idref) {
+            console.error("getDomRangeFromRangeCfi: both CFIs must be scoped under the same spineitem idref");
+            return undefined;
+        }
+        return _navigationLogic.getDomRangeFromRangeCfi(rangeCfi.contentCFI, rangeCfi2.contentCFI, inclusive);
+    };
+
+    this.getRangeCfiFromDomRange = function (domRange) {
+        return _navigationLogic.getRangeCfiFromDomRange(domRange);
+    };
+
 };
