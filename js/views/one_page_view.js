@@ -999,6 +999,23 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
     this.getLoadedContentFrames = function () {
         return [{spineItem: _currentSpineItem, $iframe: _$iframe}];
     };
+
+    this.getFirstVisibleCfi = function () {
+        return self.getNavigator().getFirstVisibleCfi();
+    };
+
+    this.getLastVisibleCfi = function () {
+        return self.getNavigator().getLastVisibleCfi();
+    };
+
+    this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
+        return self.getNavigator().getDomRangeFromRangeCfi(rangeCfi, rangeCfi2, inclusive);
+    };
+
+    this.getRangeCfiFromDomRange = function (domRange) {
+        return self.getNavigator().getRangeCfiFromDomRange(domRange);
+    };
+
 };
 
 ReadiumSDK.Views.OnePageView.SPINE_ITEM_OPEN_START = "SpineItemOpenStart";

@@ -667,7 +667,7 @@ ReadiumSDK.Views.FixedView = function(options, reader){
 
     this.insureElementVisibility = function(spineItemId, element, initiator) {
 
-        //TODO: during zoom+pan, playing element might not actualy be visible
+        //TODO: during zoom+pan, playing element might not actually be visible
 
     };
     
@@ -772,4 +772,67 @@ ReadiumSDK.Views.FixedView = function(options, reader){
         }
         return contentDocuments.length ? contentDocuments : undefined;
     };
+
+    this.getFirstVisibleCfi = function () {
+        var views = getDisplayingViews();
+        if (views.length > 0) {
+            var idref = views[0].currentSpineItem().idref;
+            var cfi = views[0].getFirstVisibleCfi();
+
+            if (cfi == undefined) {
+                cfi = "";
+            }
+
+            return new ReadiumSDK.Models.BookmarkData(idref, cfi);
+        }
+        return undefined;
+    };
+
+    this.getLastVisibleCfi = function () {
+        var views = getDisplayingViews();
+        if (views.length > 0) {
+            var idref = views[views.length - 1].currentSpineItem().idref;
+            var cfi = views[views.length - 1].getLastVisibleCfi();
+
+            if (cfi == undefined) {
+                cfi = "";
+            }
+
+            return new ReadiumSDK.Models.BookmarkData(idref, cfi);
+        }
+        return undefined;
+    };
+
+    this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
+        var views = getDisplayingViews();
+        if (rangeCfi2 && rangeCfi.idref !== rangeCfi2.idref) {
+            console.error("getDomRangeFromRangeCfi: both CFIs must be scoped under the same spineitem idref");
+            return undefined;
+        }
+        for (var i = 0, count = views.length; i < count; i++) {
+
+            var view = views[i];
+            if (view.currentSpineItem().idref === rangeCfi.idref) {
+                return view.getDomRangeFromRangeCfi(rangeCfi.contentCFI, rangeCfi2.contentCFI, inclusive);
+            }
+        }
+
+        return undefined;
+    };
+
+    this.getRangeCfiFromDomRange = function (domRange) {
+
+        var views = getDisplayingViews();
+
+        for (var i = 0, count = views.length; i < count; i++) {
+
+            var view = views[i];
+            if (view.getLoadedContentFrames()[0].$iframe[0].contentDocument === domRange.startContainer.ownerDocument) {
+                return view.getRangeCfiFromDomRange(domRange);
+            }
+        }
+
+        return undefined;
+    };
+
 };
