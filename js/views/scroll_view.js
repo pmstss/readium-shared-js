@@ -1201,30 +1201,30 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
 
     };
 
-    this.getFirstVisibleMediaOverlayElement =  function() {
+    function callOnVisiblePageView(iterator) {
         var viewPortRange = getVisibleRange();
 
-        var moElement = undefined;
+        var result = undefined;
         var normalizedRange = {top: 0, bottom: 0};
         var pageViewRange;
 
         var steppedToVisiblePage = false;
 
-        forEachItemView(function(pageView) {
+        forEachItemView(function (pageView) {
             pageViewRange = getPageViewRange(pageView);
 
             normalizedRange.top = Math.max(pageViewRange.top, viewPortRange.top) - pageViewRange.top;
             normalizedRange.bottom = Math.min(pageViewRange.bottom, viewPortRange.bottom) - pageViewRange.top;
 
-            if(rangeLength(normalizedRange) > 0) {
+            if (rangeLength(normalizedRange) > 0) {
                 steppedToVisiblePage = true;
 
-                moElement = pageView.getNavigator().getFirstVisibleMediaOverlayElement(normalizedRange);
-                if(moElement) {
+                result = iterator(pageView, normalizedRange);
+                if (result) {
                     return false;
                 }
             }
-            else if(steppedToVisiblePage) {
+            else if (steppedToVisiblePage) {
                 return false;
             }
 
@@ -1232,7 +1232,13 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
 
         }, false);
 
-        return moElement;
+        return result;
+    }
+
+    this.getFirstVisibleMediaOverlayElement = function () {
+        return callOnVisiblePageView(function (pageView, pageRange) {
+            return pageView.getNavigator().getFirstVisibleMediaOverlayElement(pageRange);
+        });
     };
 
     // /**
@@ -1406,6 +1412,49 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
         return contentDocuments.length ? contentDocuments : undefined ;
     };
 
+    function createBookmark(spineItem, cfi) {
+        return new ReadiumSDK.Models.BookmarkData(spineItem.idref, cfi);
+    }
+
+    this.getFirstVisibleCfi = function () {
+        return callOnVisiblePageView(function (pageView) {
+            return createBookmark(pageView.currentSpineItem(), pageView.getFirstVisibleCfi());
+        });
+    };
+
+    this.getLastVisibleCfi = function () {
+        return callOnVisiblePageView(function (pageView) {
+            return createBookmark(pageView.currentSpineItem(), pageView.getLastVisibleCfi());
+        });
+    };
+
+    this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
+        if (rangeCfi2 && rangeCfi.idref !== rangeCfi2.idref) {
+            console.error("getDomRangeFromRangeCfi: both CFIs must be scoped under the same spineitem idref");
+            return undefined;
+        }
+        return callOnVisiblePageView(function (pageView) {
+            return pageView.getDomRangeFromRangeCfi(rangeCfi.contentCFI, rangeCfi2.contentCFI, inclusive);
+        });
+    };
+
+    this.getRangeCfiFromDomRange = function (domRange) {
+        return callOnVisiblePageView(function (pageView) {
+            return pageView.getRangeCfiFromDomRange(domRange);
+        });
+    };
+
+    this.getVisibleCfiFromPoint = function (x, y) {
+        return callOnVisiblePageView(function (pageView) {
+            return createBookmark(pageView.currentSpineItem(), pageView.getVisibleCfiFromPoint(x, y));
+        });
+    };
+
+    this.getRangeCfiFromPoints = function (startX, startY, endX, endY) {
+        return callOnVisiblePageView(function (pageView) {
+            return createBookmark(pageView.currentSpineItem(), pageView.getRangeCfiFromPoints(startX, startY, endX, endY));
+        });
+    };
 };
 
 

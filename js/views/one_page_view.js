@@ -1016,6 +1016,14 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
         return self.getNavigator().getRangeCfiFromDomRange(domRange);
     };
 
+    this.getVisibleCfiFromPoint = function (x, y) {
+        return self.getNavigator().getVisibleCfiFromPoint(x, y);
+    };
+
+    this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {
+        return self.getNavigator().getRangeCfiFromPoints(startX, startY, endX, endY);
+    };
+
 };
 
 ReadiumSDK.Views.OnePageView.SPINE_ITEM_OPEN_START = "SpineItemOpenStart";

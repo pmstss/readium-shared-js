@@ -807,7 +807,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     //    }
     //}
 
-    function getVisibleCfiFromPoint(x, y) {
+    this.getVisibleCfiFromPoint = function (x, y) {
         var document = self.getRootDocument();
         ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(document);
         var firstVisibleCaretRange = document.caretRangeFromPoint(x,y);
@@ -860,14 +860,25 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         }
 
         return cfi;
-    }
+    };
+
+    this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {
+        var document = self.getRootDocument();
+        ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(document);
+        var start = document.caretRangeFromPoint(startX, startY),
+            end = document.caretRangeFromPoint(endX, endY),
+            range = document.createRange();
+        range.setStart(start.startContainer, start.startOffset);
+        range.setEnd(end.startContainer, end.startOffset);
+        return generateCfiFromDomRange(range);
+    };
 
     this.getFirstVisibleCfi = function () {
-        return getVisibleCfiFromPoint(0, 0);
+        return self.getVisibleCfiFromPoint(0, 0);
     };
 
     this.getLastVisibleCfi = function () {
-        return getVisibleCfiFromPoint(
+        return self.getVisibleCfiFromPoint(
             getRootDocumentClientWidth() - 1,
             getRootDocumentClientHeight() - 1
         );

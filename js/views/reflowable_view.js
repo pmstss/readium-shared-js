@@ -985,12 +985,16 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         return [{spineItem: _currentSpineItem, $iframe: _$iframe}];
     };
 
+    function createBookmarkFromCfi(cfi){
+        return new ReadiumSDK.Models.BookmarkData(_currentSpineItem.idref, cfi);
+    }
+
     this.getFirstVisibleCfi = function () {
-        return new ReadiumSDK.Models.BookmarkData(_currentSpineItem.idref, _navigationLogic.getFirstVisibleCfi());
+        return createBookmarkFromCfi(_navigationLogic.getFirstVisibleCfi());
     };
 
     this.getLastVisibleCfi = function () {
-        return new ReadiumSDK.Models.BookmarkData(_currentSpineItem.idref, _navigationLogic.getLastVisibleCfi());
+        return createBookmarkFromCfi(_navigationLogic.getLastVisibleCfi());
     };
 
     this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
@@ -1005,4 +1009,11 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         return _navigationLogic.getRangeCfiFromDomRange(domRange);
     };
 
+    this.getVisibleCfiFromPoint = function (x, y) {
+        return createBookmarkFromCfi(_navigationLogic.getVisibleCfiFromPoint(x, y));
+    };
+
+    this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {
+        return createBookmarkFromCfi(_navigationLogic.getRangeCfiFromPoints(startX, startY, endX, endY));
+    };
 };
