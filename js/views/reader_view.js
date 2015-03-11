@@ -1921,6 +1921,25 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return undefined;
     };
 
+    /**
+     *
+     * @param x
+     * @param y
+     * @returns {string}
+     */
+    this.getVisibleCfiFromPoint = function (x, y) {
+        if (_currentView) {
+            return _currentView.getVisibleCfiFromPoint(x, y);
+        }
+        return undefined;
+    };
+
+    this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {
+        if (_currentView) {
+            return _currentView.getRangeCfiFromPoints(startX, startY, endX, endY);
+        }
+        return undefined;
+    };
 
 };
 
