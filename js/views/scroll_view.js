@@ -1444,9 +1444,9 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
         });
     };
 
-    this.getVisibleCfiFromPoint = function (x, y) {
+    this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
         return callOnVisiblePageView(function (pageView) {
-            return createBookmark(pageView.currentSpineItem(), pageView.getVisibleCfiFromPoint(x, y));
+            return createBookmark(pageView.currentSpineItem(), pageView.getVisibleCfiFromPoint(x, y, precisePoint));
         });
     };
 

@@ -1016,8 +1016,8 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
         return self.getNavigator().getRangeCfiFromDomRange(domRange);
     };
 
-    this.getVisibleCfiFromPoint = function (x, y) {
-        return self.getNavigator().getVisibleCfiFromPoint(x, y);
+    this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
+        return self.getNavigator().getVisibleCfiFromPoint(x, y, precisePoint);
     };
 
     this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {

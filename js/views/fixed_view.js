@@ -604,53 +604,41 @@ ReadiumSDK.Views.FixedView = function(options, reader){
         return _spread.validItems();
     };
 
-    this.getElement = function(spineItemIdref, selector) {
-
+    function callOnPageView(spineItemIdref, fn) {
         var views = getDisplayingViews();
 
-        for(var i = 0, count = views.length; i < count; i++) {
+        for (var i = 0, count = views.length; i < count; i++) {
 
             var view = views[i];
-            if(view.currentSpineItem().idref == spineItemIdref) {
-                return view.getElement(spineItemIdref, selector);
+            if (view.currentSpineItem().idref == spineItemIdref) {
+                return fn(view);
             }
         }
 
         console.error("spine item is not loaded");
         return undefined;
+    }
+
+    this.getElement = function (spineItemIdref, selector) {
+
+        return callOnPageView(spineItemIdref, function (view) {
+            return view.getElement(spineItemIdref, selector);
+        });
     };
 
-    this.getElementById = function(spineItemIdref, id) {
+    this.getElementById = function (spineItemIdref, id) {
 
-        var views = getDisplayingViews();
-
-        for(var i = 0, count = views.length; i < count; i++) {
-
-            var view = views[i];
-            if(view.currentSpineItem().idref == spineItemIdref) {
-                return view.getElementById(spineItemIdref, id);
-            }
-        }
-
-        console.error("spine item is not loaded");
-        return undefined;
+        return callOnPageView(spineItemIdref, function (view) {
+            return view.getElementById(spineItemIdref, id);
+        });
     };
 
 
     this.getElementByCfi = function(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
-        var views = getDisplayingViews();
-
-        for(var i = 0, count = views.length; i < count; i++) {
-
-            var view = views[i];
-            if(view.currentSpineItem().idref == spineItemIdref) {
-                return view.getElementByCfi(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist);
-            }
-        }
-
-        console.error("spine item is not loaded");
-        return undefined;
+        return callOnPageView(spineItemIdref, function (view) {
+            return view.getElementByCfi(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist);
+        });
     };
     
     this.getFirstVisibleMediaOverlayElement = function() {
@@ -673,18 +661,9 @@ ReadiumSDK.Views.FixedView = function(options, reader){
     
     this.getElements = function(spineItemIdref, selector) {
 
-        var views = getDisplayingViews();
-
-        for(var i = 0, count = views.length; i < count; i++) {
-
-            var view = views[i];
-            if(view.currentSpineItem().idref == spineItemIdref) {
-                return view.getElements(spineItemIdref, selector);
-            }
-        }
-
-        console.error("spine item is not loaded");
-        return undefined;
+        return callOnPageView(spineItemIdref, function (view) {
+            return view.getElements(spineItemIdref, selector);
+        });
     };
     
     this.isElementVisible = function($element){
@@ -731,36 +710,19 @@ ReadiumSDK.Views.FixedView = function(options, reader){
         return true;
     };
     
-    this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
+    this.isVisibleSpineItemElementCfi = function (spineItemIdref, partialCfi) {
 
-        var views = getDisplayingViews();
-
-        for(var i = 0, count = views.length; i < count; i++) {
-
-            var view = views[i];
-            if(view.currentSpineItem().idref == spineIdRef) {
-                //for now we assume that for fixed layouts, everything is always visible
-                return true;
-            }
-        }
-
-        return undefined;
+        return callOnPageView(spineItemIdref, function (view) {
+            //for now we assume that for fixed layouts, everything is always visible
+            return true;
+        });
     };
 
-    this.getNodeRangeInfoFromCfi = function (spineIdRef, partialCfi) {
+    this.getNodeRangeInfoFromCfi = function (spineItemIdref, partialCfi) {
 
-        var views = getDisplayingViews();
-
-        for (var i = 0, count = views.length; i < count; i++) {
-
-            var view = views[i];
-            if (view.currentSpineItem().idref == spineIdRef) {
-                //for now we assume that for fixed layouts, everything is always visible
-                return view.getNodeRangeInfoFromCfi(spineIdRef, partialCfi);
-            }
-        }
-
-        return undefined;
+        return callOnPageView(spineItemIdref, function (view) {
+            return view.getNodeRangeInfoFromCfi(spineItemIdref, partialCfi);
+        });
     };
 
     this.getLoadedContentFrames = function () {
@@ -833,6 +795,26 @@ ReadiumSDK.Views.FixedView = function(options, reader){
         }
 
         return undefined;
+    };
+
+    this.getVisibleCfiFromPoint = function (x, y, precisePoint, spineItemIdref) {
+        if (!spineItemIdref) {
+            console.error("getVisibleCfiFromPoint: Spine item idref must be specified for this fixed layout view.");
+            return null;
+        }
+        return callOnPageView(spineItemIdref, function (view) {
+            return view.getVisibleCfiFromPoint(x,y, precisePoint);
+        });
+    };
+
+    this.getRangeCfiFromPoints = function (startX, startY, endX, endY, spineItemIdref) {
+        if (!spineItemIdref) {
+            console.error("getVisibleCfiFromPoint: Spine item idref must be specified for this fixed layout view.");
+            return null;
+        }
+        return callOnPageView(spineItemIdref, function (view) {
+            return view.getRangeCfiFromPoints(startX, startY, endX, endY);
+        });
     };
 
 };
