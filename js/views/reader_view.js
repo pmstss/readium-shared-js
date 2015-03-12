@@ -1995,18 +1995,29 @@ ReadiumSDK.Views.ReaderView = function(options) {
      *
      * @param x
      * @param y
+     * @param [precisePoint]
+     * @param [spineItemIdref] Required for fixed layout views
      * @returns {string}
      */
-    this.getVisibleCfiFromPoint = function (x, y) {
+    this.getVisibleCfiFromPoint = function (x, y, precisePoint, spineItemIdref) {
         if (_currentView) {
-            return _currentView.getVisibleCfiFromPoint(x, y);
+            return _currentView.getVisibleCfiFromPoint(x, y, precisePoint, spineItemIdref);
         }
         return undefined;
     };
 
-    this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {
+    /**
+     *
+     * @param startX
+     * @param startY
+     * @param endX
+     * @param endY
+     * @param [spineItemIdref] Required for fixed layout views
+     * @returns {*}
+     */
+    this.getRangeCfiFromPoints = function(startX, startY, endX, endY, spineItemIdref) {
         if (_currentView) {
-            return _currentView.getRangeCfiFromPoints(startX, startY, endX, endY);
+            return _currentView.getRangeCfiFromPoints(startX, startY, endX, endY, spineItemIdref);
         }
         return undefined;
     };

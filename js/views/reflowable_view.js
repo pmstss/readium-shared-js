@@ -1009,8 +1009,8 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         return _navigationLogic.getRangeCfiFromDomRange(domRange);
     };
 
-    this.getVisibleCfiFromPoint = function (x, y) {
-        return createBookmarkFromCfi(_navigationLogic.getVisibleCfiFromPoint(x, y));
+    this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
+        return createBookmarkFromCfi(_navigationLogic.getVisibleCfiFromPoint(x, y, precisePoint));
     };
 
     this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {

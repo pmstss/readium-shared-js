@@ -807,22 +807,30 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     //    }
     //}
 
-    this.getVisibleCfiFromPoint = function (x, y) {
+    this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
         var document = self.getRootDocument();
         ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(document);
         var firstVisibleCaretRange = document.caretRangeFromPoint(x,y);
-
+        var elementFromPoint = document.elementFromPoint(x, y);
+        if (precisePoint) {
+            if (!elementFromPoint || elementFromPoint === document.documentElement) {
+                return null;
+            }
+        }
         if (!firstVisibleCaretRange) {
             console.error("Could not generate CFI no visible element on page");
             return null;
         }
 
         var range = firstVisibleCaretRange;
-
+        var cfi;
         //if we get a text node we need to get an approximate range for the first visible character offsets.
         var node = range.startContainer;
         var startOffset, endOffset;
         if (node.nodeType === Node.TEXT_NODE) {
+            if (precisePoint && node.parentNode !== elementFromPoint) {
+                return null;
+            }
             if (node.length === 1 && range.startOffset === 1) {
                 startOffset = 0;
                 endOffset = 1;
@@ -833,25 +841,33 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 startOffset = range.startOffset;
                 endOffset = range.startOffset + 1;
             }
+            var wrappedRange = {
+                startContainer: node,
+                endContainer: node,
+                startOffset: startOffset,
+                endOffset: endOffset,
+                commonAncestorContainer: range.commonAncestorContainer
+            };
 
+            if (debugMode) {
+                drawDebugOverlayFromDomRange(wrappedRange);
+            }
+
+            cfi = generateCfiFromDomRange(wrappedRange);
         } else {
-            console.error("Could not generate CFI: only text nodes are supported for now");
-            return null;
+            if (precisePoint && node !== elementFromPoint) {
+                return null;
+            }
+            //noinspection JSUnresolvedVariable
+            cfi = EPUBcfi.Generator.generateElementCFIComponent(elementFromPoint,
+                ["cfi-marker"],
+                [],
+                ["MathJax_Message"]);
+
+            if (cfi[0] == "!") {
+                cfi = cfi.substring(1);
+            }
         }
-
-        var wrappedRange = {
-            startContainer: node,
-            endContainer: node,
-            startOffset: startOffset,
-            endOffset: endOffset,
-            commonAncestorContainer: range.commonAncestorContainer
-        };
-
-        if (debugMode) {
-            drawDebugOverlayFromDomRange(wrappedRange);
-        }
-
-        var cfi = generateCfiFromDomRange(wrappedRange);
 
         //This should not happen but if it does print some output, just in case
         if (cfi && cfi.indexOf('NaN') !== -1) {
