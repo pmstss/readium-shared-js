@@ -104,6 +104,12 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return normalizeRectangle(range.getBoundingClientRect(),0,0);
     }
 
+    function getNodeContentsClientRect(node) {
+        var range = createRange();
+        range.selectNodeContents(node);
+        return normalizeRectangle(range.getBoundingClientRect(),0,0);
+    }
+
     function getElementClientRect($element) {
         return normalizeRectangle($element[0].getBoundingClientRect(),0,0);
     }
@@ -814,6 +820,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         var elementFromPoint = document.elementFromPoint(x, y);
         if (precisePoint) {
             if (!elementFromPoint || elementFromPoint === document.documentElement) {
+                return null;
+            }
+            var testRect = getNodeContentsClientRect(elementFromPoint);
+            if (!isNodeClientRectVisible(testRect)) {
+                return null;
+            }
+            if ((x < testRect.left || x > testRect.right) || (y < testRect.top || y > testRect.bottom)) {
                 return null;
             }
         }
