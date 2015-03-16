@@ -1700,11 +1700,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
      *
      * @param {string} id
      * @param {string} styles
-     * @returns {undefined}
      */
-
     this.updateAnnotationView = function(id, styles) {
-        return _annotationsManager.updateAnnotationView(id, styles);
+        _annotationsManager.updateAnnotationView(id, styles);
     };
 
     this.setAnnotationViewState = function(id, state, value) {
