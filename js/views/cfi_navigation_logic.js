@@ -944,7 +944,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 range.selectNode(getTargetElementFromCfi(rangeCfi));
             }
         } else {
-            var rangeInfo2 = getRangeTargetNodes(rangeCfi2);
             if (self.isRangeCfi(rangeCfi)) {
                 var rangeInfo1 = getRangeTargetNodes(rangeCfi);
                 range.setStart(rangeInfo1.startNodes[0], rangeInfo1.startOffset);
@@ -953,6 +952,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
 
             if (self.isRangeCfi(rangeCfi2)) {
+                var rangeInfo2 = getRangeTargetNodes(rangeCfi2);
                 if (inclusive) {
                     range.setEnd(rangeInfo2.endNodes[0], rangeInfo2.endOffset);
                 } else {
