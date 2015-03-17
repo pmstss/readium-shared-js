@@ -1300,7 +1300,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Higlights all the occurences of the given text
      *
-     * @param {string} text text occurences to be highlighted
+     * @param {string} text array of text occurences to be highlighted
      * @param {string} spineIdRef spine idref where the text is searched for
      * @param {string} type - name of the class selector rule in annotations.css file.
      * The style of the class will be applied to the created hightlights
