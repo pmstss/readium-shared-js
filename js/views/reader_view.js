@@ -1895,6 +1895,46 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
     /**
      *
+     * @returns {*}
+     */
+    this.getLinksFromContentCfi = function(startContentCfi, endContentCfi) {
+        if (_currentView) {
+            var domRange = this.getDomRangeFromRangeCfi(startContentCfi, endContentCfi);
+            var nodes = (new rangy.WrappedRange(domRange)).getNodes();
+            var output = [];
+            _.each(nodes, function (node) {
+                var item = {};
+                item.location = EPUBcfi.Generator.generateElementCFIComponent(node,
+                    ["cfi-marker"],
+                    [],
+                    ["MathJax_Message"]);
+                if (node.nodeName === "a") {
+                    // getAttribute rather than .href, because .href relative URLs resolved to absolute
+                    var href = node.getAttribute("href").trim();
+                    item.type = href.match(/^[a-zA-Z]*:\/\//) ? "external" : "internal";
+                    item.target = item.type === "external" ? node.href : href;
+                    item.text = node.textContent;
+                } else if (node.nodeName === "audio" || node.nodeName === "video") {
+                    item.type = node.nodeName;
+                    item.links = [];
+                    if (node.src != "") {
+                        item.links.push(node.getAttribute("src").trim());
+                    }
+                    _.each(node.querySelectorAll("source"), function (source) {
+                        item.links.push(source.getAttribute("src").trim());
+                    });
+                }
+                if (item.type) {
+                    output.push(item);
+                }
+            });
+            return output;
+        }
+        return undefined;
+    };
+
+    /**
+     *
      * @param {string} rangeCfi
      * @param {string} [rangeCfi2]
      * @param {boolean} [inclusive]
