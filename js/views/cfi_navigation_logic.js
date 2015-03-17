@@ -929,7 +929,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     }
 
     function getTargetElementFromCfi(cfi) {
-        return EPUBcfi.getTargetElementWithPartialCFI(cfi);
+        return EPUBcfi.getTargetElementWithPartialCFI(getWrappedCfi(cfi));
     }
 
     this.getDomRangeFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
