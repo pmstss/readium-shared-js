@@ -928,10 +928,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             ['cfi-marker'], [], ["MathJax_Message"]);
     }
 
-    function getTargetElementFromCfi(cfi) {
-        return EPUBcfi.getTargetElementWithPartialCFI(getWrappedCfi(cfi));
-    }
-
     this.getDomRangeFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
         var range = createRange();
 
@@ -941,14 +937,18 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 range.setStart(rangeInfo.startNodes[0], rangeInfo.startOffset);
                 range.setEnd(rangeInfo.endNodes[0], rangeInfo.endOffset);
             } else {
-                range.selectNode(getTargetElementFromCfi(rangeCfi));
+                var element = self.getElementByCfi(rangeCfi,
+                    ['cfi-marker'], [], ["MathJax_Message"])[0];
+                range.selectNode(element);
             }
         } else {
             if (self.isRangeCfi(rangeCfi)) {
                 var rangeInfo1 = getRangeTargetNodes(rangeCfi);
                 range.setStart(rangeInfo1.startNodes[0], rangeInfo1.startOffset);
             } else {
-                range.setStart(getTargetElementFromCfi(rangeCfi)[0], 0);
+                var startElement = self.getElementByCfi(rangeCfi,
+                    ['cfi-marker'], [], ["MathJax_Message"])[0];
+                range.setStart(startElement, 0);
             }
 
             if (self.isRangeCfi(rangeCfi2)) {
@@ -959,7 +959,8 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                     range.setEnd(rangeInfo2.startNodes[0], rangeInfo2.startOffset);
                 }
             } else {
-                var endElement = getTargetElementFromCfi(rangeCfi2)[0];
+                var endElement = self.getElementByCfi(rangeCfi2,
+                    ['cfi-marker'], [], ["MathJax_Message"])[0];
                 range.setEnd(endElement, endElement.childNodes.length);
             }
         }
