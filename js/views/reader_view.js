@@ -1294,7 +1294,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Higlights all the occurences of the given text
      *
-     * @param {string} text text occurences to be highlighted
+     * @param {string} text array of text occurences to be highlighted
      * @param {string} spineIdRef spine idref where the text is searched for
      * @param {string} type - name of the class selector rule in annotations.css file.
      * The style of the class will be applied to the created hightlights
@@ -1685,12 +1685,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
     /**
      * Updates an annotation to use the supplied styles
      *
-     * @param {string} id       The id associated with the highlight.
-     * @param {string} styles   The styles to apply the view with.
-     * @returns {undefined}
+     * @param {string} id
+     * @param {string} styles
      */
     this.updateAnnotationView = function(id, styles) {
-        return _annotationsManager.updateAnnotationView(id, styles);
+        _annotationsManager.updateAnnotationView(id, styles);
     };
 
     /**
@@ -1961,6 +1960,46 @@ ReadiumSDK.Views.ReaderView = function(options) {
     this.getLastVisibleCfi = function() {
         if (_currentView) {
             return _currentView.getLastVisibleCfi();
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @returns {*}
+     */
+    this.getLinksFromContentCfi = function(startContentCfi, endContentCfi) {
+        if (_currentView) {
+            var domRange = this.getDomRangeFromRangeCfi(startContentCfi, endContentCfi);
+            var nodes = (new rangy.WrappedRange(domRange)).getNodes();
+            var output = [];
+            _.each(nodes, function (node) {
+                var item = {};
+                item.location = EPUBcfi.Generator.generateElementCFIComponent(node,
+                    ["cfi-marker"],
+                    [],
+                    ["MathJax_Message"]);
+                if (node.nodeName === "a") {
+                    // getAttribute rather than .href, because .href relative URLs resolved to absolute
+                    var href = node.getAttribute("href").trim();
+                    item.type = href.match(/^[a-zA-Z]*:\/\//) ? "external" : "internal";
+                    item.target = item.type === "external" ? node.href : href;
+                    item.text = node.textContent;
+                } else if (node.nodeName === "audio" || node.nodeName === "video") {
+                    item.type = node.nodeName;
+                    item.links = [];
+                    if (node.src != "") {
+                        item.links.push(node.getAttribute("src").trim());
+                    }
+                    _.each(node.querySelectorAll("source"), function (source) {
+                        item.links.push(source.getAttribute("src").trim());
+                    });
+                }
+                if (item.type) {
+                    output.push(item);
+                }
+            });
+            return output;
         }
         return undefined;
     };

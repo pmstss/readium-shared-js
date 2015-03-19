@@ -930,22 +930,41 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
     this.getDomRangeFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
         var range = createRange();
+
         if (!rangeCfi2) {
-            var rangeInfo = getRangeTargetNodes(rangeCfi);
-            range.setStart(rangeInfo.startNodes[0], rangeInfo.startOffset);
-            range.setEnd(rangeInfo.endNodes[0], rangeInfo.endOffset);
-            return range;
-        } else {
-            var rangeInfo1 = getRangeTargetNodes(rangeCfi);
-            var rangeInfo2 = getRangeTargetNodes(rangeCfi2);
-            range.setStart(rangeInfo1.startNodes[0], rangeInfo1.startOffset);
-            if (inclusive) {
-                range.setEnd(rangeInfo2.endNodes[0], rangeInfo2.endOffset);
+            if (self.isRangeCfi(rangeCfi)) {
+                var rangeInfo = getRangeTargetNodes(rangeCfi);
+                range.setStart(rangeInfo.startNodes[0], rangeInfo.startOffset);
+                range.setEnd(rangeInfo.endNodes[0], rangeInfo.endOffset);
             } else {
-                range.setEnd(rangeInfo2.startNodes[0], rangeInfo2.startOffset);
+                var element = self.getElementByCfi(rangeCfi,
+                    ['cfi-marker'], [], ["MathJax_Message"])[0];
+                range.selectNode(element);
             }
-            return range;
+        } else {
+            if (self.isRangeCfi(rangeCfi)) {
+                var rangeInfo1 = getRangeTargetNodes(rangeCfi);
+                range.setStart(rangeInfo1.startNodes[0], rangeInfo1.startOffset);
+            } else {
+                var startElement = self.getElementByCfi(rangeCfi,
+                    ['cfi-marker'], [], ["MathJax_Message"])[0];
+                range.setStart(startElement, 0);
+            }
+
+            if (self.isRangeCfi(rangeCfi2)) {
+                var rangeInfo2 = getRangeTargetNodes(rangeCfi2);
+                if (inclusive) {
+                    range.setEnd(rangeInfo2.endNodes[0], rangeInfo2.endOffset);
+                } else {
+                    range.setEnd(rangeInfo2.startNodes[0], rangeInfo2.startOffset);
+                }
+            } else {
+                var endElement = self.getElementByCfi(rangeCfi2,
+                    ['cfi-marker'], [], ["MathJax_Message"])[0];
+                range.setEnd(endElement, endElement.childNodes.length);
+            }
         }
+        return range;
     };
 
     function getWrappedCfi(partialCfi) {
