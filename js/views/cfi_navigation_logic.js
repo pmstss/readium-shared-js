@@ -813,11 +813,18 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     //    }
     //}
 
-    this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
+    function firstTextNode(document) {
+        return $("body", document).find(":not(iframe)").contents().filter(function () {
+            return isValidTextNode(this);
+        })[0];
+    }
+
+    this.getVisibleCfiFromPoint = function (x, y, precisePoint, paginationState) {
         var document = self.getRootDocument();
         ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(document);
         var firstVisibleCaretRange = document.caretRangeFromPoint(x,y);
         var elementFromPoint = document.elementFromPoint(x, y);
+
         if (precisePoint) {
             if (!elementFromPoint || elementFromPoint === document.documentElement) {
                 return null;
@@ -828,6 +835,27 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
             if ((x < testRect.left || x > testRect.right) || (y < testRect.top || y > testRect.bottom)) {
                 return null;
+            }
+        } else if(paginationState) {
+
+            if (!elementFromPoint || elementFromPoint === document.documentElement && paginationState === 2) {
+                //handle when targeting the very end of the document
+                elementFromPoint = $('*', document.body).last()[0];
+                if (elementFromPoint.lastChild && elementFromPoint.lastChild.nodeType === Node.TEXT_NODE) {
+                    elementFromPoint = elementFromPoint.lastChild;
+                }
+                firstVisibleCaretRange = createRange();
+                firstVisibleCaretRange.setStart(elementFromPoint, elementFromPoint.length - 1);
+                firstVisibleCaretRange.setEnd(elementFromPoint, elementFromPoint.length);
+            } else if (!elementFromPoint || elementFromPoint === document.documentElement && paginationState === 1) {
+                //handle when targeting the very start of the document
+                elementFromPoint = firstTextNode(document);
+                if (!elementFromPoint || elementFromPoint.length === 0) {
+                    elementFromPoint = document.body.firstElementChild;
+                }
+                firstVisibleCaretRange = createRange();
+                firstVisibleCaretRange.setStart(elementFromPoint, 0);
+                firstVisibleCaretRange.setEnd(elementFromPoint, 1);
             }
         }
         if (!firstVisibleCaretRange) {
@@ -902,14 +930,27 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return generateCfiFromDomRange(range);
     };
 
+    function getPaginationState() {
+        if (options.paginationInfo && options.paginationInfo.spreadCount !== 1) {
+            if ((options.paginationInfo.spreadCount - 1) === options.paginationInfo.currentSpreadIndex) {
+                return 2;
+            } else if (options.paginationInfo.currentSpreadIndex === 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
     this.getFirstVisibleCfi = function () {
-        return self.getVisibleCfiFromPoint(0, 0);
+        return self.getVisibleCfiFromPoint(0, 0, false, getPaginationState());
     };
 
     this.getLastVisibleCfi = function () {
         return self.getVisibleCfiFromPoint(
             getRootDocumentClientWidth() - 1,
-            getRootDocumentClientHeight() - 1
+            getRootDocumentClientHeight() - 1,
+            false,
+            getPaginationState()
         );
     };
 
