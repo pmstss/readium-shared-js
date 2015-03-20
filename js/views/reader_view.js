@@ -1313,10 +1313,32 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return _annotationsManager.addHighlightsForText(text, spineIdRef, type, styles);
     };
 
+    /**
+     * Draw placeholders around all "audio" elements in the rendered iFrame
+     *
+     * @param {string} spineIdRef spine idref where "audio" elements are searched for
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * The style of the class will be applied to the placeholders
+     * @param {object} styles - object representing CSS properties to be applied to the placeholders.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     *
+     * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the placeholders
+     */
     this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
         return _annotationsManager.addPlaceholdersForAudio(spineIdRef, type, styles);
     };
 
+    /**
+     * Draw placeholders around all "video" elements in the rendered iFrame
+     *
+     * @param {string} spineIdRef spine idref where "video" elements are searched for
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * The style of the class will be applied to the placeholders
+     * @param {object} styles - object representing CSS properties to be applied to the placeholders.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     *
+     * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the placeholders
+     */
     this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
         return _annotationsManager.addPlaceholdersForVideo(spineIdRef, type, styles);
     };
