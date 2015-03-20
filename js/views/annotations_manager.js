@@ -229,6 +229,36 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
+    this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
+        var bookmarks = [];
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                annotations = annotationsForView.addPlaceholdersForAudio(type, styles);
+                _.each(annotations, function (partialCfi) {
+                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
+                });
+                return bookmarks;
+            }
+        }
+        return undefined;
+    };
+
+    this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
+        var bookmarks = [];
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                annotations = annotationsForView.addPlaceholdersForVideo(type, styles);
+                _.each(annotations, function (partialCfi) {
+                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
+                });
+                return bookmarks;
+            }
+        }
+        return undefined;
+    };
+
     this.removeHighlight = function(id) {
         var result = undefined;
         for(var spine in liveAnnotations) {

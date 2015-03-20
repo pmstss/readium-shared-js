@@ -1313,6 +1313,14 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return _annotationsManager.addHighlightsForText(text, spineIdRef, type, styles);
     };
 
+    this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
+        return _annotationsManager.addPlaceholdersForAudio(spineIdRef, type, styles);
+    };
+
+    this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
+        return _annotationsManager.addPlaceholdersForVideo(spineIdRef, type, styles);
+    };
+
     /**
      * Removes a given highlight
      *
@@ -1721,6 +1729,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
             return elementMidpoints || [];
         }
         return [];
+    };
+
+    this.createMediaPlaceholders = function () {
+        if (_currentView) {
+            _currentView.createMediaPlaceholders();
+        }
     };
 
     this.isVisibleSpineItemElementCfi = function(spineIdRef, partialCfi){
