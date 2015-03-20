@@ -895,14 +895,14 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
 
     this.getFirstVisibleElementCfi = function(){
 
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = new ReadiumSDK.Controllers.NavigationController({$viewport: _$el, $iframe:_$iframe});
         return navigation.getFirstVisibleElementCfi(0);
 
     };
 
     this.getNavigator = function() {
 
-        return new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        return new ReadiumSDK.Controllers.NavigationController({$viewport: _$el, $iframe:_$iframe});
     };
 
     this.getElementByCfi = function(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
@@ -912,7 +912,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
             return undefined;
         }
 
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = new ReadiumSDK.Controllers.NavigationController({$viewport: _$el, $iframe:_$iframe});
         return navigation.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
     };
 
@@ -923,7 +923,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
             return undefined;
         }
 
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = new ReadiumSDK.Controllers.NavigationController({$viewport: _$el, $iframe:_$iframe});
         return navigation.getElementById(id);
     };
 
@@ -934,12 +934,12 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
             return undefined;
         }
 
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = new ReadiumSDK.Controllers.NavigationController({$viewport: _$el, $iframe:_$iframe});
         return navigation.getElement(selector);
     };
 
     this.getFirstVisibleMediaOverlayElement = function() {
-        var navigation = new ReadiumSDK.Views.CfiNavigationLogic(_$el, _$iframe);
+        var navigation = new ReadiumSDK.Controllers.NavigationController({$viewport: _$el, $iframe:_$iframe});
         return navigation.getFirstVisibleMediaOverlayElement({top:0, bottom: _$iframe.height()});
     };
 

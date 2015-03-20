@@ -48,7 +48,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     var _deferredPageRequest;
     var _fontSize = 100;
     var _$contentFrame;
-    var _navigationLogic;
+    var _navigationController;
     var _$el;
     var _$iframe;
     var _$epubHtml;
@@ -165,9 +165,10 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         //_$iframe.css(_spine.isLeftToRight() ? "left" : "right", "0px");
         _$iframe.css("overflow", "hidden");
 
-        _navigationLogic = new ReadiumSDK.Views.CfiNavigationLogic(
-            _$contentFrame, _$iframe,
-            { rectangleBased: true, paginationInfo: _paginationInfo });
+        _navigationController = new ReadiumSDK.Controllers.NavigationController({
+            $viewport: _$contentFrame, $iframe: _$iframe,
+            rectangleBased: true, paginationInfo: _paginationInfo
+        });
     }
 
     function loadSpineItem(spineItem) {
@@ -381,12 +382,12 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             pageIndex = pageRequest.spineItemPageIndex;
         }
         else if(pageRequest.elementId) {
-            pageIndex = _navigationLogic.getPageForElementId(pageRequest.elementId);
+            pageIndex = _navigationController.getPageForElementId(pageRequest.elementId);
         }
         else if(pageRequest.elementCfi) {
             try
             {
-                pageIndex = _navigationLogic.getPageForElementCfi(pageRequest.elementCfi,
+                pageIndex = _navigationController.getPageForElementCfi(pageRequest.elementCfi,
                     ["cfi-marker", "mo-cfi-highlight"],
                     [],
                     ["MathJax_Message"]);
@@ -719,7 +720,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     this.getFirstVisibleElementCfi = function() {
 
         var contentOffsets = getVisibleContentOffsets();
-        return _navigationLogic.getFirstVisibleElementCfi(contentOffsets);
+        return _navigationController.getFirstVisibleElementCfi(contentOffsets);
     };
 
     this.getPaginationInfo = function() {
@@ -800,7 +801,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
     function getVisibleContentOffsets() {
         //TODO: _htmlBodyIsVerticalWritingMode ? (_lastViewPortSize.height * _paginationInfo.currentSpreadIndex)
-        // NOT used with options.rectangleBased anyway (see CfiNavigationLogic constructor call, here in this reflow engine class)
+        // NOT used with options.rectangleBased anyway (see NavigationController constructor call, here in this reflow engine class)
         var columnsLeftOfViewport = Math.round(_paginationInfo.pageOffset / (_paginationInfo.columnWidth + _paginationInfo.columnGap));
 
         var topOffset =  columnsLeftOfViewport * _$contentFrame.height();
@@ -820,7 +821,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             return undefined;
         }
 
-        return _navigationLogic.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
+        return _navigationController.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
     };
 
     this.getElementById = function(spineItem, id) {
@@ -830,7 +831,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             return undefined;
         }
 
-        return _navigationLogic.getElementById(id);
+        return _navigationController.getElementById(id);
     };
 
     this.getElement = function(spineItem, selector) {
@@ -840,13 +841,13 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             return undefined;
         }
 
-        return _navigationLogic.getElement(selector);
+        return _navigationController.getElement(selector);
     };
 
     this.getFirstVisibleMediaOverlayElement = function() {
 
         var visibleContentOffsets = getVisibleContentOffsets();
-        return _navigationLogic.getFirstVisibleMediaOverlayElement(visibleContentOffsets);
+        return _navigationController.getFirstVisibleMediaOverlayElement(visibleContentOffsets);
     };
     
     // /**
@@ -855,18 +856,18 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     // this.getVisibleMediaOverlayElements = function() {
     // 
     //     var visibleContentOffsets = getVisibleContentOffsets();
-    //     return _navigationLogic.getVisibleMediaOverlayElements(visibleContentOffsets);
+    //     return _navigationController.getVisibleMediaOverlayElements(visibleContentOffsets);
     // };
 
     this.insureElementVisibility = function(spineItemId, element, initiator) {
 
         var $element = $(element);
-        if(_navigationLogic.isElementVisible($element, getVisibleContentOffsets()))
+        if(_navigationController.isElementVisible($element, getVisibleContentOffsets()))
         {
             return;
         }
 
-        var page = _navigationLogic.getPageForElement($element);
+        var page = _navigationController.getPageForElement($element);
 
         if(page == -1)
         {

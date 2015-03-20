@@ -65,6 +65,10 @@ ReadiumSDK = {
     /**
      * @namespace
      */
+    Controllers: {},
+    /**
+     * @namespace
+     */
     Collections: {},
     /**
      * @namespace
@@ -73,7 +77,12 @@ ReadiumSDK = {
     /**
      * @namespace
      */
-    Helpers: {},
+    Helpers: {
+        Dom: {},
+        Epub: {},
+        Misc: {},
+        Navigation: {}
+    },
     /**
      * @namespace
      */
