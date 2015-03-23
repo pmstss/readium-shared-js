@@ -1002,7 +1002,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             console.error("getDomRangeFromRangeCfi: both CFIs must be scoped under the same spineitem idref");
             return undefined;
         }
-        return _navigationLogic.getDomRangeFromRangeCfi(rangeCfi.contentCFI, rangeCfi2.contentCFI, inclusive);
+        return _navigationLogic.getDomRangeFromRangeCfi(rangeCfi.contentCFI, rangeCfi2? rangeCfi2.contentCFI: null, inclusive);
     };
 
     this.getRangeCfiFromDomRange = function (domRange) {
