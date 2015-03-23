@@ -1308,6 +1308,36 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Draw placeholders around all "audio" elements in the rendered iFrame
+     *
+     * @param {string} spineIdRef spine idref where "audio" elements are searched for
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * The style of the class will be applied to the placeholders
+     * @param {object} styles - object representing CSS properties to be applied to the placeholders.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     *
+     * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the placeholders
+     */
+    this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
+        return _annotationsManager.addPlaceholdersForAudio(spineIdRef, type, styles);
+    };
+
+    /**
+     * Draw placeholders around all "video" elements in the rendered iFrame
+     *
+     * @param {string} spineIdRef spine idref where "video" elements are searched for
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * The style of the class will be applied to the placeholders
+     * @param {object} styles - object representing CSS properties to be applied to the placeholders.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     *
+     * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the placeholders
+     */
+    this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
+        return _annotationsManager.addPlaceholdersForVideo(spineIdRef, type, styles);
+    };
+
+    /**
      * Removes a given highlight
      *
      * @param {string} id  The id associated with the highlight.
@@ -1728,13 +1758,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return [];
     };
 
-    /**
-     * Checks if an element associated with an element partial CFI is visible on the currently loaded content documents.
-     *
-     * @param {string} spineIdRef   The spine item idref associated with the content document
-     * @param {string} partialCfi       The partial cfi associated with the element
-     * @returns {boolean}
-     */
+    this.createMediaPlaceholders = function () {
+        if (_currentView) {
+            _currentView.createMediaPlaceholders();
+        }
+    };
+
     this.isVisibleSpineItemElementCfi = function(spineIdRef, partialCfi){
         var spineItem = getSpineItem(spineIdRef);
 

@@ -219,7 +219,37 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         for(var spine in liveAnnotations) {
             if (spines[spine].idref === spineIdRef) {
                 var annotationsForView = liveAnnotations[spine];
-                annotations = annotationsForView.addHighlightsForText(text, spineIdRef, type, styles);
+                annotations = annotationsForView.addHighlightsForText(text, type, styles);
+                _.each(annotations, function (partialCfi) {
+                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
+                });
+                return bookmarks;
+            }
+        }
+        return undefined;
+    };
+
+    this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
+        var bookmarks = [];
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                annotations = annotationsForView.addPlaceholdersForAudio(type, styles);
+                _.each(annotations, function (partialCfi) {
+                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
+                });
+                return bookmarks;
+            }
+        }
+        return undefined;
+    };
+
+    this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
+        var bookmarks = [];
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                annotations = annotationsForView.addPlaceholdersForVideo(type, styles);
                 _.each(annotations, function (partialCfi) {
                     bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
                 });
