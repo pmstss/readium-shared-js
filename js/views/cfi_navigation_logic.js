@@ -895,6 +895,21 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
 
             cfi = generateCfiFromDomRange(wrappedRange);
+        } else if (node.nodeType === Node.ELEMENT_NODE && range.startOffset > 0) {
+            node = range.startContainer.childNodes[range.startOffset];
+            if (precisePoint && node !== elementFromPoint) {
+                return null;
+            }
+
+            //noinspection JSUnresolvedVariable
+            cfi = EPUBcfi.Generator.generateElementCFIComponent(node,
+                ["cfi-marker"],
+                [],
+                ["MathJax_Message"]);
+
+            if (cfi[0] == "!") {
+                cfi = cfi.substring(1);
+            }
         } else {
             if (precisePoint && node !== elementFromPoint) {
                 return null;
