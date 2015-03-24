@@ -996,16 +996,20 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
         return navigation.getNodeRangeInfoFromCfi(partialCfi);
     };
 
+    function createBookmarkFromCfi(cfi){
+        return new ReadiumSDK.Models.BookmarkData(_currentSpineItem.idref, cfi);
+    }
+
     this.getLoadedContentFrames = function () {
         return [{spineItem: _currentSpineItem, $iframe: _$iframe}];
     };
 
     this.getFirstVisibleCfi = function () {
-        return self.getNavigator().getFirstVisibleCfi();
+        return createBookmarkFromCfi(self.getNavigator().getFirstVisibleCfi());
     };
 
     this.getLastVisibleCfi = function () {
-        return self.getNavigator().getLastVisibleCfi();
+        return createBookmarkFromCfi(self.getNavigator().getLastVisibleCfi());
     };
 
     this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
@@ -1013,15 +1017,23 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
     };
 
     this.getRangeCfiFromDomRange = function (domRange) {
-        return self.getNavigator().getRangeCfiFromDomRange(domRange);
+        return createBookmarkFromCfi(self.getNavigator().getRangeCfiFromDomRange(domRange));
     };
 
     this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
-        return self.getNavigator().getVisibleCfiFromPoint(x, y, precisePoint);
+        return createBookmarkFromCfi(self.getNavigator().getVisibleCfiFromPoint(x, y, precisePoint));
     };
 
     this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {
-        return self.getNavigator().getRangeCfiFromPoints(startX, startY, endX, endY);
+        return createBookmarkFromCfi(self.getNavigator().getRangeCfiFromPoints(startX, startY, endX, endY));
+    };
+
+    this.getCfiForElement = function(x, y) {
+        return createBookmarkFromCfi(self.getNavigator().getCfiForElement(x, y));
+    };
+
+    this.getElementFromPoint = function (x, y) {
+        return self.getNavigator().getElementFromPoint(x, y);
     };
 
 };

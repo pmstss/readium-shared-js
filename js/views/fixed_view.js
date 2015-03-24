@@ -809,7 +809,7 @@ ReadiumSDK.Views.FixedView = function(options, reader){
 
     this.getRangeCfiFromPoints = function (startX, startY, endX, endY, spineItemIdref) {
         if (!spineItemIdref) {
-            console.error("getVisibleCfiFromPoint: Spine item idref must be specified for this fixed layout view.");
+            console.error("getRangeCfiFromPoints: Spine item idref must be specified for this fixed layout view.");
             return null;
         }
         return callOnPageView(spineItemIdref, function (view) {
@@ -817,4 +817,28 @@ ReadiumSDK.Views.FixedView = function(options, reader){
         });
     };
 
+    this.getCfiForElement = function (element) {
+
+        var views = getDisplayingViews();
+
+        for (var i = 0, count = views.length; i < count; i++) {
+
+            var view = views[i];
+            if (view.getLoadedContentFrames()[0].$iframe[0].contentDocument === element.ownerDocument) {
+                return view.getCfiForElement(element);
+            }
+        }
+
+        return undefined;
+    };
+
+    this.getElementFromPoint = function (x, y, spineItemIdref) {
+        if (!spineItemIdref) {
+            console.error("getElementFromPoint: Spine item idref must be specified for this fixed layout view.");
+            return null;
+        }
+        return callOnPageView(spineItemIdref, function (view) {
+            return view.getElementFromPoint(x,y);
+        });
+    };
 };

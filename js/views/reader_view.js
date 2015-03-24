@@ -2090,6 +2090,45 @@ ReadiumSDK.Views.ReaderView = function(options) {
         return undefined;
     };
 
+    /**
+     *
+     * @param {HTMLElement} element
+     * @returns {*}
+     */
+    this.getCfiForElement = function(element) {
+        if (_currentView) {
+            return _currentView.getCfiForElement(element);
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @param x
+     * @param y
+     * @param [spineItemIdref] Required for fixed layout views
+     * @returns {*}
+     */
+    this.getImageDataFromPoint = function (x, y, spineItemIdref) {
+        if (_currentView) {
+            var element = _currentView.getElementFromPoint(x, y, spineItemIdref);
+            if (element.tagName.toLowerCase() === "img") {
+                var cfi = _currentView.getCfiForElement(element);
+                var rect = element.getBoundingClientRect();
+                return {
+                    location: cfi,
+                    pathToLocation: $(element).attr('src'),
+                    topLeftX: rect.left,
+                    topLeftY: rect.top,
+                    bottomRightX: rect.right,
+                    bottomRightY: rect.bottom
+                };
+            } else {
+                return null;
+            }
+        }
+        return undefined;
+    };
 };
 
 /**
