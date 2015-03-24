@@ -746,6 +746,17 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return {$element: $firstVisibleTextNode, percentY: percentOfElementHeight, foundTextNode: foundTextNode};
     };
 
+    this.getCfiForElement = function (element) {
+        var cfi = EPUBcfi.Generator.generateElementCFIComponent(element,
+            ["cfi-marker"],
+            [],
+            ["MathJax_Message"]);
+
+        if (cfi[0] == "!") {
+            cfi = cfi.substring(1);
+        }
+        return cfi;
+    };
 
     this.getFirstVisibleElementCfi = function (topOffset) {
         var cfi;
@@ -780,14 +791,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 ["MathJax_Message"]);
         } else if ($element) {
             //noinspection JSUnresolvedVariable
-            cfi = EPUBcfi.Generator.generateElementCFIComponent(foundElement.$element[0],
-                ["cfi-marker"],
-                [],
-                ["MathJax_Message"]);
-
-            if (cfi[0] == "!") {
-                cfi = cfi.substring(1);
-            }
+            cfi = self.getCfiForElement(foundElement.$element[0]);
 
             cfi = cfi + "@0:" + foundElement.percentY;
         } else {
@@ -902,27 +906,13 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
 
             //noinspection JSUnresolvedVariable
-            cfi = EPUBcfi.Generator.generateElementCFIComponent(node,
-                ["cfi-marker"],
-                [],
-                ["MathJax_Message"]);
-
-            if (cfi[0] == "!") {
-                cfi = cfi.substring(1);
-            }
+            cfi = self.getCfiForElement(node);
         } else {
             if (precisePoint && node !== elementFromPoint) {
                 return null;
             }
             //noinspection JSUnresolvedVariable
-            cfi = EPUBcfi.Generator.generateElementCFIComponent(elementFromPoint,
-                ["cfi-marker"],
-                [],
-                ["MathJax_Message"]);
-
-            if (cfi[0] == "!") {
-                cfi = cfi.substring(1);
-            }
+            cfi = self.getCfiForElement(elementFromPoint);
         }
 
         //This should not happen but if it does print some output, just in case
@@ -1023,6 +1013,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return range;
     };
 
+    this.getRangeCfiFromDomRange = function(domRange) {
+        return generateCfiFromDomRange(domRange);
+    };
+
     function getWrappedCfi(partialCfi) {
         return "epubcfi(" + partialCfi + ")";
     }
@@ -1080,6 +1074,12 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         return $element;
     }
+
+    this.getElementFromPoint = function (x, y) {
+
+        var document = self.getRootDocument();
+        return document.elementFromPoint(x, y);
+    };
 
     this.getNodeRangeInfoFromCfi = function (cfi) {
         var contentDoc = self.getRootDocument();
