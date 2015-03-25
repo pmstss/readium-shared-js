@@ -905,13 +905,16 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 return null;
             }
 
-            //noinspection JSUnresolvedVariable
-            cfi = self.getCfiForElement(node);
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+                cfi = generateCfiFromDomRange(range);
+            } else {
+                cfi = self.getCfiForElement(node);
+            }
         } else {
             if (precisePoint && node !== elementFromPoint) {
                 return null;
             }
-            //noinspection JSUnresolvedVariable
+
             cfi = self.getCfiForElement(elementFromPoint);
         }
 

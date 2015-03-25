@@ -2117,11 +2117,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 var rect = element.getBoundingClientRect();
                 return {
                     location: cfi,
-                    pathToLocation: $(element).attr('src'),
-                    topLeftX: rect.left,
-                    topLeftY: rect.top,
-                    bottomRightX: rect.right,
-                    bottomRightY: rect.bottom
+                    pathToLocation: $(element).data('rd-src') || $(element).attr('src'),
+                    topLeftX: Math.ceil(rect.left),
+                    topLeftY: Math.ceil(rect.top),
+                    bottomRightX: Math.ceil(rect.right),
+                    bottomRightY: Math.ceil(rect.bottom)
                 };
             } else {
                 return null;
