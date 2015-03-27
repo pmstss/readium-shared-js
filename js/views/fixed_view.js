@@ -738,14 +738,7 @@ ReadiumSDK.Views.FixedView = function(options, reader){
     this.getFirstVisibleCfi = function () {
         var views = getDisplayingViews();
         if (views.length > 0) {
-            var idref = views[0].currentSpineItem().idref;
-            var cfi = views[0].getFirstVisibleCfi();
-
-            if (cfi == undefined) {
-                cfi = "";
-            }
-
-            return new ReadiumSDK.Models.BookmarkData(idref, cfi);
+            return views[0].getFirstVisibleCfi();
         }
         return undefined;
     };
@@ -753,14 +746,7 @@ ReadiumSDK.Views.FixedView = function(options, reader){
     this.getLastVisibleCfi = function () {
         var views = getDisplayingViews();
         if (views.length > 0) {
-            var idref = views[views.length - 1].currentSpineItem().idref;
-            var cfi = views[views.length - 1].getLastVisibleCfi();
-
-            if (cfi == undefined) {
-                cfi = "";
-            }
-
-            return new ReadiumSDK.Models.BookmarkData(idref, cfi);
+            return views[views.length - 1].getLastVisibleCfi();
         }
         return undefined;
     };

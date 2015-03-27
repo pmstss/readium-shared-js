@@ -1412,19 +1412,15 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
         return contentDocuments.length ? contentDocuments : undefined ;
     };
 
-    function createBookmark(spineItem, cfi) {
-        return new ReadiumSDK.Models.BookmarkData(spineItem.idref, cfi);
-    }
-
     this.getFirstVisibleCfi = function () {
         return callOnVisiblePageView(function (pageView) {
-            return createBookmark(pageView.currentSpineItem(), pageView.getFirstVisibleCfi());
+            return pageView.getFirstVisibleCfi();
         });
     };
 
     this.getLastVisibleCfi = function () {
         return callOnVisiblePageView(function (pageView) {
-            return createBookmark(pageView.currentSpineItem(), pageView.getLastVisibleCfi());
+            return pageView.getLastVisibleCfi();
         });
     };
 
