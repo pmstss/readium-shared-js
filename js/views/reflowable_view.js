@@ -795,8 +795,8 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         // if we set max-width/max-height to 100% columnizing engine chops images embedded in the text
         // (but not if we set it to 99-98%) go figure. (+3 helps for this)
         var maxDimensions = {
-            maxHeight:_$epubHtml.height() - ($body.outerHeight(true) - $body.height() + 3),
-            maxWidth: $body[0].getClientRects()[0].width
+            maxHeight: _$epubHtml.height() - ($body.outerHeight(true) - $body.height() + 3),
+            maxWidth: $body[0].getClientRects()[0] ? $body[0].getClientRects()[0].width : _$epubHtml.width()
         };
 
         $('img, svg', _$epubHtml).each(function(){
@@ -806,14 +806,18 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             // TODO: CSS min-w/h is content-box, not border-box (does not take into account padding + border)? => images may still overrun?
             $elem.css(maxDimensions);
 
-            if(!$elem.css('height')) {
+            var ratiosUnbalanced = false;
+            if ($elem[0].tagName.toLowerCase() === "img") {
+                ratiosUnbalanced = 
+                    (($elem[0].naturalWidth / $elem[0].naturalHeight) * 10 | 0) !==
+                    (($elem[0].clientWidth / $elem[0].clientHeight) * 10 | 0);
+            }
+            if (!$elem.css('height') || ratiosUnbalanced) {
                 $elem.css('height', 'auto');
             }
-
-            if(!$elem.css('width')) {
+            if (!$elem.css('width') || ratiosUnbalanced) {
                 $elem.css('width', 'auto');
             }
-
         });
     }
 
