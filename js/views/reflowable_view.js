@@ -455,9 +455,11 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     }
 
     function onPaginationChanged(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
+        calculateColumnCount();
         _paginationInfo.pageOffset = (_paginationInfo.columnWidth + _paginationInfo.columnGap) * _paginationInfo.visibleColumnCount * _paginationInfo.currentSpreadIndex;
         
         redraw();
+        ReadiumSDK.Helpers.triggerLayout(_$iframe);
         showBook(); // as it's no longer hidden by shifting the position
         self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
     }
@@ -654,30 +656,11 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         _$epubHtml.css({left: "0", right: "0", top: "0"});
 
         redraw();
+        ReadiumSDK.Helpers.triggerLayout(_$iframe);
         resizeImages();
         ReadiumSDK.Helpers.triggerLayout(_$iframe);
 
-        _paginationInfo.columnCount = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) + _paginationInfo.columnGap) / (_paginationInfo.columnWidth + _paginationInfo.columnGap);
-        _paginationInfo.columnCount = Math.round(_paginationInfo.columnCount);
-
-        var totalGaps = (_paginationInfo.columnCount-1) * _paginationInfo.columnGap;
-        var colWidthCheck = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) - totalGaps) / _paginationInfo.columnCount;
-        colWidthCheck = Math.round(colWidthCheck);
-
-        if (colWidthCheck > _paginationInfo.columnWidth)
-        {
-            console.debug("ADJUST COLUMN");
-            console.log(_paginationInfo.columnWidth);
-            console.log(colWidthCheck);
-            
-            _paginationInfo.columnWidth = colWidthCheck;
-        }
-
-        _paginationInfo.spreadCount =  Math.ceil(_paginationInfo.columnCount / _paginationInfo.visibleColumnCount);
-
-        if(_paginationInfo.currentSpreadIndex >= _paginationInfo.spreadCount) {
-            _paginationInfo.currentSpreadIndex = _paginationInfo.spreadCount - 1;
-        }
+        calculateColumnCount();
 
         if(_deferredPageRequest) {
 
@@ -702,6 +685,29 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             //     onPaginationChanged(self); // => redraw() => showBook()
             // }, 50);
 
+        }
+    }
+
+    function calculateColumnCount() {
+        _paginationInfo.columnCount = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) + _paginationInfo.columnGap) / (_paginationInfo.columnWidth + _paginationInfo.columnGap);
+        _paginationInfo.columnCount = Math.round(_paginationInfo.columnCount);
+
+        var totalGaps = (_paginationInfo.columnCount - 1) * _paginationInfo.columnGap;
+        var colWidthCheck = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) - totalGaps) / _paginationInfo.columnCount;
+        colWidthCheck = Math.round(colWidthCheck);
+
+        if (colWidthCheck > _paginationInfo.columnWidth) {
+            console.debug("ADJUST COLUMN");
+            console.log(_paginationInfo.columnWidth);
+            console.log(colWidthCheck);
+
+            _paginationInfo.columnWidth = colWidthCheck;
+        }
+
+        _paginationInfo.spreadCount = Math.ceil(_paginationInfo.columnCount / _paginationInfo.visibleColumnCount);
+
+        if (_paginationInfo.currentSpreadIndex >= _paginationInfo.spreadCount) {
+            _paginationInfo.currentSpreadIndex = _paginationInfo.spreadCount - 1;
         }
     }
 
