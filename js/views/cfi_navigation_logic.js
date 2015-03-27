@@ -899,8 +899,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
 
             cfi = generateCfiFromDomRange(wrappedRange);
-        } else if (node.nodeType === Node.ELEMENT_NODE && range.startOffset > 0) {
-            node = range.startContainer.childNodes[range.startOffset];
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            node =
+                range.startContainer.childNodes[range.startOffset] ||
+                range.startContainer.childNodes[0] ||
+                range.startContainer;
             if (precisePoint && node !== elementFromPoint) {
                 return null;
             }
