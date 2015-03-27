@@ -953,7 +953,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     }
 
     this.getFirstVisibleCfi = function () {
-        return self.getVisibleCfiFromPoint(0, 0, false, getPaginationState());
+        return self.getVisibleCfiFromPoint(1, 1, false, getPaginationState());
     };
 
     this.getLastVisibleCfi = function () {
