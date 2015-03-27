@@ -761,7 +761,7 @@ ReadiumSDK.Views.FixedView = function(options, reader){
 
             var view = views[i];
             if (view.currentSpineItem().idref === rangeCfi.idref) {
-                return view.getDomRangeFromRangeCfi(rangeCfi.contentCFI, rangeCfi2.contentCFI, inclusive);
+                return view.getDomRangeFromRangeCfi(rangeCfi.contentCFI, rangeCfi2 ? rangeCfi2.contentCFI : null, inclusive);
             }
         }
 
