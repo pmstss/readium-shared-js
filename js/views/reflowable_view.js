@@ -804,10 +804,10 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             $elem = $(this);
 
             // Respect original styles if max-width or max-height are already set
-            if ($elem.css('max-width')) {
+            if ($elem.css('max-width') !== 'none') {
                 delete maxDimensions.maxWidth;
             }
-            if ($elem.css('max-height')) {
+            if ($elem.css('max-height') !== 'none') {
                 delete maxDimensions.maxHeight;
             }
 
