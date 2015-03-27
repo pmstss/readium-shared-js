@@ -803,6 +803,14 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
             $elem = $(this);
 
+            // Respect original styles if max-width or max-height are already set
+            if ($elem.css('max-width')) {
+                delete maxDimensions.maxWidth;
+            }
+            if ($elem.css('max-height')) {
+                delete maxDimensions.maxHeight;
+            }
+
             // TODO: CSS min-w/h is content-box, not border-box (does not take into account padding + border)? => images may still overrun?
             $elem.css(maxDimensions);
 
