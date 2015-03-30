@@ -299,6 +299,18 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    this.replaceAnnotation = function(id, cfi, type, styles) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.replaceAnnotation(id, cfi, type, styles);
+            if(result) {
+                break;
+            }
+        }
+        return result;
+    };
+
     this.redrawAnnotations = function(){
         for(var spine in liveAnnotations){
             liveAnnotations[spine].redraw();
