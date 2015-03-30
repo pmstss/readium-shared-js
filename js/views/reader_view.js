@@ -1401,6 +1401,19 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
+     * Update annotation by the id, reapplies CSS styles to the existing annotaion
+     *
+     * @param {string} id id of the annotation.
+     * @property {string} type - annotation type (name of css class)
+     * @param {object} styles - object representing CSS properties to be applied to the placeholders.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     */
+    this.updateAnnotation = function(id, type, styles) {
+        _annotationsManager.updateAnnotation(id, type, styles);
+    };
+
+
+    /**
      * Allows the subscription of events that trigger inside the epub content iframe
      *
      * @param {string} eventName    Event name.
