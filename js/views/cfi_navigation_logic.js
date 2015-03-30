@@ -828,9 +828,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(document);
         var firstVisibleCaretRange = document.caretRangeFromPoint(x,y);
         var elementFromPoint = document.elementFromPoint(x, y);
+        var invalidElementFromPoint = !elementFromPoint || elementFromPoint === document.documentElement;
 
         if (precisePoint) {
-            if (!elementFromPoint || elementFromPoint === document.documentElement) {
+            if (!elementFromPoint || invalidElementFromPoint) {
                 return null;
             }
             var testRect = getNodeContentsClientRect(elementFromPoint);
@@ -842,7 +843,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
         } else if(paginationState) {
 
-            if (!elementFromPoint || elementFromPoint === document.documentElement && paginationState === 2) {
+            if (invalidElementFromPoint && paginationState === 2) {
                 //handle when targeting the very end of the document
                 elementFromPoint = $('*', document.body).last()[0];
                 if (elementFromPoint.lastChild && elementFromPoint.lastChild.nodeType === Node.TEXT_NODE) {
@@ -851,7 +852,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 firstVisibleCaretRange = createRange();
                 firstVisibleCaretRange.setStart(elementFromPoint, elementFromPoint.length - 1);
                 firstVisibleCaretRange.setEnd(elementFromPoint, elementFromPoint.length);
-            } else if (!elementFromPoint || elementFromPoint === document.documentElement && paginationState === 1) {
+            } else if (invalidElementFromPoint && paginationState === 1) {
                 //handle when targeting the very start of the document
                 elementFromPoint = firstTextNode(document);
                 if (!elementFromPoint || elementFromPoint.length === 0) {
@@ -862,9 +863,14 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 firstVisibleCaretRange.setEnd(elementFromPoint, 1);
             }
         }
+
         if (!firstVisibleCaretRange) {
-            console.error("Could not generate CFI no visible element on page");
-            return null;
+            if (invalidElementFromPoint) {
+                console.error("Could not generate CFI no visible element on page");
+                return null;
+            }
+            firstVisibleCaretRange = createRange();
+            firstVisibleCaretRange.selectNode(elementFromPoint);
         }
 
         var range = firstVisibleCaretRange;
