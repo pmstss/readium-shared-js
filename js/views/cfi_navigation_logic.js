@@ -899,8 +899,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
 
             cfi = generateCfiFromDomRange(wrappedRange);
-        } else if (node.nodeType === Node.ELEMENT_NODE && range.startOffset > 0) {
-            node = range.startContainer.childNodes[range.startOffset];
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            node =
+                range.startContainer.childNodes[range.startOffset] ||
+                range.startContainer.childNodes[0] ||
+                range.startContainer;
             if (precisePoint && node !== elementFromPoint) {
                 return null;
             }
@@ -950,7 +953,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     }
 
     this.getFirstVisibleCfi = function () {
-        return self.getVisibleCfiFromPoint(0, 0, false, getPaginationState());
+        return self.getVisibleCfiFromPoint(1, 1, false, getPaginationState());
     };
 
     this.getLastVisibleCfi = function () {
@@ -1029,7 +1032,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     }
 
     this.isRangeCfi = function (partialCfi) {
-        return EPUBcfi.Interpreter.isRangeCfi(getWrappedCfi(partialCfi));
+        return EPUBcfi.Interpreter.isRangeCfi(getWrappedCfi(partialCfi)) || EPUBcfi.Interpreter.isRangeCfi(getWrappedCfiRelativeToContent(partialCfi));
     };
 
     this.getPageForElementCfi = function (cfi, classBlacklist, elementBlacklist, idBlacklist) {
