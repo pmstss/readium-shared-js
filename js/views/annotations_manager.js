@@ -283,6 +283,13 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
             var annotations = [];
 
             var lastId = null;
+
+            var baseOffset = {top: 0, left: 0};
+            if (item.elements && item.elements.length > 0) {
+                var offsetElement = item.elements[0].element.ownerDocument.defaultView.frameElement.parentElement;
+                baseOffset = {top: offsetElement.offsetTop, left: offsetElement.offsetLeft};
+            }
+
             _.each(item.elements, function(element){
 
                 var $element;
@@ -313,11 +320,12 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
                     scale = ReadiumSDK.Helpers.CSSTransformMatrix.getScaleFromMatrix(matrix);
                 }
                 var offset = $element.offset();
-                var position = offset;
+                offset.top += baseOffset.top;
+                offset.left += baseOffset.left;
                 if(scale !== 1){
-                    position = {top: (offset.top * scale)*(1/scale)-12, left: offset.left }; //the 12 is a "padding"
+                    offset = {top: (offset.top * scale)*(1/scale)-12, left: offset.left }; //the 12 is a "padding"
                 }
-                var $highlighted = {id: elementId, position: position, lineHeight: parseInt($element.css('line-height'),10)};
+                var $highlighted = {id: elementId, position: offset, lineHeight: parseInt($element.css('line-height'),10)};
                 annotations.push($highlighted)
             });
 
