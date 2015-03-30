@@ -1286,15 +1286,17 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * Creates a higlight based on the current selection
      *
      * @param {string} id id of the highlight. must be unique
-     * @param {string} type - name of the class selector rule in annotations.css file. 
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * @param {boolean} clearSelection - set to true to clear the current selection 
+     * after it is highlighted
      * The style of the class will be applied to the created hightlight
      * @param {object} styles - object representing CSS properties to be applied to the highlight.
      * e.g., to apply background color pass this {'background-color': 'green'}
      *
      * @returns {object | undefined} partial cfi object of the created highlight
      */
-    this.addSelectionHighlight =  function(id, type, styles) {
-        return _annotationsManager.addSelectionHighlight(id, type, styles);
+    this.addSelectionHighlight =  function(id, type, clearSelection, styles) {
+        return _annotationsManager.addSelectionHighlight(id, type, clearSelection, styles);
     };
 
     /**
