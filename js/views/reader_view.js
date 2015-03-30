@@ -254,7 +254,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
             //application will be notified by the same ReadiumSDK.Events.PAGINATION_CHANGED event
             _mediaOverlayPlayer.onPageChanged(pageChangeData);
 
-            self.trigger(ReadiumSDK.Events.PAGINATION_CHANGED, pageChangeData);
+            _.defer(function(){
+                self.trigger(ReadiumSDK.Events.PAGINATION_CHANGED, pageChangeData);
+            });
         });
 
         _currentView.on(ReadiumSDK.Events.FXL_VIEW_RESIZED, function(){

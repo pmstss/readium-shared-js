@@ -234,9 +234,15 @@ ReadiumSDK.Views.FixedView = function(options, reader){
     function onPagesLoaded(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
 
         updateContentMetaSize();
-        resizeBook();
-        
-        self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
+        resizeBook(true);
+        _.defer(function () {
+            self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, {
+                paginationInfo: self.getPaginationInfo(),
+                initiator: initiator,
+                spineItem: paginationRequest_spineItem,
+                elementId: paginationRequest_elementId
+            });
+        });
     }
 
     this.onViewportResize = function() {
