@@ -791,8 +791,7 @@ ReadiumSDK.Views.FixedView = function(options, reader){
 
     this.getVisibleCfiFromPoint = function (x, y, precisePoint, spineItemIdref) {
         if (!spineItemIdref) {
-            console.error("getVisibleCfiFromPoint: Spine item idref must be specified for this fixed layout view.");
-            return null;
+            throw new Error("getVisibleCfiFromPoint: Spine item idref must be specified for this fixed layout view.");
         }
         return callOnPageView(spineItemIdref, function (view) {
             return view.getVisibleCfiFromPoint(x,y, precisePoint);
@@ -801,8 +800,7 @@ ReadiumSDK.Views.FixedView = function(options, reader){
 
     this.getRangeCfiFromPoints = function (startX, startY, endX, endY, spineItemIdref) {
         if (!spineItemIdref) {
-            console.error("getRangeCfiFromPoints: Spine item idref must be specified for this fixed layout view.");
-            return null;
+            throw new Error("getRangeCfiFromPoints: Spine item idref must be specified for this fixed layout view.");
         }
         return callOnPageView(spineItemIdref, function (view) {
             return view.getRangeCfiFromPoints(startX, startY, endX, endY);
@@ -826,8 +824,7 @@ ReadiumSDK.Views.FixedView = function(options, reader){
 
     this.getElementFromPoint = function (x, y, spineItemIdref) {
         if (!spineItemIdref) {
-            console.error("getElementFromPoint: Spine item idref must be specified for this fixed layout view.");
-            return null;
+            throw new Error("getElementFromPoint: Spine item idref must be specified for this fixed layout view.");
         }
         return callOnPageView(spineItemIdref, function (view) {
             return view.getElementFromPoint(x,y);
