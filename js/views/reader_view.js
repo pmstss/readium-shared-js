@@ -254,7 +254,9 @@ ReadiumSDK.Views.ReaderView = function(options) {
             //application will be notified by the same ReadiumSDK.Events.PAGINATION_CHANGED event
             _mediaOverlayPlayer.onPageChanged(pageChangeData);
 
-            self.trigger(ReadiumSDK.Events.PAGINATION_CHANGED, pageChangeData);
+            _.defer(function(){
+                self.trigger(ReadiumSDK.Events.PAGINATION_CHANGED, pageChangeData);
+            });
         });
 
         _currentView.on(ReadiumSDK.Events.FXL_VIEW_RESIZED, function(){
@@ -1280,15 +1282,17 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * Creates a higlight based on the current selection
      *
      * @param {string} id id of the highlight. must be unique
-     * @param {string} type - name of the class selector rule in annotations.css file. 
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * @param {boolean} clearSelection - set to true to clear the current selection 
+     * after it is highlighted
      * The style of the class will be applied to the created hightlight
      * @param {object} styles - object representing CSS properties to be applied to the highlight.
      * e.g., to apply background color pass this {'background-color': 'green'}
      *
      * @returns {object | undefined} partial cfi object of the created highlight
      */
-    this.addSelectionHighlight =  function(id, type, styles) {
-        return _annotationsManager.addSelectionHighlight(id, type, styles);
+    this.addSelectionHighlight =  function(id, type, clearSelection, styles) {
+        return _annotationsManager.addSelectionHighlight(id, type, clearSelection, styles);
     };
 
     /**
@@ -1390,6 +1394,31 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
     this.getHighlight = function(id) {
         return _annotationsManager.getHighlight(id);
+    };
+
+    /**
+     * Update annotation by the id, reapplies CSS styles to the existing annotaion
+     *
+     * @param {string} id id of the annotation.
+     * @property {string} type - annotation type (name of css class)
+     * @param {object} styles - object representing CSS properties to be applied to the annotation.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     */
+    this.updateAnnotation = function(id, type, styles) {
+        _annotationsManager.updateAnnotation(id, type, styles);
+    };
+
+    /**
+     * Replace annotation with this id. Current annotation is removed and a new one is created.
+     *
+     * @param {string} id id of the annotation.
+     * @property {string} cfi - partial CFI range of the annotation
+     * @property {string} type - annotation type (name of css class)
+     * @param {object} styles - object representing CSS properties to be applied to the annotation.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     */
+    this.replaceAnnotation = function(id, cfi, type, styles) {
+        _annotationsManager.replaceAnnotation(id, cfi, type, styles);
     };
 
     /**

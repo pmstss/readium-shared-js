@@ -587,6 +587,7 @@ ReadiumSDK.Views.OnePageView = function(options, classes, enableBookStyleOverrid
 
         self.showIFrame();
 
+        ReadiumSDK.Helpers.triggerLayout(_$iframe);
         setTimeout(function()
         {
             //_$epubHtml.css("visibility", "visible");
