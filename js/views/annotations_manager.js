@@ -283,6 +283,8 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         for(var spine in liveAnnotations) {
             var annotationsForView = liveAnnotations[spine];
             result  = annotationsForView.getHighlight(id);
+            if (result !== undefined)
+				return result;
         }
         return result;
     };
