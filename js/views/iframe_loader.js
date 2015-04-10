@@ -31,7 +31,7 @@
  *
  * @constructor
  */
-ReadiumSDK.Views.IFrameLoader = function() {
+ReadiumSDK.Views.IFrameLoader = function(options) {
 
     var self = this;
     var eventListeners = {};
@@ -101,12 +101,12 @@ ReadiumSDK.Views.IFrameLoader = function() {
     
     this.loadIframe = function (iframe, src, callback, context, attachedData) {
 
-        iframe.setAttribute("data-baseUri", iframe.baseURI);
+        iframe.setAttribute("data-baseUri", options.baseUrl || iframe.baseURI);
         iframe.setAttribute("data-src", src);
 
         $(iframe).hide();
         
-        var loadedDocumentUri = new URI(src).absoluteTo(iframe.baseURI).toString();
+        var loadedDocumentUri = new URI(src).absoluteTo(options.baseUrl || iframe.baseURI).toString();
 
         self._loadIframeWithUri(iframe, attachedData, loadedDocumentUri, function () {
             var doc = iframe.contentDocument || iframe.contentWindow.document;
