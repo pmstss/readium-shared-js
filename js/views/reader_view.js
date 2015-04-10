@@ -2060,8 +2060,13 @@ ReadiumSDK.Views.ReaderView = function(options) {
      */
     this.getLinksFromRangeCfi = function(startCfi, endCfi) {
         if (_currentView) {
-            var domRange = this.getDomRangeFromRangeCfi(startCfi, endCfi);
-            var nodes = (new rangy.WrappedRange(domRange)).getNodes();
+            var domRanges = this.getDomRangesFromRangeCfi(startCfi, endCfi);
+            var nodes = [];
+            _.each(domRanges, function (domRange) {
+                _.each((new rangy.WrappedRange(domRange)).getNodes(), function (node) {
+                    nodes.push(node);
+                })
+            });
             var output = [];
             _.each(nodes, function (node) {
                 var item = {};
@@ -2099,6 +2104,43 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 }
             });
             return output;
+        }
+        return undefined;
+    };
+    
+    /**
+     *
+     * @param {string} rangeCfi
+     * @param {string} [rangeCfi2]
+     * @param {boolean} [inclusive]
+     * @returns {array}
+     */
+    this.getDomRangesFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
+        if (_currentView) {
+            if (_currentView.getDomRangesFromRangeCfi) {
+                return _currentView.getDomRangesFromRangeCfi(rangeCfi, rangeCfi2, inclusive);
+            } else {
+                return [_currentView.getDomRangeFromRangeCfi(rangeCfi, rangeCfi2, inclusive)];
+            }
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @param {ReadiumSDK.Models.BookmarkData} startCfi starting CFI
+     * @param {ReadiumSDK.Models.BookmarkData} [endCfi] ending CFI
+     * optional - may be omited if startCfi is a range CFI
+     * @param {boolean} [inclusive] optional indicating if the range should be inclusive
+     * @returns {array}
+     */
+    this.getDomRangesFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
+        if (_currentView) {
+            if (_currentView.getDomRangesFromRangeCfi) {
+                return _currentView.getDomRangesFromRangeCfi(rangeCfi, rangeCfi2, inclusive);
+            } else {
+                return [_currentView.getDomRangeFromRangeCfi(rangeCfi, rangeCfi2, inclusive)];
+            }
         }
         return undefined;
     };
