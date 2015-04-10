@@ -32,7 +32,7 @@ Please note:
 
 - only simple text highlighting is currently supported
 - it's the job of the reading system to keep track of annotations. readium-js simply displays your annotations.
-- full CFIs for annotations are not currently available. We use so called "partial CFI"s, a tuple containing idref of the spine item 
+- full CFIs for annotations are not currently available. We use so called "partial CFI"s, a tuple containing idref of the spine item
   and the CFI definition relative to the root of the spine item.
 
 Currently, the API exposed via `ReaderView` exposes 4 functions and 1 event which should be sufficient for a simple highlighting workflow.
@@ -43,7 +43,7 @@ For the purposes of the examples below, `RReader` is a previously instantiated `
 
 ## Is anything selected (getCurrentSelectionCfi())
 
-Before proceeding with the highlighting workflow it is sometimes necessary to determine whether the user has in fact selected anything. 
+Before proceeding with the highlighting workflow it is sometimes necessary to determine whether the user has in fact selected anything.
 This can be accomplished with the following:
 
 	> RReader.getCurrentSelectionCfi()
@@ -55,7 +55,7 @@ You can also use partial Cfi with `openSpineItemElementCfi()` to navigate to whe
 
 ## Highlighting (addHighlight and addSelectionHighlight)
 
-Once we've determined what needs to be highlighted (by generating a partial CFI from a selection, or having an existing partial CFI stored externally) 
+Once we've determined what needs to be highlighted (by generating a partial CFI from a selection, or having an existing partial CFI stored externally)
 we can add it to the reader by calling `addHighlight()`:
 
 	> RReader.addHighlight('id-id2604743', "/4/2/6,/1:74,/1:129", 123, "highlight")
@@ -103,7 +103,7 @@ Then when the user clicks on the highlight the following will show up in the con
 
 	highlight id-id2604743 /4/2/6,/1:74,/1:129 123
 
-Note that there are 2 more events that may be hadled in a similar manner - 'textSelection' and 'imgDblClicked'. 
+Note that there are 2 more events that may be hadled in a similar manner - 'textSelection' and 'imgDblClicked'.
 The set of arguments passed to the event handling function is different though.
 
 */
@@ -207,6 +207,20 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
             if (spines[spine].idref === spineIdRef) {
                 var annotationsForView = liveAnnotations[spine];
                 var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles);
+                if (annotation) {
+                    return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
+                }
+            }
+        }
+        return undefined;
+    };
+
+    this.addPlaceholder = function(spineIdRef, partialCfi, $element, id, type, styles) {
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                var annotation = annotationsForView.addPlaceholder(partialCfi, $element,
+                                                                   id, type, styles);
                 if (annotation) {
                     return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
                 }
