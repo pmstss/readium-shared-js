@@ -2059,6 +2059,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
      - rectangle - only for "audio"/"video" onscreen coordinates of the element
      */
     this.getLinksFromRangeCfi = function(startCfi, endCfi) {
+        var that = this;
         if (_currentView) {
             var domRanges = this.getDomRangesFromRangeCfi(startCfi, endCfi);
             var nodes = [];
@@ -2074,6 +2075,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
                     ["cfi-marker"],
                     [],
                     ["MathJax_Message"]);
+                _.each(that.getLoadedContentFrames(), function (frame) {
+                    if (node.ownerDocument === frame.$iframe[0].contentDocument) {
+                        item.spineIdref = frame.spineItem.idref;
+                    }
+                });
                 if (node.nodeName === "a") {
                     // getAttribute rather than .href, because .href relative URLs resolved to absolute
                     var href = node.getAttribute("href").trim();
