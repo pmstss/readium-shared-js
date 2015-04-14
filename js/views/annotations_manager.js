@@ -168,7 +168,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
 
     this.attachAnnotations = function($iframe, spineItem, loadedSpineItems) {
         var epubDocumentFrame = $iframe[0];
-        liveAnnotations[spineItem.index] = new EpubAnnotationsModule(epubDocumentFrame, self, annotationCSSUrl);
+        liveAnnotations[spineItem.index] = new EpubAnnotationsModule(epubDocumentFrame, self, annotationCSSUrl, spineItem);
         spines[spineItem.index] = spineItem;
 
         // check to see which spine indicies can be culled depending on the currently loaded spine items
