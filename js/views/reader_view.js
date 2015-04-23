@@ -2071,15 +2071,17 @@ ReadiumSDK.Views.ReaderView = function(options) {
             var output = [];
             _.each(nodes, function (node) {
                 var item = {};
-                item.location = EPUBcfi.Generator.generateElementCFIComponent(node,
+                var cfi = EPUBcfi.Generator.generateElementCFIComponent(node,
                     ["cfi-marker"],
                     [],
                     ["MathJax_Message"]);
+                var idref = null;
                 _.each(that.getLoadedContentFrames(), function (frame) {
                     if (node.ownerDocument === frame.$iframe[0].contentDocument) {
-                        item.spineIdref = frame.spineItem.idref;
+                      idref = frame.spineItem.idref;
                     }
                 });
+                item.location = new ReadiumSDK.Models.BookmarkData(idref, cfi);
                 if (node.nodeName === "a") {
                     // getAttribute rather than .href, because .href relative URLs resolved to absolute
                     var href = node.getAttribute("href").trim();
@@ -2093,10 +2095,10 @@ ReadiumSDK.Views.ReaderView = function(options) {
                     // get bounding rectangle for audio/video
                     item.rectangle = {};
                     var rect = node.getBoundingClientRect();
-                    item.rectangle.topLeftX = Math.ceil(rect.left);
-                    item.rectangle.topLeftY = Math.ceil(rect.top);
-                    item.rectangle.bottomRightX = Math.ceil(rect.right);
-                    item.rectangle.bottomRightY = Math.ceil(rect.bottom);
+                    item.rectangle.left = Math.ceil(rect.left);
+                    item.rectangle.top = Math.ceil(rect.top);
+                    item.rectangle.right = Math.ceil(rect.right);
+                    item.rectangle.bottom = Math.ceil(rect.bottom);
 
                     if (node.src != "") {
                         item.links.push(node.getAttribute("src").trim());
@@ -2113,7 +2115,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
         return undefined;
     };
-    
+
     /**
      *
      * @param {string} rangeCfi
