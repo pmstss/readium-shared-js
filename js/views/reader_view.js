@@ -247,16 +247,21 @@ ReadiumSDK.Views.ReaderView = function(options) {
             self.trigger(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, $iframe, spineItem);
         });
 
-        _currentView.on(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, function( pageChangeData ){
+        _currentView.on(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, function( pageChangeData, preventPublicTrigger ){
 
             //we call on onPageChanged explicitly instead of subscribing to the ReadiumSDK.Events.PAGINATION_CHANGED by
             //mediaOverlayPlayer because we hve to guarantee that mediaOverlayPlayer will be updated before the host
             //application will be notified by the same ReadiumSDK.Events.PAGINATION_CHANGED event
             _mediaOverlayPlayer.onPageChanged(pageChangeData);
 
-            _.defer(function(){
-                self.trigger(ReadiumSDK.Events.PAGINATION_CHANGED, pageChangeData);
-            });
+            // This event trigger can be prevented if in some cases the page change action did not cause a view to redraw.
+            // Reading systems may do expensive operations on this event hook so we should not trigger it when the pagination state stayed the same.
+            if(!preventPublicTrigger){
+                _.defer(function(){
+                    self.trigger(ReadiumSDK.Events.PAGINATION_CHANGED, pageChangeData);
+                });
+            }
+
         });
 
         _currentView.on(ReadiumSDK.Events.FXL_VIEW_RESIZED, function(){
