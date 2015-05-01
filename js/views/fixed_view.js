@@ -171,7 +171,7 @@ ReadiumSDK.Views.FixedView = function(options, reader){
 
                 if (paginationRequest)
                 {
-                    onPagesLoaded(initiator, paginationRequest.spineItem, paginationRequest.elementId)
+                    onPagesLoaded(initiator, paginationRequest)
                 }
                 else
                 {
@@ -231,17 +231,19 @@ ReadiumSDK.Views.FixedView = function(options, reader){
 
     }
 
-    function onPagesLoaded(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
+    function onPagesLoaded(initiator, pageChangeData) {
 
         updateContentMetaSize();
         resizeBook(true);
+        onPaginationChanged(initiator, pageChangeData);
+    }
+
+    function onPaginationChanged(initiator, paginationRequest, preventPublicTrigger) {
+        paginationRequest = paginationRequest || {};
+        paginationRequest.initiator = initiator;
+        paginationRequest.paginationInfo = self.getPaginationInfo();
         window.setTimeout(function () {
-            self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, {
-                paginationInfo: self.getPaginationInfo(),
-                initiator: initiator,
-                spineItem: paginationRequest_spineItem,
-                elementId: paginationRequest_elementId
-            });
+            self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, paginationRequest, preventPublicTrigger);
         }, 60);
     }
 
@@ -483,7 +485,9 @@ ReadiumSDK.Views.FixedView = function(options, reader){
         updatePageSwitchDir(dir === 0 ? 0 : (_spread.spine.isRightToLeft() ? (dir === 1 ? 2 : 1) : dir), hasChanged);
 
         if (hasChanged) {
-            redraw(paginationRequest.initiator, paginationRequest);
+            redraw(paginationRequest.initiator, paginationRequest); // this will call onPaginationChanged
+        } else {
+            onPaginationChanged(paginationRequest.initiator, paginationRequest, true);
         }
     };
 
