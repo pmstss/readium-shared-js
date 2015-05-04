@@ -264,6 +264,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
         });
 
+        // automatically redraw annotations.
+        self.on(ReadiumSDK.Events.PAGINATION_CHANGED, _.debounce(function () {
+            self.redrawAnnotations();
+        }, 10, true));
+
+
         _currentView.on(ReadiumSDK.Events.FXL_VIEW_RESIZED, function(){
             self.trigger(ReadiumSDK.Events.FXL_VIEW_RESIZED);
         });
