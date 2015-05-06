@@ -1285,7 +1285,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * @returns {object | undefined} partial cfi object of the created highlight
      */
     this.addHighlight = function(spineIdRef, cfi, id, type, styles) {
-        return _annotationsManager.addHighlight(spineIdRef, cfi, id, type, styles) ;
+        return _annotationsManager.addHighlight(spineIdRef, cfi, id, type, styles, self.getFirstVisibleCfi(), self.getLastVisibleCfi()) ;
     };
 
     /**

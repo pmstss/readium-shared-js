@@ -202,13 +202,15 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
-    this.addHighlight = function(spineIdRef, partialCfi, id, type, styles) {
+    this.addHighlight = function(spineIdRef, partialCfi, id, type, styles, firstVisibleCfi, lastVisibleCfi) {
         for(var spine in liveAnnotations) {
             if (spines[spine].idref === spineIdRef) {
                 var annotationsForView = liveAnnotations[spine];
-                var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles);
-                if (annotation) {
-                    return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
+                if ((firstVisibleCfi === undefined && lastVisibleCfi === undefined) || this.cfiIsBetweenTwoCfis(partialCfi, firstVisibleCfi.contentCFI, lastVisibleCfi.contentCFI)) {
+                    var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles);
+                    if (annotation) {
+                        return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
+                    }
                 }
             }
         }
@@ -423,4 +425,41 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
     this.getAnnotationsElementSelector = function () {
         return 'div.highlight';
     };
+
+
+    //return an array of all numbers in the content cfi
+    this.parseContentCfi = function(cont) {
+        return cont.replace(/\[(.*?)\]/, "").split(/[\/,:]/).map(function(n) { return parseInt(n); }).filter(Boolean);
+    };
+
+    this.contentCfiComparator = function(cont1, cont2) {
+        cont1 = this.parseContentCfi(cont1);
+        cont2 = this.parseContentCfi(cont2);
+
+        //compare cont arrays looking for differences
+        for (var i=0; i<cont1.length; i++) {
+            if (cont1[i] > cont2[i]) {
+                return 1;
+            }
+            else if (cont1[i] < cont2[i]) {
+                return -1;
+            }
+        }
+
+        //no differences found, so confirm that cont2 did not have values we didn't check
+        if (cont1.length < cont2.length) {
+            return -1;
+        }
+
+        //cont arrays are identical
+        return 0;
+    };
+
+    // determine if a given Cfi falls between two other cfis.2
+    this.cfiIsBetweenTwoCfis = function (cfi, firstVisibleCfi, lastVisibleCfi) {
+        var first = this.contentCfiComparator(cfi, firstVisibleCfi);
+        var second = this.contentCfiComparator(cfi, lastVisibleCfi);
+        return first >= 0 && second <= 0;
+    };
+
 };
