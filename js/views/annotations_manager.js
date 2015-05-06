@@ -202,11 +202,12 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
-    this.addHighlight = function(spineIdRef, partialCfi, id, type, styles, firstVisibleCfi, lastVisibleCfi) {
+    this.addHighlight = function(spineIdRef, partialCfi, id, type, styles, options) {
         for(var spine in liveAnnotations) {
             if (spines[spine].idref === spineIdRef) {
                 var annotationsForView = liveAnnotations[spine];
-                if ((firstVisibleCfi === undefined && lastVisibleCfi === undefined) || this.cfiIsBetweenTwoCfis(partialCfi, firstVisibleCfi.contentCFI, lastVisibleCfi.contentCFI)) {
+                var isCfiVisible = _.undefined(options) ? false : this.cfiIsBetweenTwoCfis(partialCfi, options.firstVisibleCfi.contentCFI, options.lastVisibleCfi.contentCFI);
+                if (_.undefined(options) || isCfiVisible) {
                     var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles);
                     if (annotation) {
                         return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);

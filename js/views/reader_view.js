@@ -266,7 +266,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
         // automatically redraw annotations.
         self.on(ReadiumSDK.Events.PAGINATION_CHANGED, _.debounce(function () {
-            self.redrawAnnotations();
+            self.redrawAnnotations(annotationsOptions);
         }, 10, true));
 
 
@@ -1285,7 +1285,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * @returns {object | undefined} partial cfi object of the created highlight
      */
     this.addHighlight = function(spineIdRef, cfi, id, type, styles) {
-        return _annotationsManager.addHighlight(spineIdRef, cfi, id, type, styles, self.getFirstVisibleCfi(), self.getLastVisibleCfi()) ;
+        var options = getCfisForVisibleRegion();
+        return _annotationsManager.addHighlight(spineIdRef, cfi, id, type, styles, options);
     };
 
     /**
@@ -1769,7 +1770,12 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * Redraws all annotations
      */
     this.redrawAnnotations = function(){
-        _annotationsManager.redrawAnnotations();
+        var options = getCfisForVisibleRegion();
+        _annotationsManager.redrawAnnotations(options);
+    };
+
+    function getCfisForVisibleRegion() {
+        return {firstVisibleCfi: self.getFirstVisibleCfi(), lastVisibleCfi: self.getLastVisibleCfi()};
     };
 
     /**
