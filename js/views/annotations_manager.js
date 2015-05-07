@@ -117,7 +117,14 @@ The set of arguments passed to the event handling function is different though.
 ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
 
     var self = this;
+
+    // live annotations contains references to the annotation _module_ for visible spines
     var liveAnnotations = {};
+
+    // allAnnotations is the annotation _objects_ for visible spines
+    var allAnnotations = {};
+
+
     var spines = {};
     var proxy = proxyObj;
     var annotationCSSUrl = options.annotationCSSUrl;
@@ -169,12 +176,14 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
     this.attachAnnotations = function($iframe, spineItem, loadedSpineItems) {
         var epubDocumentFrame = $iframe[0];
         liveAnnotations[spineItem.index] = new EpubAnnotationsModule(epubDocumentFrame, self, annotationCSSUrl, spineItem);
+        allAnnotations[spineItem.index] = {};
         spines[spineItem.index] = spineItem;
 
         // check to see which spine indicies can be culled depending on the currently loaded spine items
         for(var spineIndex in liveAnnotations) {
             if (liveAnnotations.hasOwnProperty(spineIndex) && !_.contains(loadedSpineItems, spines[spineIndex])) {
                 delete liveAnnotations[spineIndex];
+                delete allAnnotations[spineIndex];
             }
         }
     };
@@ -202,12 +211,15 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
+    // @PROGREND
     this.addHighlight = function(spineIdRef, partialCfi, id, type, styles, options) {
         for(var spine in liveAnnotations) {
             if (spines[spine].idref === spineIdRef) {
                 var annotationsForView = liveAnnotations[spine];
-                var isCfiVisible = _.undefined(options) ? false : this.cfiIsBetweenTwoCfis(partialCfi, options.firstVisibleCfi.contentCFI, options.lastVisibleCfi.contentCFI);
-                if (_.undefined(options) || isCfiVisible) {
+                var allAnnotationsForView = allAnnotations[spine];
+                allAnnotationsForView[id] = {id: id, spineIdRef:spineIdRef, partialCfi: partialCfi, type: type, styles: styles};
+                var isCfiVisible = _.isUndefined(options) ? false : this.cfiIsBetweenTwoCfis(partialCfi, options.firstVisibleCfi.contentCFI, options.lastVisibleCfi.contentCFI);
+                if (_.isUndefined(options) || isCfiVisible) {
                     var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles);
                     if (annotation) {
                         return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
@@ -218,6 +230,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
+    // @PROGREND
     this.addPlaceholder = function(spineIdRef, partialCfi, $element, id, type, styles) {
         for(var spine in liveAnnotations) {
             if (spines[spine].idref === spineIdRef) {
@@ -232,6 +245,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
+    // @PROGREND
     this.addHighlightsForText = function(text, spineIdRef, type, styles) {
         var bookmarks = [];
         for(var spine in liveAnnotations) {
@@ -247,6 +261,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
+    // @PROGREND
     this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
         var bookmarks = [];
         for(var spine in liveAnnotations) {
@@ -262,6 +277,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
+    // @PROGREND
     this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
         var bookmarks = [];
         for(var spine in liveAnnotations) {
@@ -277,6 +293,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
+    // @PROGREND
     this.removeHighlight = function(id) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -286,6 +303,8 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+
+    // @PROGREND
     this.removeHighlightsByType = function(type) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -295,6 +314,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    // @PROGREND
     this.getHighlight = function(id) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -306,6 +326,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    // @PROGREND
     this.updateAnnotation = function(id, type, styles) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -318,6 +339,7 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    // @PROGREND
     this.replaceAnnotation = function(id, cfi, type, styles) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -330,11 +352,22 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
-    this.redrawAnnotations = function(){
+    // @PROGREND
+    // redraw gets called on pagination change, so for progressive rendering we may have to add annotations that were previously not visible.
+    this.redrawAnnotations = function(options){
         for(var spine in liveAnnotations){
+            // get highlights, remove them, and then add the visible highlights.
+            removeAllHighlights(liveAnnotations[spine]);
+            _.each(allAnnotations[spine], function (annotation){
+                var isCfiVisible = _.isUndefined(options) ? false : self.cfiIsBetweenTwoCfis(annotation.partialCfi, options.firstVisibleCfi.contentCFI, options.lastVisibleCfi.contentCFI);
+                if (isCfiVisible) {
+                    self.addHighlight(annotation.spineIdRef, annotation.partialCfi, annotation.id, annotation.type, annotation.styles);
+                }
+            });
             liveAnnotations[spine].redraw();
         }
     };
+
 
     this.updateAnnotationView = function(id, styles) {
         var result = undefined;
@@ -372,6 +405,8 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+
+    // @PROGREND ??
     this.getAnnotationMidpoints = function($elementSpineItemCollection){
         var output = [];
 
@@ -427,6 +462,13 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return 'div.highlight';
     };
 
+
+    function removeAllHighlights(annotationModule) { 
+        console.debug("Removing all highlights..");
+        _.each(annotationModule.getHighlights(), function(annotation) {
+            annotationModule.removeHighlight(annotation.id);
+        });
+    };
 
     //return an array of all numbers in the content cfi
     this.parseContentCfi = function(cont) {

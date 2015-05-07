@@ -266,6 +266,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
         // automatically redraw annotations.
         self.on(ReadiumSDK.Events.PAGINATION_CHANGED, _.debounce(function () {
+            var annotationsOptions = getCfisForVisibleRegion();
             self.redrawAnnotations(annotationsOptions);
         }, 10, true));
 
