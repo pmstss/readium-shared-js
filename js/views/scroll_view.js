@@ -276,6 +276,22 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
         }
     }
 
+    function cancelScrolling () {
+        var scrollerWidth = _$contentFrame[0].offsetWidth - _$contentFrame[0].scrollWidth;
+        _$contentFrame.css({
+            "-webkit-overflow-scrolling": "",
+            "overflow-y": "hidden",
+            "padding-right": scrollerWidth + "px"
+        });
+        setTimeout(function () {
+            _$contentFrame.css({
+                "-webkit-overflow-scrolling": "touch",
+                "overflow-y": "auto",
+                "padding-right": ""
+            });
+        }, 0);
+    }
+
     function scrollTo(offset, pageRequest) {
 
         _$contentFrame[0].scrollTop = offset;
@@ -290,6 +306,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
         var scrollPos = scrollTop();
         var rangeBeforeResize = getPageViewRange(pageView);
 
+        cancelScrolling();
         updatePageViewSize(pageView);
 
         var rangeAfterResize = getPageViewRange(pageView);
@@ -547,6 +564,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
 
     function updatePageViewSize(pageView) {
 
+        cancelScrolling();
         if(pageView.currentSpineItem().isFixedLayout()) {
             pageView.scaleToWidth(_$contentFrame.width());
         }
