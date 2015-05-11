@@ -203,7 +203,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         }
         return undefined;
     };
-
     
     this.addHighlight = function(spineIdRef, partialCfi, id, type, styles, options) {
         for(var spine in liveAnnotations) {
@@ -217,7 +216,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         }
         return undefined;
     };
-
     
     this.addPlaceholder = function(spineIdRef, partialCfi, $element, id, type, styles) {
         for(var spine in liveAnnotations) {
@@ -233,7 +231,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
-    
     this.addHighlightsForText = function(text, spineIdRef, type, styles) {
         var bookmarks = [];
         for(var spine in liveAnnotations) {
@@ -249,7 +246,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return undefined;
     };
 
-    
     this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
         var bookmarks = [];
         for(var spine in liveAnnotations) {
@@ -264,7 +260,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         }
         return undefined;
     };
-
     
     this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
         var bookmarks = [];
@@ -285,14 +280,10 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         var result = undefined;
         for(var spine in liveAnnotations) {
             var annotationsForView = liveAnnotations[spine];
-            // remove from cached list as well.
-            delete allAnnotations[spine][id];
             result  = annotationsForView.removeHighlight(id);
         }
         return result;
     };
-
-
     
     this.removeHighlightsByType = function(type) {
         var result = undefined;
@@ -302,7 +293,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         }
         return result;
     };
-
     
     this.getHighlight = function(id) {
         var result = undefined;
@@ -315,7 +305,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
-    
     this.updateAnnotation = function(id, type, styles) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -328,7 +317,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
-    
     this.replaceAnnotation = function(id, cfi, type, styles) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -341,14 +329,12 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
-    
     // redraw gets called on pagination change, so for progressive rendering we may have to add annotations that were previously not visible.
     this.redrawAnnotations = function(options){
         for(var spine in liveAnnotations) {
             liveAnnotations[spine].redraw(options);
         }
     };
-
 
     this.updateAnnotationView = function(id, styles) {
         var result = undefined;
