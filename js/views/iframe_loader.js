@@ -113,6 +113,7 @@ ReadiumSDK.Views.IFrameLoader = function() {
             $('svg', doc).load(function(){
                 console.log('loaded');
             });
+            $(iframe).show();
             callback.call(context, true, attachedData);
         });
     };
