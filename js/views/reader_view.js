@@ -266,8 +266,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
         // automatically redraw annotations.
         self.on(ReadiumSDK.Events.PAGINATION_CHANGED, _.debounce(function () {
-            var annotationsOptions = getCfisForVisibleRegion();
-            self.redrawAnnotations(annotationsOptions);
+            self.redrawAnnotations();
         }, 10, true));
 
 
@@ -1771,13 +1770,15 @@ ReadiumSDK.Views.ReaderView = function(options) {
      * Redraws all annotations
      */
     this.redrawAnnotations = function(){
-        var options = getCfisForVisibleRegion();
-        _annotationsManager.redrawAnnotations(options);
+        if (_currentView) {
+            var options = getCfisForVisibleRegion();
+            _annotationsManager.redrawAnnotations(options);
+        }
     };
 
     function getCfisForVisibleRegion() {
         return {firstVisibleCfi: self.getFirstVisibleCfi(), lastVisibleCfi: self.getLastVisibleCfi()};
-    };
+    }
 
     /**
      * Updates an annotation to use the supplied styles
