@@ -76,9 +76,9 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
         _$contentFrame.css("overflow-y", "auto");
         _$contentFrame.css("overflow-x", "hidden");
         _$contentFrame.css("-webkit-overflow-scrolling", "touch");
-        _$contentFrame.css("width", "100%");
-        _$contentFrame.css("height", "100%");
-        _$contentFrame.css("position", "relative");
+        // _$contentFrame.css("width", "100%");
+        // _$contentFrame.css("height", "100%");
+        _$contentFrame.css("position", "absolute");
 
         var settings = reader.viewerSettings();
         if (!settings || typeof settings.enableGPUHardwareAccelerationCSS3D === "undefined")
@@ -276,6 +276,22 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
         }
     }
 
+    function cancelScrolling () {
+        var scrollerWidth = _$contentFrame[0].offsetWidth - _$contentFrame[0].scrollWidth;
+        _$contentFrame.css({
+            "-webkit-overflow-scrolling": "",
+            "overflow-y": "hidden",
+            "padding-right": scrollerWidth + "px"
+        });
+        setTimeout(function () {
+            _$contentFrame.css({
+                "-webkit-overflow-scrolling": "touch",
+                "overflow-y": "auto",
+                "padding-right": ""
+            });
+        }, 0);
+    }
+
     function scrollTo(offset, pageRequest) {
 
         _$contentFrame[0].scrollTop = offset;
@@ -290,6 +306,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
         var scrollPos = scrollTop();
         var rangeBeforeResize = getPageViewRange(pageView);
 
+        cancelScrolling();
         updatePageViewSize(pageView);
 
         var rangeAfterResize = getPageViewRange(pageView);
@@ -547,6 +564,7 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
 
     function updatePageViewSize(pageView) {
 
+        cancelScrolling();
         if(pageView.currentSpineItem().isFixedLayout()) {
             pageView.scaleToWidth(_$contentFrame.width());
         }
@@ -1367,6 +1385,18 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
 
     };
 
+    this.getVisibleElements = function(selector, includeSpineItem) {
+        var elements = [];
+        forEachItemView(function (pageView) {
+            if (includeSpineItem) {
+                elements.push({elements: pageView.getVisibleElements(selector), spineItem: pageView.currentSpineItem()});
+            } else {
+                elements = _.flatten([elements, pageView.getVisibleElements(selector)], true);
+            }
+        });
+        return elements;
+    };
+
     this.getVisibleElementsWithFilter = function(filterFunction) {
 
         console.warn('getVisibleElementsWithFilter: Not implemented yet for scroll_view');
@@ -1378,22 +1408,31 @@ ReadiumSDK.Views.ScrollView = function(options, isContinuousScroll, reader){
     };
 
     this.getElements = function(spineItemIdref, selector) {
-
-        console.warn('getElements: Not implemented yet for scroll_view');
+        var pageView = findPageViewForSpineItem(spineItemIdref);
+        if (pageView) {
+            return pageView.getElements(spineItemIdref, selector);
+        }
     };
 
     this.isNodeFromRangeCfiVisible = function (spineIdref, partialCfi) {
-        
-        console.warn('isNodeFromRangeCfiVisible: Not implemented yet for scroll_view');
+        var pageView = findPageViewForSpineItem(spineIdRef);
+        if (pageView) {
+            return pageView.isNodeFromRangeCfiVisible(spineIdRef, partialCfi);
+        }
     };
 
     this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
-        
-        console.warn('isVisibleSpineItemElementCfi: Not implemented yet for scroll_view');
+        var pageView = findPageViewForSpineItem(spineIdRef);
+        if (pageView) {
+            return pageView.isVisibleSpineItemElementCfi(spineIdRef, partialCfi);
+        }
     };
 
     this.getNodeRangeInfoFromCfi = function(spineIdRef, partialCfi){
-        console.warn('getNodeRangeInfoFromCfi: Not implemented yet for scroll_view');
+        var pageView = findPageViewForSpineItem(spineIdRef);
+        if (pageView) {
+            return pageView.isVisibleSpineItemElementCfi(spineIdRef, partialCfi);
+        }
     };
 
     this.getLoadedContentFrames = function () {
