@@ -336,6 +336,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
     };
 
     this.getAnnotationsElementSelector = function () {
-        return 'div.highlight';
+        return 'div.highlight, div.highlight-border';
     };
 };
