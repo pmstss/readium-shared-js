@@ -958,8 +958,25 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return 0;
     }
 
+    // TODODM: determine the optimal step size and the column/page size
+    function getFirstVisibleElementCfiWithStepperScanner() {
+        var STEP = 5;
+        for (var y = 0; y < 300; y = y + STEP) { // TODO
+            for (var x = 0; x < 300; x = x + STEP) { // TODO
+                var element = self.getElementFromPoint(x,y);
+                if (element !== self.getRootElement()) {
+                    return self.getRangeCfiFromPoints(x,y,x+1,y+1);
+                }
+            }
+        }
+        return undefined;
+    };
+
     this.getFirstVisibleCfi = function () {
-        return self.getVisibleCfiFromPoint(1, 1, false, getPaginationState());
+        // get the first element CFIs two ways and then figure out which one is actually first.
+        var possibleFirstElementCfis = [self.getVisibleCfiFromPoint(1, 1, false, getPaginationState()), getFirstVisibleElementCfiWithStepperScanner()];
+        possibleFirstElementCfis.sort(contentCfiComparator);
+        return possibleFirstElementCfis[0];
     };
 
     this.getLastVisibleCfi = function () {
@@ -1435,6 +1452,44 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         return undefined;
     };
+
+
+    // dmitry debug 
+    // dmitry debug     
+    // dmitry debug 
+    // dmitry debug     
+    // dmitry debug 
+    // dmitry debug     
+
+    parseContentCfi = function(cont) {
+        return cont.replace(/\[(.*?)\]/, "").split(/[\/,:]/).map(function(n) { return parseInt(n); }).filter(Boolean);
+    };
+
+    contentCfiComparator = function(cont1, cont2) {
+        cont1 = this.parseContentCfi(cont1);
+        cont2 = this.parseContentCfi(cont2);
+
+        //compare cont arrays looking for differences
+        for (var i=0; i<cont1.length; i++) {
+            if (cont1[i] > cont2[i]) {
+                return 1;
+            }
+            else if (cont1[i] < cont2[i]) {
+                return -1;
+            }
+        }
+
+        //no differences found, so confirm that cont2 did not have values we didn't check
+        if (cont1.length < cont2.length) {
+            return -1;
+        }
+
+        //cont arrays are identical
+        return 0;
+    };
+
+
+    // end dmitry debug
 
     if (debugMode) {
         //used for visual debug atm
