@@ -961,10 +961,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     // TODODM: determine the optimal step size and the column/page size
     function getFirstVisibleElementCfiWithStepperScanner() {
         var STEP = 5;
-        for (var y = 0; y < 300; y = y + STEP) { // TODO
-            for (var x = 0; x < 300; x = x + STEP) { // TODO
+        for (var y = 0; y < $viewport.height(); y = y + STEP) { // TODO
+            for (var x = 0; x < getColumnFullWidth(); x = x + STEP) { // TODO
                 var element = self.getElementFromPoint(x,y);
-                if (element !== self.getRootElement()) {
+                if (_.isElement(element) && element !== self.getRootElement()) {
                     return self.getRangeCfiFromPoints(x,y,x+1,y+1);
                 }
             }
