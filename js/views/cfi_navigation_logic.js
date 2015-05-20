@@ -973,9 +973,22 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     };
 
     this.getFirstVisibleCfi = function () {
-        // get the first element CFIs two ways and then figure out which one is actually first.
-        var possibleFirstElementCfis = [self.getVisibleCfiFromPoint(1, 1, false, getPaginationState()), getFirstVisibleElementCfiWithStepperScanner()];
+        // get a few possible guesses for what the first element is, then generate the CFIs for each element
+        // then sort CFIs by their position within the DOM tree and pick the first one.
+
+        // TODODM: not sure what visibleContentOffsets actually mean and if this is correct.
+        var visibleContentOffsets = {top: 0, bottom: $iframe.height()};
+        var firstVisibleTextElement = self.getVisibleTextElements(visibleContentOffsets)[0]
+        var cfiForFirstTextElement = self.getCfiForElement(firstVisibleTextElement.element);
+
+        var cfiDiscoveredByStepperFunction = getFirstVisibleElementCfiWithStepperScanner();
+
+        var cfiFromPoint = self.getVisibleCfiFromPoint(1, 1, false, getPaginationState());
+
+        var possibleFirstElementCfis = [cfiForFirstTextElement, cfiDiscoveredByStepperFunction, cfiFromPoint];
+
         possibleFirstElementCfis.sort(contentCfiComparator);
+        
         return possibleFirstElementCfis[0];
     };
 
