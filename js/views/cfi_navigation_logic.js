@@ -828,6 +828,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(document);
         var firstVisibleCaretRange = document.caretRangeFromPoint(x,y);
         var elementFromPoint = document.elementFromPoint(x, y);
+        // @jccr hey should this be self.getRootDocument instead?
         var invalidElementFromPoint = !elementFromPoint || elementFromPoint === document.documentElement;
 
         if (precisePoint) {
@@ -958,11 +959,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return 0;
     }
 
-    // TODODM: determine the optimal step size and the column/page size
+    // TODODM: determine the optimal step size
     function getFirstVisibleElementCfiWithStepperScanner() {
         var STEP = 5;
-        for (var y = 0; y < $viewport.height(); y = y + STEP) { // TODO
-            for (var x = 0; x < getColumnFullWidth(); x = x + STEP) { // TODO
+        for (var y = 0; y < $viewport.height(); y = y + STEP) { 
+            for (var x = 0; x < getColumnFullWidth(); x = x + STEP) {
                 var element = self.getElementFromPoint(x,y);
                 if (_.isElement(element) && element !== self.getRootElement()) {
                     return self.getRangeCfiFromPoints(x,y,x+1,y+1);
@@ -972,11 +973,26 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return undefined;
     };
 
+
+
+    function getLastVisibleElementCfiWithStepperScanner() {
+        var STEP = 5;
+        for (var y =  $viewport.height(); y > 0; y = y - STEP) { 
+            for (var x = getColumnFullWidth(); x > 0; x = x - STEP) {
+                var element = self.getElementFromPoint(x,y);
+                if (_.isElement(element) && element !== self.getRootElement()) {
+                    return self.getRangeCfiFromPoints(x,y,x+1,y+1);
+                }
+            }
+        }
+        return undefined;
+    };
+
+
     this.getFirstVisibleCfi = function () {
         // get a few possible guesses for what the first element is, then generate the CFIs for each element
         // then sort CFIs by their position within the DOM tree and pick the first one.
 
-        // TODODM: not sure what visibleContentOffsets actually mean and if this is correct.
         var firstVisibleTextElement = self.getVisibleTextElements(getVisibleContentOffsets)[0];
         var cfiForFirstTextElement = _.isUndefined(firstVisibleTextElement) ? undefined : self.getCfiForElement(firstVisibleTextElement.element);
 
@@ -988,16 +1004,21 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         possibleFirstElementCfis.sort(contentCfiComparator);
         
-        return possibleFirstElementCfis[0];
+        return _.first(possibleFirstElementCfis);
     };
 
     this.getLastVisibleCfi = function () {
-        return self.getVisibleCfiFromPoint(
+        var cfiDiscoveredByStepperFunction = getLastVisibleElementCfiWithStepperScanner();
+        var cfiFromPoint = self.getVisibleCfiFromPoint(
             getRootDocumentClientWidth() - 1,
             getRootDocumentClientHeight() - 1,
             false,
             getPaginationState()
         );
+
+        var possibleLastElementCfis = [cfiDiscoveredByStepperFunction, cfiFromPoint];
+        possibleLastElementCfis.sort(contentCfiComparator);
+        return _.last(possibleLastElementCfis);
     };
 
     function generateCfiFromDomRange(range) {
