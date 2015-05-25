@@ -965,7 +965,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         for (var y = 0; y < $viewport.height(); y = y + STEP) { 
             for (var x = 0; x < getColumnFullWidth(); x = x + STEP) {
                 var element = self.getElementFromPoint(x,y);
-                if (_.isElement(element) && element !== self.getRootElement()) {
+                var rect = element ? element.getBoundingClientRect() : null;
+
+                if (_.isElement(element) && element !== self.getRootElement() && rect.left > 0) {
                     return self.getRangeCfiFromPoints(x,y,x+1,y+1);
                 }
             }
@@ -980,7 +982,8 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         for (var y =  $viewport.height(); y > 0; y = y - STEP) { 
             for (var x = getColumnFullWidth(); x > 0; x = x - STEP) {
                 var element = self.getElementFromPoint(x,y);
-                if (_.isElement(element) && element !== self.getRootElement()) {
+                var rect = element ? element.getBoundingClientRect() : null;
+                if (_.isElement(element) && element !== self.getRootElement() && rect.left < $viewport.width()) {
                     return self.getRangeCfiFromPoints(x,y,x+1,y+1);
                 }
             }
