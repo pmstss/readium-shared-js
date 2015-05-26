@@ -945,6 +945,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             range = document.createRange();
         range.setStart(start.startContainer, start.startOffset);
         range.setEnd(end.startContainer, end.startOffset);
+        // if we're looking at a text node create a nice range (n, n+1)
+        if (start.startContainer === start.endContainer && start.startContainer.nodeType === Node.TEXT_NODE && end.startContainer.length > end.startOffset+1) {
+            range.setEnd(end.startContainer, end.startOffset+1);
+        }
         return generateCfiFromDomRange(range);
     };
 
@@ -967,7 +971,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 var element = self.getElementFromPoint(x,y);
                 var rect = element ? element.getBoundingClientRect() : null;
 
-                if (_.isElement(element) && element !== self.getRootElement() && rect.left > 0) {
+                if (_.isElement(element) && element !== self.getRootElement() && rect.left >= 0) {
                     return self.getRangeCfiFromPoints(x,y,x+1,y+1);
                 }
             }
@@ -1007,7 +1011,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             for (var x = getColumnFullWidth(); x > 0; x = x - STEP) {
                 var element = self.getElementFromPoint(x,y);
                 var rect = element ? element.getBoundingClientRect() : null;
-                if (_.isElement(element) && element !== self.getRootElement() && rect.right < $viewport.width()) {
+                if (_.isElement(element) && element !== self.getRootElement() && rect.right <= $viewport.width()) {
                     return self.getRangeCfiFromPoints(x,y,x+1,y+1);
                 }
             }
