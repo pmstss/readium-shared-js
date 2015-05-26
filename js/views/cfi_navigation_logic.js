@@ -976,6 +976,30 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     };
 
 
+    // get an array of visible text elements and then select one based on the func supplied
+    // and generate a CFI for the first visible text subrange.
+    function getVisibleTextRangeCfiForTextElementSelectedByFunc(func) {
+        var visibleTextElement = func(self.getVisibleTextElements());
+        var element = visibleTextElement.element || undefined;
+        var textNode = _.first(element.childNodes);
+        if (!_.isUndefined(textNode)) {
+            var visibleRange = getFirstVisibleTextNodeRange(textNode);
+            var range = createRange();
+            range.setStart(textNode, visibleRange.start);
+            range.setEnd(textNode, visibleRange.end);
+            return generateCfiFromDomRange(range);
+        }
+        return undefined;
+    };
+
+
+    function getLastVisibleTextRangeCfi() {
+        return getVisibleTextRangeCfiForTextElementSelectedByFunc(_.last);
+    };
+
+    function getFirstVisibleTextRangeCfi() {
+        return getVisibleTextRangeCfiForTextElementSelectedByFunc(_.first);
+    };
 
     function getLastVisibleElementCfiWithStepperScanner() {
         var STEP = 5;
@@ -983,7 +1007,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             for (var x = getColumnFullWidth(); x > 0; x = x - STEP) {
                 var element = self.getElementFromPoint(x,y);
                 var rect = element ? element.getBoundingClientRect() : null;
-                if (_.isElement(element) && element !== self.getRootElement() && rect.left < $viewport.width()) {
+                if (_.isElement(element) && element !== self.getRootElement() && rect.right < $viewport.width()) {
                     return self.getRangeCfiFromPoints(x,y,x+1,y+1);
                 }
             }
@@ -995,9 +1019,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     this.getFirstVisibleCfi = function () {
         // get a few possible guesses for what the first element is, then generate the CFIs for each element
         // then sort CFIs by their position within the DOM tree and pick the first one.
-
-        var firstVisibleTextElement = self.getVisibleTextElements(getVisibleContentOffsets)[0];
-        var cfiForFirstTextElement = _.isUndefined(firstVisibleTextElement) ? undefined : self.getCfiForElement(firstVisibleTextElement.element);
+        var cfiForFirstTextElement = getFirstVisibleTextRangeCfi();
 
         var cfiDiscoveredByStepperFunction = getFirstVisibleElementCfiWithStepperScanner();
 
@@ -1011,16 +1033,20 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     };
 
     this.getLastVisibleCfi = function () {
+        var lastVisibleTextNodeCfi = getLastVisibleTextRangeCfi();
         var cfiDiscoveredByStepperFunction = getLastVisibleElementCfiWithStepperScanner();
-        var cfiFromPoint = self.getVisibleCfiFromPoint(
-            getRootDocumentClientWidth() - 1,
-            getRootDocumentClientHeight() - 1,
-            false,
-            getPaginationState()
-        );
 
-        var possibleLastElementCfis = [cfiDiscoveredByStepperFunction, cfiFromPoint];
+        // var cfiFromPoint = self.getVisibleCfiFromPoint(
+        //     getRootDocumentClientWidth() - 1,
+        //     getRootDocumentClientHeight() - 1,
+        //     false,
+        //     getPaginationState()
+        // );
+
+        var possibleLastElementCfis = [cfiDiscoveredByStepperFunction/*, cfiFromPoint*/, lastVisibleTextNodeCfi];
+
         possibleLastElementCfis.sort(contentCfiComparator);
+
         return _.last(possibleLastElementCfis);
     };
 
