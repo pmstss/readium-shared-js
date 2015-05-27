@@ -808,27 +808,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     };
 
 
-    //function findFirstVisibleCaretRange(document) {
-    //    var range = document.caretRangeFromPoint(0,0);
-    //    if (typeof document.msElementsFromRect !== "undefined"){
-    //
-    //    } else {
-    //
-    //    }
-    //}
-
-    function firstTextNode(document) {
-        return $("body", document).find(":not(iframe)").contents().filter(function () {
-            return isValidTextNode(this);
-        })[0];
-    }
-
-    this.getVisibleCfiFromPoint = function (x, y, precisePoint, paginationState) {
+    this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
         var document = self.getRootDocument();
         ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(document);
         var firstVisibleCaretRange = document.caretRangeFromPoint(x,y);
         var elementFromPoint = document.elementFromPoint(x, y);
-        // @jccr hey should this be self.getRootDocument instead?
         var invalidElementFromPoint = !elementFromPoint || elementFromPoint === document.documentElement;
 
         if (precisePoint) {
@@ -842,28 +826,30 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             if ((x < testRect.left || x > testRect.right) || (y < testRect.top || y > testRect.bottom)) {
                 return null;
             }
-        } else if(paginationState) {
-
-            if (invalidElementFromPoint && paginationState === 2) {
-                //handle when targeting the very end of the document
-                elementFromPoint = $('*', document.body).last()[0];
-                if (elementFromPoint.lastChild && elementFromPoint.lastChild.nodeType === Node.TEXT_NODE) {
-                    elementFromPoint = elementFromPoint.lastChild;
-                }
-                firstVisibleCaretRange = createRange();
-                firstVisibleCaretRange.setStart(elementFromPoint, elementFromPoint.length - 1);
-                firstVisibleCaretRange.setEnd(elementFromPoint, elementFromPoint.length);
-            } else if (invalidElementFromPoint && paginationState === 1) {
-                //handle when targeting the very start of the document
-                elementFromPoint = firstTextNode(document);
-                if (!elementFromPoint || elementFromPoint.length === 0) {
-                    elementFromPoint = document.body.firstElementChild;
-                }
-                firstVisibleCaretRange = createRange();
-                firstVisibleCaretRange.setStart(elementFromPoint, 0);
-                firstVisibleCaretRange.setEnd(elementFromPoint, 1);
-            }
         }
+
+        //else if(paginationState) {
+        //
+        //    if (invalidElementFromPoint && paginationState === 2) {
+        //        //handle when targeting the very end of the document
+        //        elementFromPoint = $('*', document.body).last()[0];
+        //        if (elementFromPoint.lastChild && elementFromPoint.lastChild.nodeType === Node.TEXT_NODE) {
+        //            elementFromPoint = elementFromPoint.lastChild;
+        //        }
+        //        firstVisibleCaretRange = createRange();
+        //        firstVisibleCaretRange.setStart(elementFromPoint, elementFromPoint.length - 1);
+        //        firstVisibleCaretRange.setEnd(elementFromPoint, elementFromPoint.length);
+        //    } else if (invalidElementFromPoint && paginationState === 1) {
+        //        //handle when targeting the very start of the document
+        //        elementFromPoint = firstTextNode(document);
+        //        if (!elementFromPoint || elementFromPoint.length === 0) {
+        //            elementFromPoint = document.body.firstElementChild;
+        //        }
+        //        firstVisibleCaretRange = createRange();
+        //        firstVisibleCaretRange.setStart(elementFromPoint, 0);
+        //        firstVisibleCaretRange.setEnd(elementFromPoint, 1);
+        //    }
+        //}
 
         if (!firstVisibleCaretRange) {
             if (invalidElementFromPoint) {
@@ -982,10 +968,19 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
     // get an array of visible text elements and then select one based on the func supplied
     // and generate a CFI for the first visible text subrange.
-    function getVisibleTextRangeCfiForTextElementSelectedByFunc(func) {
-        var visibleTextElement = func(self.getVisibleTextElements());
-        var element = visibleTextElement.element || undefined;
-        var textNode = _.first(element.childNodes);
+    function getVisibleTextRangeCfiForTextElementSelectedByFunc(pickerFunc) {
+        var visibleLeafNode = pickerFunc(self.getVisibleLeafNodes());
+        var element = visibleLeafNode.element || undefined;
+
+        var visibleTextNodes = [];
+        _.each(element.childNodes, function(node){
+            if(isValidTextNode(node)){
+                visibleTextNodes.push(node);
+            }
+        });
+
+        var textNode = pickerFunc(visibleTextNodes);
+
         if (!_.isUndefined(textNode)) {
             var visibleRange = getFirstVisibleTextNodeRange(textNode);
             var range = createRange();
@@ -993,7 +988,8 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             range.setEnd(textNode, visibleRange.end);
             return generateCfiFromDomRange(range);
         }
-        return undefined;
+
+        return self.getCfiForElement(element);
     };
 
 
@@ -1021,37 +1017,39 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
 
     this.getFirstVisibleCfi = function () {
-        // get a few possible guesses for what the first element is, then generate the CFIs for each element
-        // then sort CFIs by their position within the DOM tree and pick the first one.
-        var cfiForFirstTextElement = getFirstVisibleTextRangeCfi();
-
-        var cfiDiscoveredByStepperFunction = getFirstVisibleElementCfiWithStepperScanner();
-
-        var cfiFromPoint = self.getVisibleCfiFromPoint(1, 1, false, getPaginationState());
-
-        var possibleFirstElementCfis = [cfiForFirstTextElement, cfiDiscoveredByStepperFunction, cfiFromPoint];
-
-        possibleFirstElementCfis.sort(contentCfiComparator);
-        
-        return _.first(possibleFirstElementCfis);
+        return getFirstVisibleTextRangeCfi();
+        //// get a few possible guesses for what the first element is, then generate the CFIs for each element
+        //// then sort CFIs by their position within the DOM tree and pick the first one.
+        //var cfiForFirstTextElement = getFirstVisibleTextRangeCfi();
+        //
+        //var cfiDiscoveredByStepperFunction = getFirstVisibleElementCfiWithStepperScanner();
+        //
+        //var cfiFromPoint = self.getVisibleCfiFromPoint(1, 1, false, getPaginationState());
+        //
+        //var possibleFirstElementCfis = [cfiForFirstTextElement, cfiDiscoveredByStepperFunction, cfiFromPoint];
+        //
+        //possibleFirstElementCfis.sort(contentCfiComparator);
+        //
+        //return _.first(possibleFirstElementCfis);
     };
 
     this.getLastVisibleCfi = function () {
-        var lastVisibleTextNodeCfi = getLastVisibleTextRangeCfi();
-        var cfiDiscoveredByStepperFunction = getLastVisibleElementCfiWithStepperScanner();
-
-        // var cfiFromPoint = self.getVisibleCfiFromPoint(
-        //     getRootDocumentClientWidth() - 1,
-        //     getRootDocumentClientHeight() - 1,
-        //     false,
-        //     getPaginationState()
-        // );
-
-        var possibleLastElementCfis = [cfiDiscoveredByStepperFunction/*, cfiFromPoint*/, lastVisibleTextNodeCfi];
-
-        possibleLastElementCfis.sort(contentCfiComparator);
-
-        return _.last(possibleLastElementCfis);
+        return getLastVisibleTextRangeCfi();
+        //var lastVisibleTextNodeCfi = getLastVisibleTextRangeCfi();
+        //var cfiDiscoveredByStepperFunction = getLastVisibleElementCfiWithStepperScanner();
+        //
+        //// var cfiFromPoint = self.getVisibleCfiFromPoint(
+        ////     getRootDocumentClientWidth() - 1,
+        ////     getRootDocumentClientHeight() - 1,
+        ////     false,
+        ////     getPaginationState()
+        //// );
+        //
+        //var possibleLastElementCfis = [cfiDiscoveredByStepperFunction/*, cfiFromPoint*/, lastVisibleTextNodeCfi];
+        //
+        //possibleLastElementCfis.sort(contentCfiComparator);
+        //
+        //return _.last(possibleLastElementCfis);
     };
 
     function generateCfiFromDomRange(range) {
@@ -1435,9 +1433,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return visibleElements;
     };
 
-    this.getVisibleTextElements = function (visibleContentOffsets) {
+    this.getVisibleLeafNodes = function (visibleContentOffsets) {
 
-        var $elements = this.getTextElements($("body", this.getRootElement()));
+        var $elements = this.getLeafNodeElements($("body", this.getRootElement()));
 
         return this.getVisibleElements($elements, visibleContentOffsets);
     };
@@ -1469,36 +1467,48 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return $elements;
     };
 
-    this.getTextElements = function ($root) {
+    this.getLeafNodeElements = function ($root) {
 
-        var $textElements = [];
+        var nodeIterator = document.createNodeIterator(
+            $root[0],
+            NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: function (node) {
+                    //a "leaf node" here is an element with no child elements and no valid text nodes as children
+                    var isLeafNode = node.nodeType === Node.ELEMENT_NODE && !node.childElementCount && !isValidTextNodeContent(node.textContent);
+                    return (isValidTextNode(node) || isLeafNode) ?  NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                }
+            },
+            false
+        );
 
-        $root.find(":not(iframe)").contents().each(function () {
+        var $leafNodeElements = [];
 
-            if (isValidTextNode(this)) {
-                $textElements.push($(this).parent());
-            }
+        var node;
+        while ((node = nodeIterator.nextNode())) {
+            $leafNodeElements.push((node.nodeType === Node.TEXT_NODE) ? $(node).parent() : $(node));
+        }
 
-        });
-
-        return $textElements;
-
+        return $leafNodeElements;
     };
 
     function isValidTextNode(node) {
 
         if (node.nodeType === Node.TEXT_NODE) {
 
-            // Heuristic to find a text node with actual text
-            // If we don't do this, we may get a reference to a node that doesn't get rendered
-            // (such as for example a node that has tab character and a bunch of spaces) 
-            // this is would be bad! ask me why.
-            var nodeText = node.nodeValue.replace(/[\s\n\r\t]/g, "");
-            return nodeText.length > 0;
+            return isValidTextNodeContent(node.nodeValue);
         }
 
         return false;
 
+    }
+
+    function isValidTextNodeContent(text) {
+        // Heuristic to find a text node with actual text
+        // If we don't do this, we may get a reference to a node that doesn't get rendered
+        // (such as for example a node that has tab character and a bunch of spaces)
+        // this is would be bad! ask me why.
+        return text.replace(/[\s\n\r\t]/g, "").length > 0;
     }
 
     this.getElements = function (selector) {
