@@ -41,7 +41,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     var self = this;
     options = options || {};
 
-    var debugMode = false;
+    var debugMode = ReadiumSDK.DEBUG_MODE;
 
     this.getRootElement = function(){
 
@@ -1579,6 +1579,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     // end dmitry debug
 
     if (debugMode) {
+
+        var $debugOverlays = [];
+
         //used for visual debug atm
         function getRandomColor() {
             var letters = '0123456789ABCDEF'.split('');
@@ -1597,30 +1600,32 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
             for (var i = 0; i != rects.length; i++) {
                 var rect = rects[i];
-                var tableRectDiv = doc.createElement('div');
-                tableRectDiv.style.position = 'absolute';
-                $(tableRectDiv).css('z-index', '-1');
-                $(tableRectDiv).css('opacity', '0.4');
-                tableRectDiv.style.border = '1px solid white';
+                var overlayDiv = doc.createElement('div');
+                overlayDiv.style.position = 'absolute';
+                $(overlayDiv).css('z-index', '-1');
+                $(overlayDiv).css('pointer-events', 'none');
+                $(overlayDiv).css('opacity', '0.4');
+                overlayDiv.style.border = '1px solid white';
                 if (!color && !random) {
-                    tableRectDiv.style.background = 'purple';
+                    overlayDiv.style.background = 'purple';
                 } else if (random && !color) {
-                    tableRectDiv.style.background = random;
+                    overlayDiv.style.background = random;
                 } else {
                     if (color === true) {
                         color = 'red';
                     }
-                    tableRectDiv.style.border = '1px solid ' + color;
-                    tableRectDiv.style.background = 'red';
+                    overlayDiv.style.border = '1px dashed ' + color;
+                    overlayDiv.style.background = 'yellow';
                 }
 
-                tableRectDiv.style.margin = tableRectDiv.style.padding = '0';
-                tableRectDiv.style.top = (rect.top ) + 'px';
-                tableRectDiv.style.left = (rect.left ) + 'px';
+                overlayDiv.style.margin = overlayDiv.style.padding = '0';
+                overlayDiv.style.top = (rect.top ) + 'px';
+                overlayDiv.style.left = (rect.left ) + 'px';
                 // we want rect.width to be the border width, so content width is 2px less.
-                tableRectDiv.style.width = (rect.width - 2) + 'px';
-                tableRectDiv.style.height = (rect.height - 2) + 'px';
-                doc.body.appendChild(tableRectDiv);
+                overlayDiv.style.width = (rect.width - 2) + 'px';
+                overlayDiv.style.height = (rect.height - 2) + 'px';
+                doc.documentElement.appendChild(overlayDiv);
+                $debugOverlays.push($(overlayDiv));
             }
         }
 
@@ -1641,6 +1646,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 range.endContainer,
                 range.endOffset);
             drawDebugOverlayFromRect(rect);
+            return rect;
         }
 
         function drawDebugOverlayFromNode(node) {
@@ -1659,6 +1665,32 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             return offsetLeft;
         }
 
+        function clearDebugOverlays() {
+            _.each($debugOverlays, function($el){
+                $el.remove();
+            });
+            $debugOverlays.clear();
+        }
+
+        ReadiumSDK.Views.CfiNavigationLogic.DEBUG = {
+            clearDebugOverlays: clearDebugOverlays,
+            drawDebugOverlayFromRect: drawDebugOverlayFromRect,
+            drawDebugOverlayFromDomRange: drawDebugOverlayFromDomRange,
+            drawDebugOverlayFromNode: drawDebugOverlayFromNode,
+            debugVisibleCfis: function () {
+                console.log(JSON.stringify(ReadiumSDK.reader.getPaginationInfo().openPages));
+
+                var cfi1 = ReadiumSDK.reader.getFirstVisibleCfi();
+                var range1 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi1);
+                console.log(cfi1, range1, drawDebugOverlayFromDomRange(range1));
+
+                var cfi2 = ReadiumSDK.reader.getLastVisibleCfi();
+                var range2 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi2);
+                console.log(cfi2, range2, drawDebugOverlayFromDomRange(range2));
+            }
+        };
+
+        //
     }
 
 };
