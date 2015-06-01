@@ -2093,7 +2093,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
                 var cfi = EPUBcfi.Generator.generateElementCFIComponent(node,
                     ["cfi-marker"],
                     [],
-                    ["MathJax_Message"]);
+                    ["MathJax_Message", "MathJax_SVG_Hidden"]);
                 var idref = null;
                 _.each(that.getLoadedContentFrames(), function (frame) {
                     if (node.ownerDocument === frame.$iframe[0].contentDocument) {

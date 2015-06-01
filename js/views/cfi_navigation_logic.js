@@ -371,9 +371,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             var adjustedRect = clientRectangles[0];
 
             if (adjustedRect.bottom < 0 || adjustedRect.top < 0) {
-            // because of webkit inconsistency, that single rectangle should be adjusted
-            // until it hits the end OR will be based on the FIRST column that is visible
-            adjustRectangle(adjustedRect, true);
+                // because of webkit inconsistency, that single rectangle should be adjusted
+                // until it hits the end OR will be based on the FIRST column that is visible
+                adjustRectangle(adjustedRect, true);
             }
 
             if (isRectVisible(adjustedRect)) {
@@ -770,7 +770,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         var cfi = EPUBcfi.Generator.generateElementCFIComponent(element,
             ["cfi-marker"],
             [],
-            ["MathJax_Message"]);
+            ["MathJax_Message", "MathJax_SVG_Hidden"]);
 
         if (cfi[0] == "!") {
             cfi = cfi.substring(1);
@@ -1073,14 +1073,14 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             range.startContainer, range.startOffset,
             range.endContainer, range.endOffset,
             range.commonAncestorContainer,
-            ['cfi-marker'], [], ["MathJax_Message"]);
+            ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"]);
     }
 
     function getRangeTargetNodes(rangeCfi) {
         return EPUBcfi.getRangeTargetNodes(
             getWrappedCfiRelativeToContent(rangeCfi),
             self.getRootDocument(),
-            ['cfi-marker'], [], ["MathJax_Message"]);
+            ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"]);
     }
 
     this.getDomRangeFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
@@ -1093,7 +1093,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 range.setEnd(rangeInfo.endNodes[0], rangeInfo.endOffset);
             } else {
                 var element = self.getElementByCfi(rangeCfi,
-                    ['cfi-marker'], [], ["MathJax_Message"])[0];
+                    ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"])[0];
                 range.selectNode(element);
             }
         } else {
@@ -1102,7 +1102,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 range.setStart(rangeInfo1.startNodes[0], rangeInfo1.startOffset);
             } else {
                 var startElement = self.getElementByCfi(rangeCfi,
-                    ['cfi-marker'], [], ["MathJax_Message"])[0];
+                    ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"])[0];
                 range.setStart(startElement, 0);
             }
 
@@ -1115,7 +1115,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 }
             } else {
                 var endElement = self.getElementByCfi(rangeCfi2,
-                    ['cfi-marker'], [], ["MathJax_Message"])[0];
+                    ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"])[0];
                 range.setEnd(endElement, endElement.childNodes.length);
             }
         }
@@ -1200,7 +1200,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 var nodeResult = EPUBcfi.Interpreter.getRangeTargetNodes(wrappedCfi, contentDoc,
                     ["cfi-marker"],
                     [],
-                    ["MathJax_Message"]);
+                    ["MathJax_Message", "MathJax_SVG_Hidden"]);
 
                 if (debugMode) {
                     console.log(nodeResult);
@@ -1235,7 +1235,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             var $element = self.getElementByCfi(cfi,
                 ["cfi-marker"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 
             var normRects = getNormalizedRectangles($element);
             return {startInfo: null, endInfo: null, clientRect: normRects.wrapperRectangle }

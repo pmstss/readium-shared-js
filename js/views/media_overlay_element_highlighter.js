@@ -240,7 +240,7 @@ ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
 //                     txtLast.length,
 //                     ["cfi-marker"],
 //                     [],
-//                     ["MathJax_Message"]
+//                     ["MathJax_Message", "MathJax_SVG_Hidden"]
 //                     );
 //             
 //             var id = $hel.data("mediaOverlayData").par.getSmil().spineItemId;
@@ -290,14 +290,14 @@ ReadiumSDK.Views.MediaOverlayElementHighlighter = function(reader) {
             var infoStart = EPUBcfi.getTextTerminusInfoWithPartialCFI(startCFI, doc,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 //console.log(infoStart);
 
             var endCFI = "epubcfi(" + _highlightedCfiPar.cfi.partialEndCfi + ")";
             var infoEnd = EPUBcfi.getTextTerminusInfoWithPartialCFI(endCFI, doc,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 //console.log(infoEnd);
             
             _rangyRange.setStartAndEnd(

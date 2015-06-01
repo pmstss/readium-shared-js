@@ -386,7 +386,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
                 pageIndex = _navigationLogic.getPageForElementCfi(pageRequest.elementCfi,
                     ["cfi-marker", "mo-cfi-highlight"],
                     [],
-                    ["MathJax_Message"]);
+                    ["MathJax_Message", "MathJax_SVG_Hidden"]);
             }
             catch (e)
             {

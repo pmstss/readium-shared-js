@@ -188,7 +188,7 @@ ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
                             var $element = reader.getElementByCfi(spineItem.idref, cfi,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 
                             element = ($element && $element.length > 0) ? $element[0] : undefined;
                             if (element)
@@ -214,7 +214,7 @@ ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
                             var $element = reader.getElementByCfi(spineItem.idref, partial,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
                                 
                             element = ($element && $element.length > 0) ? $element[0] : undefined;
                             if (element)
@@ -551,14 +551,14 @@ ReadiumSDK.Views.MediaOverlayPlayer = function(reader, onStatusChanged) {
                 var infoStart = EPUBcfi.getTextTerminusInfoWithPartialCFI(startCFI, doc,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 //console.log(infoStart);
 
                 var endCFI = "epubcfi(" + cfi.partialEndCfi + ")";
                 var infoEnd = EPUBcfi.getTextTerminusInfoWithPartialCFI(endCFI, doc,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 //console.log(infoEnd);
 
                 if (rangy)
