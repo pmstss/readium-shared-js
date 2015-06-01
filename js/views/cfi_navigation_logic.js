@@ -1483,6 +1483,34 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return $elements;
     };
 
+    function isElementBlacklisted($element) {
+        //TODO: Ok we really need to have a single point of reference for this blacklist
+        var blacklist = {
+            classes: ["cfi-marker", "mo-cfi-highlight"],
+            elements: [], //not looked at
+            ids: ["MathJax_Message", "MathJax_SVG_Hidden"]
+        };
+
+        var isBlacklisted = false;
+
+        _.some(blacklist.classes, function (value) {
+            if ($element.hasClass(value)) {
+                isBlacklisted = true;
+            }
+            return isBlacklisted;
+        });
+
+        _.some(blacklist.ids, function (value) {
+            if ($element.attr("id") === value) {
+                isBlacklisted = true;
+            }
+            return isBlacklisted;
+        });
+
+
+        return isBlacklisted;
+    }
+
     this.getLeafNodeElements = function ($root) {
 
         var nodeIterator = document.createNodeIterator(
@@ -1502,7 +1530,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         var node;
         while ((node = nodeIterator.nextNode())) {
-            $leafNodeElements.push((node.nodeType === Node.TEXT_NODE) ? $(node).parent() : $(node));
+            var $element = (node.nodeType === Node.TEXT_NODE) ? $(node).parent() : $(node);
+            if (!isElementBlacklisted($element)) {
+                $leafNodeElements.push($element);
+            }
         }
 
         return $leafNodeElements;
