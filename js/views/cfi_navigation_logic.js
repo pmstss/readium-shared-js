@@ -1583,7 +1583,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
     // end dmitry debug
 
-    if (debugMode) {
+    //if (debugMode) {
 
         var $debugOverlays = [];
 
@@ -1607,7 +1607,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 var rect = rects[i];
                 var overlayDiv = doc.createElement('div');
                 overlayDiv.style.position = 'absolute';
-                $(overlayDiv).css('z-index', '-1');
+                $(overlayDiv).css('z-index', '1000');
                 $(overlayDiv).css('pointer-events', 'none');
                 $(overlayDiv).css('opacity', '0.4');
                 overlayDiv.style.border = '1px solid white';
@@ -1696,6 +1696,6 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         };
 
         //
-    }
+   // }
 
 };
