@@ -961,7 +961,9 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
     function getTextNodeRectCornerPairs(rect) {
         // top left corner & top right corner
-        return [{x: rect.left, y: rect.top}, {x: rect.right, y: rect.top}];
+        // but for y coord use the mid point between top and bottom
+        var y = rect.top + (rect.height / 2);
+        return [{x: rect.left, y: y}, {x: rect.right, y: y}];
     }
 
     function getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc) {
