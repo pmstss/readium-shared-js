@@ -369,9 +369,12 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         if (clientRectangles.length === 1) {
             var adjustedRect = clientRectangles[0];
+
+            if (adjustedRect.bottom < 0 || adjustedRect.top < 0) {
             // because of webkit inconsistency, that single rectangle should be adjusted
             // until it hits the end OR will be based on the FIRST column that is visible
             adjustRectangle(adjustedRect, true);
+            }
 
             if (isRectVisible(adjustedRect)) {
                 //it might still be partially visible in webkit
