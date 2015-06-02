@@ -322,7 +322,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
                 $element = _navigationLogic.getElementByCfi(pageRequest.elementCfi,
                     ["cfi-marker", "mo-cfi-highlight"],
                     [],
-                    ["MathJax_Message"]);
+                    ["MathJax_Message", "MathJax_SVG_Hidden"]);
             }
             catch (e)
             {
