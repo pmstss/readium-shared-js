@@ -974,8 +974,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             return isRectVisible(rect);
         });
 
-
         var fragment = pickerFunc(visibleFragments);
+        if (!fragment) {
+            //no visible fragment, empty text node?
+            return null;
+        }
         var fragmentCorner = pickerFunc(getTextNodeRectCornerPairs(fragment));
         var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
         if (caretRange.startContainer === textNode) {
@@ -989,35 +992,60 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         }
     }
 
-    // get an array of visible text elements and then select one based on the func supplied
-    // and generate a CFI for the first visible text subrange.
-    function getVisibleTextRangeCfiForTextElementSelectedByFunc(pickerFunc) {
-        var visibleLeafNode = pickerFunc(self.getVisibleLeafNodes());
+    function findVisibleLeafNodeCfi(leafNodeList, pickerFunc, targetLeafNode) {
+        var index = 0;
+        if (!targetLeafNode) {
+            index = leafNodeList.indexOf(pickerFunc(leafNodeList))
+        } else {
+            index = leafNodeList.indexOf(targetLeafNode);
+            if (index === -1) {
+                //target leaf node not the right type? not in list?
+                return null;
+            }
+            // use the next leaf node in the list
+            index += pickerFunc([1, -1]);
+        }
+        var visibleLeafNode = leafNodeList[index];
+
         if (!visibleLeafNode) {
             return null;
         }
+
         var element = visibleLeafNode.element;
 
+        //find the first/last valid text node of the leaf node
         var visibleTextNodes = [];
-        _.each(element.childNodes, function(node){
-            if(isValidTextNode(node)){
+        _.each(element.childNodes, function (node) {
+            if (isValidTextNode(node)) {
                 visibleTextNodes.push(node);
             }
         });
-
         var textNode = pickerFunc(visibleTextNodes);
 
-        if (!_.isUndefined(textNode)) {
+        //if a valid text node is found, try to generate a CFI with range offsets
+        if (textNode) {
             var visibleRange = getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc);
+            if (!visibleRange) {
+                //the text node is valid, but not visible..
+                //let's try again with the next node in the list
+                return findVisibleLeafNodeCfi(leafNodeList, pickerFunc, visibleLeafNode);
+            }
             var range = createRange();
             range.setStart(textNode, visibleRange.start);
             range.setEnd(textNode, visibleRange.end);
             return generateCfiFromDomRange(range);
+        } else {
+            //if not then generate a CFI for the element
+            return self.getCfiForElement(element);
         }
-
-        return self.getCfiForElement(element);
     }
 
+    // get an array of visible text elements and then select one based on the func supplied
+    // and generate a CFI for the first visible text subrange.
+    function getVisibleTextRangeCfiForTextElementSelectedByFunc(pickerFunc) {
+        var visibleLeafNodeList = self.getVisibleLeafNodes();
+        return findVisibleLeafNodeCfi(visibleLeafNodeList, pickerFunc);
+    }
 
     function getLastVisibleTextRangeCfi() {
         return getVisibleTextRangeCfiForTextElementSelectedByFunc(_.last);
@@ -1520,7 +1548,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
                 acceptNode: function (node) {
                     //a "leaf node" here is an element with no child elements and no valid text nodes as children
                     var isLeafNode = node.nodeType === Node.ELEMENT_NODE && !node.childElementCount && !isValidTextNodeContent(node.textContent);
-                    return (isValidTextNode(node) || isLeafNode) ?  NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                    return (isValidTextNode(node) || isLeafNode) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                 }
             },
             false
