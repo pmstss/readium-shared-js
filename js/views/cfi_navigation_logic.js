@@ -351,13 +351,15 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
      * @param {jQuery} $element
      * @param {Object} _props
      * @param {boolean} shouldCalculateVisibilityPercentage
+     * @param {Object} [frameDimensions]
      * @returns {number|null}
      *      0 for non-visible elements,
      *      0 < n <= 100 for visible elements
      *      (will just give 100, if `shouldCalculateVisibilityPercentage` => false)
      *      null for elements with display:none
      */
-    function checkVisibilityByRectangles($element, _props, shouldCalculateVisibilityPercentage) {
+    function checkVisibilityByRectangles($element, _props, shouldCalculateVisibilityPercentage, frameDimensions) {
+        frameDimensions = frameDimensions || getFrameDimensions();
 
         var elementRectangles = getNormalizedRectangles($element);
         var clientRectangles = elementRectangles.clientRectangles;
@@ -370,10 +372,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         if (clientRectangles.length === 1) {
             var adjustedRect = clientRectangles[0];
 
-            if (adjustedRect.bottom < 0 || adjustedRect.top < 0) {
+            if (adjustedRect.bottom > frameDimensions.height || adjustedRect.top < 0) {
                 // because of webkit inconsistency, that single rectangle should be adjusted
                 // until it hits the end OR will be based on the FIRST column that is visible
-                adjustRectangle(adjustedRect, true);
+                adjustRectangle(adjustedRect, true, frameDimensions);
             }
 
             if (isRectVisible(adjustedRect)) {
