@@ -306,6 +306,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     // Old (offsetTop-based) algorithm, useful in top-to-bottom layouts
     function checkVisibilityByVerticalOffsets($element, visibleContentOffsets, shouldCalculateVisibilityOffset) {
 
+        //TODO JC: Trace calls to this function and verify the use of visibleContentOffsets
+        if (!visibleContentOffsets) {
+            visibleContentOffsets = {};
+        }
+
         var elementRect = ReadiumSDK.Helpers.Rect.fromElement($element);
         if (_.isNaN(elementRect.left)) {
             // this is actually a point element, doesnt have a bounding rectangle
