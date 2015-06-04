@@ -2,27 +2,27 @@
 //
 //  Created by Boris Schneiderman.
 //  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
-//  
-//  Redistribution and use in source and binary forms, with or without modification, 
+//
+//  Redistribution and use in source and binary forms, with or without modification,
 //  are permitted provided that the following conditions are met:
-//  1. Redistributions of source code must retain the above copyright notice, this 
+//  1. Redistributions of source code must retain the above copyright notice, this
 //  list of conditions and the following disclaimer.
-//  2. Redistributions in binary form must reproduce the above copyright notice, 
-//  this list of conditions and the following disclaimer in the documentation and/or 
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//  this list of conditions and the following disclaimer in the documentation and/or
 //  other materials provided with the distribution.
-//  3. Neither the name of the organization nor the names of its contributors may be 
-//  used to endorse or promote products derived from this software without specific 
+//  3. Neither the name of the organization nor the names of its contributors may be
+//  used to endorse or promote products derived from this software without specific
 //  prior written permission.
-//  
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /**
@@ -274,12 +274,12 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
      * @returns {number} Full width of a column in pixels
      */
     function getColumnFullWidth() {
-        
+
         if (!options.paginationInfo || isVerticalWritingMode())
         {
             return $iframe.width();
         }
-        
+
         return options.paginationInfo.columnWidth + options.paginationInfo.columnGap;
     }
 
@@ -687,7 +687,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         if (isVwm) {
             return;
         }
-        
+
         var totalHeight = _.reduce(rects, function(prev, cur) {
             return prev + cur.height;
         }, 0);
@@ -1012,18 +1012,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         }
 
         var element = visibleLeafNode.element;
-
-        //find the first/last valid text node of the leaf node
-        var visibleTextNodes = [];
-        _.each(element.childNodes, function (node) {
-            if (isValidTextNode(node)) {
-                visibleTextNodes.push(node);
-            }
-        });
-        var textNode = pickerFunc(visibleTextNodes);
+        var textNode = visibleLeafNode.textNode;
 
         //if a valid text node is found, try to generate a CFI with range offsets
-        if (textNode) {
+        if (textNode && isValidTextNode(textNode)) {
             var visibleRange = getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc);
             if (!visibleRange) {
                 //the text node is valid, but not visible..
@@ -1323,7 +1315,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         var $element = $(contentDoc.getElementById(id));
         //$("#" + ReadiumSDK.Helpers.escapeJQuerySelector(id), contentDoc);
-        
+
         if($element.length == 0) {
             return undefined;
         }
@@ -1427,10 +1419,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     //  * @deprecated
     //  */
     // this.getVisibleMediaOverlayElements = function(visibleContentOffsets) {
-    // 
+    //
     //     var $elements = this.getMediaOverlayElements($("body", this.getRootElement()));
     //     return this.getVisibleElements($elements, visibleContentOffsets);
-    // 
+    //
     // };
 
     this.isElementVisible = visibilityCheckerFunc;
@@ -1460,15 +1452,18 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         var visibleElements = [];
 
-        $.each($elements, function () {
-            var $element = this;
+        _.each($elements, function ($node) {
+            var isTextNode = ($node[0].nodeType === Node.TEXT_NODE);
+            var $element = isTextNode ? $node.parent() : $node;
             var visibilityPercentage = visibilityCheckerFunc(
                 $element, visibleContentOffsets, true);
 
             if (visibilityPercentage) {
                 var $visibleElement = $element;
+
                 visibleElements.push({
                     element: $visibleElement[0], // DOM Element is pushed
+                    textNode: isTextNode ? $node[0] : null,
                     percentVisible: visibilityPercentage
                 });
             }
@@ -1558,9 +1553,10 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
         var node;
         while ((node = nodeIterator.nextNode())) {
-            var $element = (node.nodeType === Node.TEXT_NODE) ? $(node).parent() : $(node);
+            var $node = $(node);
+            var $element = (node.nodeType === Node.TEXT_NODE) ? $node.parent() : $node;
             if (!isElementBlacklisted($element)) {
-                $leafNodeElements.push($element);
+                $leafNodeElements.push($node);
             }
         }
 
@@ -1605,12 +1601,12 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     };
 
 
-    // dmitry debug 
-    // dmitry debug     
-    // dmitry debug 
-    // dmitry debug     
-    // dmitry debug 
-    // dmitry debug     
+    // dmitry debug
+    // dmitry debug
+    // dmitry debug
+    // dmitry debug
+    // dmitry debug
+    // dmitry debug
 
     parseContentCfi = function(cont) {
         return cont.replace(/\[(.*?)\]/, "").split(/[\/,:]/).map(function(n) { return parseInt(n); }).filter(Boolean);
