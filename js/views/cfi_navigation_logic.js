@@ -988,13 +988,29 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         }
         var fragmentCorner = pickerFunc(getTextNodeRectCornerPairs(fragment));
         var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
+        if (!caretRange) {
+            // Desperately try to find it from all angles!
+            caretRange = getCaretRangeFromPoint(fragmentCorner.x-1, fragmentCorner.y);
+            if (!caretRange) {
+                caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y-1);
+                if (!caretRange) {
+                    caretRange = getCaretRangeFromPoint(fragmentCorner.x-1, fragmentCorner.y-1);
+                }
+            }
+        }
+        // Still nothing? fall through..
+        if (!caretRange) {
+            console.warn('getVisibleTextRangeOffsetsSelectedByFunc: no caret range result');
+            return null;
+        }
+
         if (caretRange.startContainer === textNode) {
             return pickerFunc(
                 [{start: caretRange.startOffset, end: caretRange.startOffset + 1},
                 {start: caretRange.startOffset - 1, end: caretRange.startOffset}]
             );
         } else {
-            console.error('getVisibleTextRangeOffsetsSelectedByFunc: incorrect caret range result');
+            console.warn('getVisibleTextRangeOffsetsSelectedByFunc: incorrect caret range result');
             return null;
         }
     }
