@@ -372,6 +372,30 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    this.cfiIsBetweenTwoCfis = function (cfi, lowBoundaryCfi, highBoundaryCfi) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.cfiIsBetweenTwoCfis(cfi, lowBoundaryCfi, highBoundaryCfi);
+            if(result){
+                break;
+            }
+        }
+        return result;
+    };
+
+    this.contentCfiComparator = function(contCfi1, contCfi2) { 
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.contentCfiComparator(contCfi1, contCfi2);
+            if(result){
+                break;
+            }
+        }
+        return result;
+    };
+
     this.getAnnotationMidpoints = function($elementSpineItemCollection){
         var output = [];
 
@@ -426,7 +450,6 @@ ReadiumSDK.Views.AnnotationsManager = function (proxyObj, options) {
     this.getAnnotationsElementSelector = function () {
         return 'div.highlight';
     };
-
 
     function removeAllHighlights(annotationModule) { 
         console.debug("Removing all highlights..");

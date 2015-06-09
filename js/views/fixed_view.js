@@ -854,4 +854,18 @@ ReadiumSDK.Views.FixedView = function(options, reader){
             return view.getElementFromPoint(x,y);
         });
     };
+
+    // introduced for Know "rendering restriction" feature
+    this.hide = function() {
+        _.forEach(getDisplayingViews(), function(one_page_view) {
+            one_page_view.hideIFrame();
+        });
+    };
+
+    this.show = function() {
+        _.forEach(getDisplayingViews(), function(one_page_view) {
+            one_page_view.showIFrame();
+        });
+    };
+
 };

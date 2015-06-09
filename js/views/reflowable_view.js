@@ -998,4 +998,15 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     this.getElementFromPoint = function(x, y) {
         return _navigationLogic.getElementFromPoint(x,y);
     };
+
+    // introduced for Know "rendering restriction" feature
+    this.hide = function() {
+        // note that we have to use {"visibility": "hidden"}, rather than .hide, and do it on 
+        // _$iframe rather than on _$el. "hide" results in infinite loop with pagination event
+        _$iframe.css({"visibility": "hidden"});
+    };
+
+    this.show = function() {
+        _$iframe.css({"visibility": "visible"});
+    };
 };

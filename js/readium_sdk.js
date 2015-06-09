@@ -128,7 +128,11 @@ ReadiumSDK = {
         /**
          * @event
          */
-        MEDIA_OVERLAY_TTS_STOP: "MediaOverlayTTSStop"
+        MEDIA_OVERLAY_TTS_STOP: "MediaOverlayTTSStop",
+        /**
+         * @event (introduced for Know)
+         */
+        BOUNDARY_CROSSED: "BoundaryCrossed"
     },
     /**
      * Internal Events

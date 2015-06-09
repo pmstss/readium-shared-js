@@ -57,6 +57,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
     var _iframeLoader;
     var _$el;
     var _annotationsManager = new ReadiumSDK.Views.AnnotationsManager(self, options);
+    // initial value undefined, so that we do not do any boundary checks
+    var _boundaryData = undefined;
 
     //We will call onViewportResize after user stopped resizing window
     var lazyResize = ReadiumSDK.Helpers.extendedThrottle(
@@ -1602,7 +1604,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             //         console.log(pageChangeData.paginationInfo.openPages[i].idref);
             //     }
             // }
-
+            
             var atLeastOne = false;
 
             try
@@ -2268,6 +2270,107 @@ ReadiumSDK.Views.ReaderView = function(options) {
         }
         return undefined;
     };
+
+    /**
+     * Sets a "boundary CFI" that defines the boundary, that can not be crossed 
+       while rendering a book. 
+     * @param {string} spineItemIdref Spine idref that defines the partial Cfi
+     * @param {string} cfi            Partial CFI (withouth the indirection step) relative
+                                      to the spine index 
+     */
+    this.setRenderingRestriction = function (spineItemIdref, cfi) {
+        // if content CFI is a range CFI, replace it with the start CFI of the range
+        var startCfi = cfi;
+        var comps = cfi.split(",");
+        if (comps.length > 0) {
+            startCfi = comps[0] + comps[1];
+        }
+        
+        // set boundary
+        _boundaryData = {
+            bookmark: new ReadiumSDK.Models.BookmarkData(spineItemIdref, startCfi),
+            spineItem: _spine.getItemById(spineItemIdref)
+        };
+    };
+
+    /**
+     * Clears book rendering restrictions
+     */
+    this.clearRenderingRestriction = function () {
+        // clear boundary
+        _boundaryData = undefined;
+
+        // make current page visible
+        _currentView.show();
+    };
+
+    // helper function to restrict rendering
+    this.boundaryCrossed = function () {
+        console.log("boundaryCrossed");
+
+        // make current page invisible
+        _currentView.hide();
+
+        // raise event that indicates boundary violation
+        self.trigger(ReadiumSDK.Events.BOUNDARY_CROSSED);
+    };
+
+    // constructor
+    var BoundaryChecker = function()
+    {
+// for testing only
+//        self.on(ReadiumSDK.Events.BOUNDARY_CROSSED, function () {
+//            console.log("BOUNDARY_CROSSED event received");
+//        });
+
+        // set PAGINATION_CHANGED handler to check if we "crossed the boundary"
+        // PAGINATION_CHANGED happened when we sequentially go through pages 
+        // or  when we jump to the bookmark
+        self.on(ReadiumSDK.Events.PAGINATION_CHANGED, function (pageChangeData) {
+            
+            // if boundary is set (rendering rerstricted)
+            if (_boundaryData) {
+
+                // get open pages array (for "fixed" with spread we may have 
+                // several spine items rendered, so go through all of them)
+                var pages = pageChangeData.paginationInfo.openPages;
+                for(var i = 0; i < pages.length; i++) {
+                    page = pages[i];
+
+                    if (page.spineItemIndex < _boundaryData.spineItem.index)
+                        continue;
+                    if (page.spineItemIndex > _boundaryData.spineItem.index) {
+                        this.boundaryCrossed();
+                        return;
+                    }
+
+                    // current spine item id ref is the same as "boundary's"
+
+                    // get first and last visible CFIs
+                    visibleCfis = getCfisForVisibleRegion();
+
+                    // check if boundary content CFI is within the page that was just open
+                    if (_annotationsManager.cfiIsBetweenTwoCfis(_boundaryData.bookmark.contentCFI, 
+                                                                visibleCfis.firstVisibleCfi.contentCFI, 
+                                                                visibleCfis.lastVisibleCfi.contentCFI)) {
+                        this.boundaryCrossed();
+                        return;
+                    }
+
+                    // check if pages's first visible CFI is greater than the boundary
+                    var result = _annotationsManager.contentCfiComparator(
+                        visibleCfis.firstVisibleCfi.contentCFI,
+                        _boundaryData.bookmark.contentCFI);
+                    if (result >= 0) {
+                        this.boundaryCrossed();
+                        return;
+                    }
+                }
+            }
+        });
+    };
+
+    this.boundaryChecker = new BoundaryChecker();
 };
 
 /**
