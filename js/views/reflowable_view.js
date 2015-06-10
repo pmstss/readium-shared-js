@@ -3,27 +3,27 @@
 //
 //  Created by Boris Schneiderman.
 //  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
-//  
-//  Redistribution and use in source and binary forms, with or without modification, 
+//
+//  Redistribution and use in source and binary forms, with or without modification,
 //  are permitted provided that the following conditions are met:
-//  1. Redistributions of source code must retain the above copyright notice, this 
+//  1. Redistributions of source code must retain the above copyright notice, this
 //  list of conditions and the following disclaimer.
-//  2. Redistributions in binary form must reproduce the above copyright notice, 
-//  this list of conditions and the following disclaimer in the documentation and/or 
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//  this list of conditions and the following disclaimer in the documentation and/or
 //  other materials provided with the distribution.
-//  3. Neither the name of the organization nor the names of its contributors may be 
-//  used to endorse or promote products derived from this software without specific 
+//  3. Neither the name of the organization nor the names of its contributors may be
+//  used to endorse or promote products derived from this software without specific
 //  prior written permission.
-//  
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /**
@@ -36,15 +36,15 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     _.extend(this, Backbone.Events);
 
     var self = this;
-    
+
     var _$viewport = options.$viewport;
     var _spine = options.spine;
     var _userStyles = options.userStyles;
     var _bookStyles = options.bookStyles;
     var _iframeLoader = options.iframeLoader;
-    
+
     var _currentSpineItem;
-    var _isWaitingFrameRender = false;    
+    var _isWaitingFrameRender = false;
     var _deferredPageRequest;
     var _fontSize = 100;
     var _$contentFrame;
@@ -52,14 +52,14 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     var _$el;
     var _$iframe;
     var _$epubHtml;
-    
+
     var _$htmlBody;
-    
+
     var _htmlBodyIsVerticalWritingMode;
     var _htmlBodyIsLTRDirection;
     var _htmlBodyIsLTRWritingMode;
-    
-    
+
+
     var _currentOpacity = -1;
 
     var _lastViewPortSize = {
@@ -132,16 +132,13 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
     var _viewSettings = undefined;
     this.setViewSettings = function(settings) {
-        
+
         _viewSettings = settings;
 
         _paginationInfo.columnGap = settings.columnGap;
         _fontSize = settings.fontSize;
 
-        updateHtmlFontSize();
-        updateColumnGap();
-        
-        updateViewportSize();
+        updatePaginationParameters();
         updatePagination();
     };
 
@@ -169,7 +166,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             _$contentFrame, _$iframe,
             { rectangleBased: true, paginationInfo: _paginationInfo });
     }
-    
+
     function loadSpineItem(spineItem) {
 
         if(_currentSpineItem != spineItem) {
@@ -186,7 +183,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             self.trigger(ReadiumSDK.Events.CONTENT_DOCUMENT_LOAD_START, _$iframe, spineItem);
 
             _$iframe.css("opacity", "0.01");
-            
+
             _iframeLoader.loadIframe(_$iframe[0], src, onIFrameLoad, self, {spineItem : spineItem});
         }
     }
@@ -204,6 +201,12 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
             _$epubHtml.css("column-gap", _paginationInfo.columnGap + "px");
         }
+    }
+
+    function updatePaginationParameters() {
+        updateHtmlFontSize();
+        updateColumnGap();
+        updateViewportSize();
     }
 
     function onIFrameLoad(success) {
@@ -242,7 +245,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             $("video", _$htmlBody).css("transform", "translateZ(0)");
         }
         */
-        
+
         _htmlBodyIsVerticalWritingMode = false;
         _htmlBodyIsLTRDirection = true;
         _htmlBodyIsLTRWritingMode = undefined;
@@ -299,7 +302,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
         updateViewportSize();
         _$epubHtml.css("height", _lastViewPortSize.height + "px");
-        
+
         _$epubHtml.css("position", "relative");
         _$epubHtml.css("margin", "0");
         _$epubHtml.css("padding", "0");
@@ -317,33 +320,44 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         //
         // ////
 
-        self.applyBookStyles();
-        updateHtmlFontSize();
-        updateColumnGap();
-        self.applyStyles();
+        applyBookStyles();
+        applyStyles();
 
+        updatePaginationParameters();
+        updatePagination();
     }
 
-    this.applyStyles = function() {
-
+    function applyStyles() {
         ReadiumSDK.Helpers.setStyles(_userStyles.getStyles(), _$el.parent());
 
         //because left, top, bottom, right setting ignores padding of parent container
         //we have to take it to account manually
         var elementMargins = ReadiumSDK.Helpers.Margins.fromElement(_$el);
         setFrameSizesToRectangle(elementMargins.padding);
+    }
 
+    this.applyStyles = function() {
 
-        updateViewportSize();
+        applyStyles();
+
+        updatePaginationParameters();
         updatePagination();
     };
 
-    this.applyBookStyles = function() {
+    function applyBookStyles() {
 
         if(_$epubHtml) {
             ReadiumSDK.Helpers.setStyles(_bookStyles.getStyles(), _$epubHtml);
         }
     };
+
+    this.applyBookStyles = function() {
+
+        applyBookStyles();
+
+        updatePaginationParameters();
+        updatePagination();
+    }
 
     function openDeferredElement() {
 
@@ -413,7 +427,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         else {
             console.log('Illegal pageIndex value: ', pageIndex, 'column count is ', _paginationInfo.columnCount);
         }
-        
+
         return false;
     };
 
@@ -457,7 +471,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     function onPaginationChanged(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
         calculateColumnCount();
         _paginationInfo.pageOffset = (_paginationInfo.columnWidth + _paginationInfo.columnGap) * _paginationInfo.visibleColumnCount * _paginationInfo.currentSpreadIndex;
-        
+
         redraw();
         ReadiumSDK.Helpers.triggerLayout(_$iframe);
         fitImages();
@@ -513,17 +527,17 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
 
     function updatePagination() {
-        
+
         // At 100% font-size = 16px (on HTML, not body or descendant markup!)
         var MAXW = 550; //TODO user/vendor-configurable?
         var MINW = 400;
         var LIMIT_WIDTH = false;
-        
+
         var isDoublePageSyntheticSpread = ReadiumSDK.Helpers.deduceSyntheticSpread(_$viewport, _currentSpineItem, _viewSettings);
-        
+
         var forced = (isDoublePageSyntheticSpread === false) || (isDoublePageSyntheticSpread === true);
         // excludes 0 and 1 falsy/truthy values which denote non-forced result
-        
+
 // console.debug("isDoublePageSyntheticSpread: " + isDoublePageSyntheticSpread);
 // console.debug("forced: " + forced);
 //
@@ -532,9 +546,9 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
             isDoublePageSyntheticSpread = 1; // try double page, will shrink if doesn't fit
 // console.debug("TRYING SPREAD INSTEAD OF SINGLE...");
         }
-        
+
         _paginationInfo.visibleColumnCount = isDoublePageSyntheticSpread ? 2 : 1;
-   
+
         if (_htmlBodyIsVerticalWritingMode)
         {
             MAXW *= 2;
@@ -547,9 +561,9 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         if(!_$epubHtml) {
             return;
         }
-        
+
         hideBook(); // shiftBookOfScreen();
-        
+
         var borderLeft = parseInt(_$viewport.css("border-left-width"));
         var borderRight = parseInt(_$viewport.css("border-right-width"));
         var adjustedGapLeft = _paginationInfo.columnGap/2;
@@ -558,7 +572,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         adjustedGapRight = Math.max(0, adjustedGapRight-borderRight)
 
         var filler = 0;
-        
+
 //         var win = _$iframe[0].contentDocument.defaultView || _$iframe[0].contentWindow;
 //         var htmlBodyComputedStyle = win.getComputedStyle(_$htmlBody[0], null);
 //         if (htmlBodyComputedStyle)
@@ -574,21 +588,21 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 //             }
 // console.debug(fontSize);
 //         }
-        
+
         if (_viewSettings.fontSize)
         {
             var fontSizeAdjust = (_viewSettings.fontSize*0.8)/100;
             MAXW = Math.floor(MAXW * fontSizeAdjust);
             MINW = Math.floor(MINW * fontSizeAdjust);
         }
-        
+
         var availableWidth = _$viewport.width();
         var textWidth = availableWidth - borderLeft - borderRight - adjustedGapLeft - adjustedGapRight;
         if (isDoublePageSyntheticSpread)
         {
             textWidth = (textWidth - _paginationInfo.columnGap) * 0.5;
         }
-        
+
         if (textWidth > MAXW)
         {
 // console.debug("LIMITING WIDTH");
@@ -599,7 +613,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 //console.debug("REDUCING SPREAD TO SINGLE");
             isDoublePageSyntheticSpread = false;
             _paginationInfo.visibleColumnCount = 1;
-            
+
             textWidth = availableWidth - borderLeft - borderRight - adjustedGapLeft - adjustedGapRight;
             if (textWidth > MAXW)
             {
@@ -613,12 +627,12 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
         updateViewportSize(); //_$contentFrame ==> _lastViewPortSize
 
-        
+
         _$iframe.css("width", _lastViewPortSize.width + "px");
         _$iframe.css("height", _lastViewPortSize.height + "px");
 
         _$epubHtml.css("height", _lastViewPortSize.height + "px");
-        
+
         // below min- max- are required in vertical writing mode (height is not enough, in some cases...weird!)
         _$epubHtml.css("min-height", _lastViewPortSize.height + "px");
         _$epubHtml.css("max-height", _lastViewPortSize.height + "px");
@@ -637,7 +651,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         }
         catch(err)
         {
-            
+
         }
         // Needed for Firefox, otherwise content shrinks vertically, resulting in scrollWidth accomodating more columns than necessary
         //_$htmlBody.css("min-height", _lastViewPortSize.height-spacing-9 + "px");
@@ -674,7 +688,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         else {
 
             //we get here on resizing the viewport
-            
+
             onPaginationChanged(self); // => redraw() => showBook(), so the trick below is not needed
 
             // //We do this to force re-rendering of the document in the iframe.
@@ -725,7 +739,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     function hideBook()
     {
         if (_currentOpacity != -1) return; // already hidden
-        
+
         _currentOpacity = _$epubHtml.css('opacity');
         _$epubHtml.css('opacity', "0");
     }
@@ -839,7 +853,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
         return _navigationLogic.getElement(selector);
     };
-    
+
     this.getFirstVisibleMediaOverlayElement = function() {
 
         var visibleContentOffsets = getVisibleContentOffsets();
@@ -850,11 +864,11 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     //  * @deprecated
     //  */
     // this.getVisibleMediaOverlayElements = function() {
-    // 
+    //
     //     var visibleContentOffsets = getVisibleContentOffsets();
     //     return _navigationLogic.getVisibleMediaOverlayElements(visibleContentOffsets);
     // };
-    
+
     this.insureElementVisibility = function(spineItemId, element, initiator) {
 
         var $element = $(element);
@@ -878,7 +892,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         {
             id = element.getAttribute("id");
         }
-        
+
         if (id)
         {
             openPageRequest.setElementId(id);
@@ -1001,7 +1015,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
     // introduced for Know "rendering restriction" feature
     this.hide = function() {
-        // note that we have to use {"visibility": "hidden"}, rather than .hide, and do it on 
+        // note that we have to use {"visibility": "hidden"}, rather than .hide, and do it on
         // _$iframe rather than on _$el. "hide" results in infinite loop with pagination event
         _$iframe.css({"visibility": "hidden"});
     };

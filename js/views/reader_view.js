@@ -579,10 +579,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
 
                 initViewForItem(spineItem, function(isViewChanged){
 
-                    if(!isViewChanged) {
-                        _currentView.setViewSettings(_viewerSettings);
-                    }
-
                     self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
 
                     if (wasPlaying)
@@ -798,10 +794,6 @@ ReadiumSDK.Views.ReaderView = function(options) {
     function openPage(pageRequest, dir) {
 
         initViewForItem(pageRequest.spineItem, function(isViewChanged){
-
-            if(!isViewChanged) {
-                _currentView.setViewSettings(_viewerSettings);
-            }
 
             _currentView.openPage(pageRequest, dir);
         });
@@ -1255,7 +1247,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             initViewForItem(spineItem, function(isViewChanged)
             {
                 self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
-                return;
+                _currentView.onViewportResize();
             });
         }
         else
@@ -1604,7 +1596,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
             //         console.log(pageChangeData.paginationInfo.openPages[i].idref);
             //     }
             // }
-            
+
             var atLeastOne = false;
 
             try
@@ -2272,11 +2264,11 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     /**
-     * Sets a "boundary CFI" that defines the boundary, that can not be crossed 
-       while rendering a book. 
+     * Sets a "boundary CFI" that defines the boundary, that can not be crossed
+       while rendering a book.
      * @param {string} spineItemIdref Spine idref that defines the partial Cfi
      * @param {string} cfi            Partial CFI (withouth the indirection step) relative
-                                      to the spine index 
+                                      to the spine index
      */
     this.setRenderingRestriction = function (spineItemIdref, cfi) {
         // if content CFI is a range CFI, replace it with the start CFI of the range
@@ -2285,7 +2277,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
         if (comps.length > 0) {
             startCfi = comps[0] + comps[1];
         }
-        
+
         // set boundary
         _boundaryData = {
             bookmark: new ReadiumSDK.Models.BookmarkData(spineItemIdref, startCfi),
@@ -2324,14 +2316,14 @@ ReadiumSDK.Views.ReaderView = function(options) {
 //        });
 
         // set PAGINATION_CHANGED handler to check if we "crossed the boundary"
-        // PAGINATION_CHANGED happened when we sequentially go through pages 
+        // PAGINATION_CHANGED happened when we sequentially go through pages
         // or  when we jump to the bookmark
         self.on(ReadiumSDK.Events.PAGINATION_CHANGED, function (pageChangeData) {
-            
+
             // if boundary is set (rendering rerstricted)
             if (_boundaryData) {
 
-                // get open pages array (for "fixed" with spread we may have 
+                // get open pages array (for "fixed" with spread we may have
                 // several spine items rendered, so go through all of them)
                 var pages = pageChangeData.paginationInfo.openPages;
                 for(var i = 0; i < pages.length; i++) {
@@ -2350,8 +2342,8 @@ ReadiumSDK.Views.ReaderView = function(options) {
                     visibleCfis = getCfisForVisibleRegion();
 
                     // check if boundary content CFI is within the page that was just open
-                    if (_annotationsManager.cfiIsBetweenTwoCfis(_boundaryData.bookmark.contentCFI, 
-                                                                visibleCfis.firstVisibleCfi.contentCFI, 
+                    if (_annotationsManager.cfiIsBetweenTwoCfis(_boundaryData.bookmark.contentCFI,
+                                                                visibleCfis.firstVisibleCfi.contentCFI,
                                                                 visibleCfis.lastVisibleCfi.contentCFI)) {
                         this.boundaryCrossed();
                         return;
