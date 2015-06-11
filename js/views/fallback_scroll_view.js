@@ -374,6 +374,7 @@ ReadiumSDK.Views.FallbackScrollView = function(options){
 
     function onPaginationChanged(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
         if (!_isViewReady) return;
+        _navigationLogic.invalidateCache();
         self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
     }
 

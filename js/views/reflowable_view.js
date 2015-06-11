@@ -124,8 +124,8 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
     };
 
     this.onViewportResize = function(forceResize) {
-
-        if(forceResize || updateViewportSize()) {
+        if (forceResize || updateViewportSize()) {
+            _navigationLogic.invalidateCache();
             updatePagination();
         }
     };
@@ -137,6 +137,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
         _paginationInfo.columnGap = settings.columnGap;
         _fontSize = settings.fontSize;
+
 
         updatePaginationParameters();
         updatePagination();
@@ -188,25 +189,43 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         }
     }
 
-    function updateHtmlFontSize() {
+    var _lastFontSize = _fontSize;
 
-        if(_$epubHtml) {
+    function updateHtmlFontSize(forceUpdate) {
+
+        if (_$epubHtml && (forceUpdate || _lastFontSize !== _fontSize)) {
             ReadiumSDK.Helpers.UpdateHtmlFontSize(_$epubHtml, _fontSize);
+            _lastFontSize = _fontSize;
+            return true;
         }
     }
 
-    function updateColumnGap() {
+    var _lastColumnGap = (_paginationInfo || {}).columnGap;
 
-        if(_$epubHtml) {
+    function updateColumnGap(forceUpdate) {
+        var columnGap = _paginationInfo.columnGap;
 
-            _$epubHtml.css("column-gap", _paginationInfo.columnGap + "px");
+        if (_$epubHtml && (forceUpdate || _lastColumnGap !== columnGap)) {
+            _$epubHtml.css("column-gap", columnGap + "px");
+            _lastColumnGap = columnGap;
+            return true;
         }
     }
 
     function updatePaginationParameters() {
-        updateHtmlFontSize();
-        updateColumnGap();
-        updateViewportSize();
+        var invalidateCache = false;
+        if (updateHtmlFontSize()) {
+            invalidateCache = true;
+        }
+        if (updateColumnGap()) {
+            invalidateCache = true;
+        }
+        if (updateViewportSize()) {
+            invalidateCache = true;
+        }
+        if (invalidateCache) {
+            _navigationLogic.invalidateCache();
+        }
     }
 
     function onIFrameLoad(success) {
@@ -300,7 +319,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         hideBook();
         _$iframe.css("opacity", "1");
 
-        updateViewportSize();
+        updateViewportSize(true);
         _$epubHtml.css("height", _lastViewPortSize.height + "px");
 
         _$epubHtml.css("position", "relative");
@@ -320,8 +339,10 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         //
         // ////
 
-        applyBookStyles();
-        applyStyles();
+        self.applyBookStyles();
+        updateHtmlFontSize(true);
+        updateColumnGap(true);
+        self.applyStyles();
 
         updatePaginationParameters();
         updatePagination();
@@ -448,7 +469,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         }
     }
 
-    function updateViewportSize() {
+    function updateViewportSize(forceUpdate) {
 
         var newWidth = _$contentFrame.width();
 
@@ -458,7 +479,7 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
 
         var newHeight = _$contentFrame.height();
 
-        if(_lastViewPortSize.width !== newWidth || _lastViewPortSize.height !== newHeight){
+        if (forceUpdate || (_lastViewPortSize.width !== newWidth || _lastViewPortSize.height !== newHeight)) {
 
             _lastViewPortSize.width = newWidth;
             _lastViewPortSize.height = newHeight;

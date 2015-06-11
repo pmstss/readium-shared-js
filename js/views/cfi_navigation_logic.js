@@ -1497,9 +1497,17 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
     this.getVisibleLeafNodes = function (visibleContentOffsets) {
 
+        var cacheKey = (options.paginationInfo || {}).currentSpreadIndex || 0;
+        var fromCache = _cache.visibleLeafNodes.get(cacheKey);
+        if (fromCache) {
+            return fromCache;
+        }
+
         var $elements = this.getLeafNodeElements($("body", this.getRootElement()));
 
-        return this.getVisibleElements($elements, visibleContentOffsets);
+        var visibleElements = this.getVisibleElements($elements, visibleContentOffsets);
+        _cache.visibleLeafNodes.set(cacheKey, visibleElements);
+        return visibleElements;
     };
 
     this.getElementsWithFilter = function ($root, filterFunction) {
@@ -1559,6 +1567,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
 
     this.getLeafNodeElements = function ($root) {
 
+        var fromCache = _cache.leafNodeElements.get($root);
+        if (fromCache) {
+            return fromCache;
+        }
+
         var nodeIterator = document.createNodeIterator(
             $root[0],
             NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
@@ -1583,6 +1596,7 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
             }
         }
 
+        _cache.leafNodeElements.set($root, $leafNodeElements);
         return $leafNodeElements;
     };
 
@@ -1623,6 +1637,34 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
         return undefined;
     };
 
+    function Cache() {
+        var that = this;
+
+        //true = survives invalidation
+        var props = {
+            leafNodeElements: true,
+            visibleLeafNodes: false
+        };
+
+        _.each(props, function (val, key) {
+            that[key] = new Map();
+        });
+
+        this._invalidate = function () {
+            _.each(props, function (val, key) {
+                if (!val) {
+                    that[key] = new Map();
+                }
+            });
+        }
+    }
+
+    var _cache = new Cache();
+
+    this.invalidateCache = function () {
+        _cache._invalidate();
+    };
+
 
     // dmitry debug
     // dmitry debug
@@ -1631,11 +1673,11 @@ ReadiumSDK.Views.CfiNavigationLogic = function ($viewport, $iframe, options) {
     // dmitry debug
     // dmitry debug
 
-    parseContentCfi = function(cont) {
+    var parseContentCfi = function(cont) {
         return cont.replace(/\[(.*?)\]/, "").split(/[\/,:]/).map(function(n) { return parseInt(n); }).filter(Boolean);
     };
 
-    contentCfiComparator = function(cont1, cont2) {
+    var contentCfiComparator = function(cont1, cont2) {
         cont1 = this.parseContentCfi(cont1);
         cont2 = this.parseContentCfi(cont2);
 
