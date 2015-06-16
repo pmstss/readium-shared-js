@@ -791,13 +791,13 @@ ReadiumSDK.Views.ReaderView = function(options) {
     };
 
     // dir: 0 => new or same page, 1 => previous, 2 => next
-    function openPage(pageRequest, dir) {
+    var openPage = _.throttle(function (pageRequest, dir) {
 
         initViewForItem(pageRequest.spineItem, function(isViewChanged){
 
             _currentView.openPage(pageRequest, dir);
         });
-    }
+    }, 300);
 
     /**
      * Opens page index of the spine item with idref provided
