@@ -64,7 +64,7 @@ ReadiumSDK.Views.ReaderView = function(options) {
     var lazyResize = ReadiumSDK.Helpers.extendedThrottle(
         handleViewportResizeStart,
         handleViewportResizeTick,
-        handleViewportResizeEnd, 250, 1000, self);
+        handleViewportResizeEnd, 100, 300, self);
 
     $(window).on("resize.ReadiumSDK.readerView", lazyResize);
 
