@@ -497,7 +497,9 @@ ReadiumSDK.Views.ReflowableView = function(options, reader){
         ReadiumSDK.Helpers.triggerLayout(_$iframe);
         fitImages();
         showBook(); // as it's no longer hidden by shifting the position
-        self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
+        if (_currentSpineItem) {
+            self.trigger(ReadiumSDK.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
+        }
     }
 
     this.openPagePrev = function (initiator) {
