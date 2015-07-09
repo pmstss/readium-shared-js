@@ -77,7 +77,9 @@ ReadiumSDK = {
     /**
      * @namespace
      */
-    Overrides: {},
+    Overrides: {
+        TextNodeFragmentBuffer: 60
+    },
     /**
      * @namespace
      */
@@ -126,7 +128,11 @@ ReadiumSDK = {
         /**
          * @event
          */
-        MEDIA_OVERLAY_TTS_STOP: "MediaOverlayTTSStop"
+        MEDIA_OVERLAY_TTS_STOP: "MediaOverlayTTSStop",
+        /**
+         * @event (introduced for Know)
+         */
+        BOUNDARY_CROSSED: "BoundaryCrossed"
     },
     /**
      * Internal Events
@@ -139,7 +145,8 @@ ReadiumSDK = {
          * @event
          */
         CURRENT_VIEW_PAGINATION_CHANGED: "CurrentViewPaginationChanged",
-    }
+    },
+
 
 };
 

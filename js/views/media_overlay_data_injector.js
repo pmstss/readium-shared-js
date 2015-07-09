@@ -184,14 +184,14 @@ console.log("MO CLICKED LINK");
                                     var infoStart = EPUBcfi.getTextTerminusInfoWithPartialCFI(startCFI, elem.ownerDocument,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 //console.log(infoStart);
 
                                     var endCFI = "epubcfi(" + p.cfi.partialEndCfi + ")";
                                     var infoEnd = EPUBcfi.getTextTerminusInfoWithPartialCFI(endCFI, elem.ownerDocument,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 //console.log(infoEnd);
 
                                     var range = rangy.createRange(elem.ownerDocument); //createNativeRange
@@ -385,7 +385,7 @@ console.debug("MO readaloud attr: " + readaloud);
                                     var infoStart = EPUBcfi.getTextTerminusInfoWithPartialCFI(startCFI, $iframe[0].contentDocument,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 //console.log(infoStart);
 
                                     var partialEndCfi = parts[0] + parts[2];
@@ -393,7 +393,7 @@ console.debug("MO readaloud attr: " + readaloud);
                                     var infoEnd = EPUBcfi.getTextTerminusInfoWithPartialCFI(endCFI, $iframe[0].contentDocument,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
 //console.log(infoEnd);
 
                                     var cfiTextParent = infoStart.textNode[0].parentNode;
@@ -469,7 +469,7 @@ console.debug("MO readaloud attr: " + readaloud);
                                     $element = EPUBcfi.getTargetElementWithPartialCFI(cfi, $iframe[0].contentDocument,
                 ["cfi-marker", "mo-cfi-highlight"],
                 [],
-                ["MathJax_Message"]);
+                ["MathJax_Message", "MathJax_SVG_Hidden"]);
                                 }
                                 catch (error)
                                 {

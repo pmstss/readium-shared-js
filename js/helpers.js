@@ -582,6 +582,54 @@ ReadiumSDK.Helpers.extendedThrottle = function (startCb, tickCb, endCb, tickRate
 };
 
 
+ReadiumSDK.Helpers.fitImages = function ($html, options) {
+    if(!$html) {
+        return;
+    }
+
+    options = options || {};
+
+    var $elem;
+    var height;
+    var width;
+    var $body = $('body', $html);
+    //maxHeight is (html el height) - (body el padding+margin+border)
+    //we add 3 to the maxHeight as a buffer, this fixes a strange scaling issue on IE11
+    // if we set max-width/max-height to 100% columnizing engine chops images embedded in the text
+    // (but not if we set it to 99-98%) go figure.
+    var maxDimensions = {
+        maxHeight: $html.height() - ($body.outerHeight(true) - $body.height() + Math.floor($html.height() * 0.02)),
+        maxWidth: ($body[0].getClientRects()[0] ? $body[0].getClientRects()[0].width : $html.width()) - Math.floor($html.width() * 0.02)
+    };
+
+    $('img, svg', $html).each(function(){
+
+        $elem = $(this);
+
+        if (options.doNotChangeWidth) {
+            delete maxDimensions.maxWidth;
+        }
+        if (options.doNotChangeHeight) {
+            delete maxDimensions.maxHeight;
+        }
+
+        $elem.css(maxDimensions);
+
+        var ratiosUnbalanced = false;
+        if ($elem[0].tagName.toLowerCase() === "img") {
+            ratiosUnbalanced =
+                (($elem[0].naturalWidth / $elem[0].naturalHeight) * 10 | 0) !==
+                (($elem[0].clientWidth / $elem[0].clientHeight) * 10 | 0);
+        }
+        if (!$elem.css('height') || ratiosUnbalanced) {
+            $elem.css('height', 'auto');
+        }
+        if (!$elem.css('width') || ratiosUnbalanced) {
+            $elem.css('width', 'auto');
+        }
+    });
+};
+
 //TODO: consider using CSSOM escape() or polyfill
 //https://github.com/mathiasbynens/CSS.escape/blob/master/css.escape.js
 //http://mathiasbynens.be/notes/css-escapes
@@ -646,7 +694,16 @@ ReadiumSDK.Helpers.escapeJQuerySelector = function(sel) {
     // escapeSelector('~');
 
 
+/**
+ *
+ * @type {{getMatrix: getMatrix, getScaleFromMatrix: getScaleFromMatrix}}
+ */
 ReadiumSDK.Helpers.CSSTransformMatrix = {
+    /**
+     *
+     * @param $obj
+     * @returns {undefined}
+     */
     getMatrix: function ($obj) {
         var matrix = $obj.css("-webkit-transform") ||
             $obj.css("-moz-transform") ||
@@ -655,13 +712,22 @@ ReadiumSDK.Helpers.CSSTransformMatrix = {
             $obj.css("transform");
         return matrix === "none" ? undefined : matrix;
     },
+    /**
+     *
+     * @param matrix
+     * @returns {*}
+     */
     getScaleFromMatrix: function (matrix) {
         var matrixRegex = /matrix\((-?\d*\.?\d+),\s*0,\s*0,\s*(-?\d*\.?\d+),\s*0,\s*0\)/,
             matches = matrix.match(matrixRegex);
         return matches[1];
     }
 };
-//use triggerLayout helper instead
+
+/**
+ * @deprecated use triggerLayout helper instead
+ * @param $iframe
+ */
 ReadiumSDK.Helpers.waitForRendering = function($iframe) {
 
     var doc = $iframe[0].contentDocument;
@@ -676,3 +742,85 @@ ReadiumSDK.Helpers.waitForRendering = function($iframe) {
     doc.body.removeChild(el);
     var blocking = doc.body.offsetTop; // browser rendering / layout done
 };
+
+ReadiumSDK.Helpers.polyfillCaretRangeFromPoint = function(dokument) {
+    //Taken from css-regions-polyfill:
+    // https://github.com/FremyCompany/css-regions-polyfill/blob/master/src/range-extensions.js
+    //Copyright (c) 2013 François REMY
+    //Copyright (c) 2013 Adobe Systems Inc.
+    //Licensed under the Apache License, Version 2.0
+        if (!dokument.caretRangeFromPoint) {
+            if (dokument.caretPositionFromPoint) {
+                dokument.caretRangeFromPoint = function caretRangeFromPoint(x, y) {
+                    var r = dokument.createRange();
+                    var p = dokument.caretPositionFromPoint(x, y);
+                    if (p.offsetNode) {
+                        r.setStart(p.offsetNode, p.offset);
+                        r.setEnd(p.offsetNode, p.offset);
+                    }
+                    return r;
+                }
+            } else if ((dokument.body || dokument.createElement('body')).createTextRange) {
+                //
+                // we may want to convert TextRange to Range
+                //
+
+                //TextRangeUtils, taken from: https://code.google.com/p/ierange/
+                //Copyright (c) 2009 Tim Cameron Ryan
+                //Released under the MIT/X License
+                var TextRangeUtils = {
+                    convertToDOMRange: function(textRange, dokument) {
+                        var adoptBoundary = function(domRange, textRangeInner, bStart) {
+                            // iterate backwards through parent element to find anchor location
+                            var cursorNode = dokument.createElement('a'),
+                                cursor = textRangeInner.duplicate();
+                            cursor.collapse(bStart);
+                            var parent = cursor.parentElement();
+                            do {
+                                parent.insertBefore(cursorNode, cursorNode.previousSibling);
+                                cursor.moveToElementText(cursorNode);
+                            } while (cursor.compareEndPoints(bStart ? 'StartToStart' : 'StartToEnd', textRangeInner) > 0 && cursorNode.previousSibling);
+                            // when we exceed or meet the cursor, we've found the node
+                            if (cursor.compareEndPoints(bStart ? 'StartToStart' : 'StartToEnd', textRangeInner) == -1 && cursorNode.nextSibling) {
+                                // data node
+                                cursor.setEndPoint(bStart ? 'EndToStart' : 'EndToEnd', textRangeInner);
+                                domRange[bStart ? 'setStart' : 'setEnd'](cursorNode.nextSibling, cursor.text.length);
+                            } else {
+                                // element
+                                domRange[bStart ? 'setStartBefore' : 'setEndBefore'](cursorNode);
+                            }
+                            cursorNode.parentNode.removeChild(cursorNode);
+                        };
+                        // return a DOM range
+                        var domRange = dokument.createRange();
+                        adoptBoundary(domRange, textRange, true);
+                        adoptBoundary(domRange, textRange, false);
+                        return domRange;
+                    }
+                };
+
+                dokument.caretRangeFromPoint = function caretRangeFromPoint(x, y) {
+                    // the accepted number of vertical backtracking, in CSS pixels
+                    var IYDepth = 40;
+                    // try to create a text range at the specified location
+                    var tr = dokument.body.createTextRange();
+                    for (var iy = IYDepth; iy; iy = iy - 4) {
+                        try {
+                            tr.moveToPoint(x, iy + y - IYDepth);
+                            return TextRangeUtils.convertToDOMRange(tr, dokument);
+                        } catch (ex) {
+                        }
+                    }
+                    // if that fails, return the location just after the element located there
+                    try {
+                        var elem = dokument.elementFromPoint(x - 1, y - 1);
+                        var r = dokument.createRange();
+                        r.setStartAfter(elem);
+                        return r;
+                    } catch (ex) {
+                        return null;
+                    }
+                }
+            }
+        }
+    };
