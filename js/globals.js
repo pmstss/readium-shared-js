@@ -105,7 +105,11 @@ var Globals = {
         /**
          * @event
          */
-        PLUGINS_LOADED: "PluginsLoaded"
+        BOUNDARY_CROSSED: "BoundaryCrossed",
+        /**
+         * @event
+         */
+        PLUGINS_LOADED: "PluginsLoaded",
     },
     /**
      * Internal Events
@@ -118,7 +122,8 @@ var Globals = {
          * @event
          */
         CURRENT_VIEW_PAGINATION_CHANGED: "CurrentViewPaginationChanged",
-    }
+    },
+
 
 };
 _.extend(Globals, new EventEmitter());

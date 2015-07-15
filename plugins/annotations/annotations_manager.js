@@ -1,32 +1,30 @@
 //  Created by Dmitry Markushevich (dmitrym@evidentpoint.com)
-// 
+//
 //  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
-//  
-//  Redistribution and use in source and binary forms, with or without modification, 
+//
+//  Redistribution and use in source and binary forms, with or without modification,
 //  are permitted provided that the following conditions are met:
-//  1. Redistributions of source code must retain the above copyright notice, this 
+//  1. Redistributions of source code must retain the above copyright notice, this
 //  list of conditions and the following disclaimer.
-//  2. Redistributions in binary form must reproduce the above copyright notice, 
-//  this list of conditions and the following disclaimer in the documentation and/or 
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//  this list of conditions and the following disclaimer in the documentation and/or
 //  other materials provided with the distribution.
-//  3. Neither the name of the organization nor the names of its contributors may be 
-//  used to endorse or promote products derived from this software without specific 
+//  3. Neither the name of the organization nor the names of its contributors may be
+//  used to endorse or promote products derived from this software without specific
 //  prior written permission.
-//  
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*
-
-
 
 # Highlighting in Readium - A primer
 
@@ -34,31 +32,31 @@ Please note:
 
 - only simple text highlighting is currently supported
 - it's the job of the reading system to keep track of annotations. readium-js simply displays your annotations.
-- full CFIs for annotations are not currently available. We use so called "partial CFI"s, a tuple containing idref of the spine item and the CFI definition relative to the root of the spine item.
+- full CFIs for annotations are not currently available. We use so called "partial CFI"s, a tuple containing idref of the spine item
+  and the CFI definition relative to the root of the spine item.
 
-Currently, the API exposed via `ReaderView` exposes 4 functions and 1 even which should be sufficient for a simple highlighting workflow.
-
+Currently, the API exposed via `ReaderView` exposes 4 functions and 1 event which should be sufficient for a simple highlighting workflow.
 
 # API
 
 For the purposes of the examples below, `RReader` is a previously instantiated `ReaderView` instance.
 
-
 ## Is anything selected (getCurrentSelectionCfi())
 
-Before proceeding with the highlighting workflow it is sometimes necessary to determine whether the user has in fact selected anything. This can be accomplished with the following:
-
+Before proceeding with the highlighting workflow it is sometimes necessary to determine whether the user has in fact selected anything.
+This can be accomplished with the following:
 
 	> RReader.getCurrentSelectionCfi()
-	Object {idref: "id-id2604743", cfi: "/4/2/6,/1:74,/1:129"}
+        ReadiumSDK.Models.BookmarkData {idref: "id-id2635343", contentCFI: "/4/2[building_a_better_epub]/10,/4/1:12,/6/1:429", toString: function}
 
-The response contains a partial CFI that is sufficient to create a highlight based on selection. If nothing is selected *undefined* is returned. 
+The response contains a partial CFI that is sufficient to create a highlight based on selection. If nothing is selected *undefined* is returned.
 
 You can also use partial Cfi with `openSpineItemElementCfi()` to navigate to where this selection is later.
 
 ## Highlighting (addHighlight and addSelectionHighlight)
 
-Once we've determined what needs to be highlighted (by generating a partial CFI from a selection, or having an existing partial CFI stored externally) we can add it to the reader by calling `addHighlight()`:
+Once we've determined what needs to be highlighted (by generating a partial CFI from a selection, or having an existing partial CFI stored externally)
+we can add it to the reader by calling `addHighlight()`:
 
 	> RReader.addHighlight('id-id2604743', "/4/2/6,/1:74,/1:129", 123, "highlight")
 	Object {CFI: "/4/2/6,/1:74,/1:129", selectedElements: Array[1], idref: "id-id2604743"}
@@ -68,7 +66,7 @@ Once we've determined what needs to be highlighted (by generating a partial CFI 
 - *id-id2604743* - `idref` is the idref value from `getCurrentSelectionCfi()
 - * /4/2/6,/1:74,/1:129* - `cfi` is the cfi value from `getCurrentSelectionCfi()
 - *123* - `id` is the unique id that defines this annotation
-- *highlight* - 'type' of annotation. only 'highlight' is currently supported.
+- *highlight* - 'type' of annotation.
 
 ### addSelectioHighlight
 
@@ -80,7 +78,7 @@ Alternatively, you can call addSelectionHighlight(). It combines both getCurrent
 Note that it provides no validation. If nothing is selected, `undefined` is returned.
 
 
-## Removing highlights 
+## Removing highlights
 
 To remove the highlight, call `removeHighlight`:
 
@@ -103,8 +101,10 @@ When a user clicks on a highlight `annotationClicked` event is dispatched with t
 	
 Then when the user clicks on the highlight the following will show up in the console:
 
-	highlight id-id2604743 /4/2/6,/1:74,/1:129 123 
-	
+	highlight id-id2604743 /4/2/6,/1:74,/1:129 123
+
+Note that there are 2 more events that may be hadled in a similar manner - 'textSelection' and 'imgDblClicked'.
+The set of arguments passed to the event handling function is different though.
 
 */
 define(['jquery', 'underscore', 'eventEmitter', './annotations_module'], function($, _, EventEmitter, EpubAnnotationsModule) {
@@ -117,9 +117,11 @@ define(['jquery', 'underscore', 'eventEmitter', './annotations_module'], functio
 var AnnotationsManager = function (proxyObj, options) {
 
     var self = this;
+
+    // live annotations contains references to the annotation _module_ for visible spines
     var liveAnnotations = {};
     var spines = {};
-    var proxy = proxyObj; 
+    var proxy = proxyObj;
     var annotationCSSUrl = options.annotationCSSUrl;
 
     if (!annotationCSSUrl) {
@@ -129,6 +131,10 @@ var AnnotationsManager = function (proxyObj, options) {
     _.extend(this, new EventEmitter());
 
     // we want to bubble up all of the events that annotations module may trigger up.
+    // Note that annotations module produces "annotation" related events (triggered on HighlightViews of HighlightGroup):
+    // that are mangled, i.e., a new set of arguments is produced in mangleEvent function
+    // as well as these 2 events:  "textSelectionEvent" and "imgDblClicked", that are not mangled and propogated "as is"
+
     // this.on("all", function() {
     // });
     //TODO: EventEmitter3 does not support "all" or "*" (catch-all event sink)
@@ -139,28 +145,34 @@ var AnnotationsManager = function (proxyObj, options) {
     
     var triggerEmitPatch = function() {
         var args = Array.prototype.slice.call(arguments);
-console.debug(args);
-
-        // mangle annotationClicked event. What really needs to happen is, the annotation_module needs to return a 
+        // mangle annotationClicked event. What really needs to happen is, the annotation_module needs to return a
         // bare Cfi, and this class should append the idref.
-        var annotationClickedEvent = 'annotationClicked';
-        if (args.length && args[0] === annotationClickedEvent) {
-            for (var spineIndex in liveAnnotations)
-            {
-                var jQueryEvent = args[4];
-                var annotationId = args[3];
-                var fullFakeCfi = args[2];
-                var type = args[1];
-                if (liveAnnotations[spineIndex].getHighlight(annotationId)) {
-                    var idref = spines[spineIndex].idref;
-                    var partialCfi = getPartialCfi(fullFakeCfi);
-                    args = [annotationClickedEvent, type, idref, partialCfi, annotationId, jQueryEvent];
-                    
-console.debug("Corrected CFI:");
-console.debug(args);
+        var mangleEvent = function(annotationEvent){
+            if (args.length && args[0] === annotationEvent) {
+                for (var spineIndex in liveAnnotations)
+                {
+                    var contentDocumentFrame = args[5];
+                    var jQueryEvent = args[4];
+                    if (typeof jQueryEvent.clientX === 'undefined') {
+                        jQueryEvent.clientX = jQueryEvent.pageX;
+                        jQueryEvent.clientY = jQueryEvent.pageY;
+                    }
+
+                    var annotationId = args[3];
+                    var partialCfi = args[2];
+                    var type = args[1];
+                    if (liveAnnotations[spineIndex].getHighlight(annotationId)) {
+                        var idref = spines[spineIndex].idref;
+                        args = [annotationEvent, type, idref, partialCfi, annotationId, jQueryEvent, contentDocumentFrame];
+                    }
                 }
             }
         }
+        mangleEvent('annotationClicked');
+        mangleEvent('annotationTouched');
+        mangleEvent('annotationRightClicked');
+        mangleEvent('annotationHoverIn');
+        mangleEvent('annotationHoverOut');
         
         originalEmit.apply(this, args);
         originalEmit.apply(proxy, args);
@@ -169,52 +181,109 @@ console.debug(args);
     this.trigger = triggerEmitPatch;
     this.emit = triggerEmitPatch;
 
-    this.attachAnnotations = function($iframe, spineItem) {
-        var epubDocument = $iframe[0].contentDocument;
-        liveAnnotations[spineItem.index] = new EpubAnnotationsModule(epubDocument, self, annotationCSSUrl);
+    this.attachAnnotations = function($iframe, spineItem, loadedSpineItems) {
+        var epubDocumentFrame = $iframe[0];
+        liveAnnotations[spineItem.index] = new EpubAnnotationsModule(epubDocumentFrame, self, annotationCSSUrl, spineItem);
         spines[spineItem.index] = spineItem;
 
-        // check to see which spine indecies can be culled depending on the distance from current spine item
+        // check to see which spine indicies can be culled depending on the currently loaded spine items
         for(var spineIndex in liveAnnotations) {
-            if (Math.abs(spineIndex - spineIndex.index) > 3) {
+            if (liveAnnotations.hasOwnProperty(spineIndex) && !_.contains(loadedSpineItems, spines[spineIndex])) {
                 delete liveAnnotations[spineIndex];
             }
         }
     };
 
-
     this.getCurrentSelectionCfi = function() {
         for(var spine in liveAnnotations) {
-            var annotationsForView = liveAnnotations[spine]; 
+            var annotationsForView = liveAnnotations[spine];
             var partialCfi = annotationsForView.getCurrentSelectionCFI();
             if (partialCfi) {
-                return {"idref":spines[spine].idref, "cfi":partialCfi};
+                return new ReadiumSDK.Models.BookmarkData(spines[spine].idref, partialCfi);
             }
         }
         return undefined;
     };
 
-    this.addSelectionHighlight = function(id, type) {
-        for(spine in liveAnnotations) {
-            var annotationsForView = liveAnnotations[spine]; 
+    this.addSelectionHighlight = function(id, type, clearSelection, styles) {
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
             if (annotationsForView.getCurrentSelectionCFI()) {
-                var annotation = annotationsForView.addSelectionHighlight(id, type);
-                annotation.idref = spines[spine].idref;
-                return annotation;
+                var annotation = annotationsForView.addSelectionHighlight(
+                    id, type, clearSelection, styles);
+                return new ReadiumSDK.Models.BookmarkData(spines[spine].idref, annotation.CFI);
             }
         }
         return undefined;
     };
-
-    this.addHighlight = function(spineIdRef, partialCfi, id, type, styles) {
+    
+    this.addHighlight = function(spineIdRef, partialCfi, id, type, styles, options) {
         for(var spine in liveAnnotations) {
             if (spines[spine].idref === spineIdRef) {
-                var fakeCfi = "epubcfi(/99!" + partialCfi + ")";
-                var annotationsForView = liveAnnotations[spine]; 
-                var annotation = annotationsForView.addHighlight(fakeCfi, id, type, styles);
-                annotation.idref = spineIdRef;
-                annotation.CFI = getPartialCfi(annotation.CFI);
-                return annotation;
+                var annotationsForView = liveAnnotations[spine];
+                var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles, options);
+                if (annotation) {
+                    return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
+                }
+            }
+        }
+        return undefined;
+    };
+    
+    this.addPlaceholder = function(spineIdRef, partialCfi, $element, id, type, styles) {
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                var annotation = annotationsForView.addPlaceholder(partialCfi, $element,
+                                                                   id, type, styles);
+                if (annotation) {
+                    return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
+                }
+            }
+        }
+        return undefined;
+    };
+
+    this.addHighlightsForText = function(text, spineIdRef, type, styles) {
+        var bookmarks = [];
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                annotations = annotationsForView.addHighlightsForText(text, type, styles);
+                _.each(annotations, function (partialCfi) {
+                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
+                });
+                return bookmarks;
+            }
+        }
+        return undefined;
+    };
+
+    this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
+        var bookmarks = [];
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                annotations = annotationsForView.addPlaceholdersForAudio(type, styles);
+                _.each(annotations, function (partialCfi) {
+                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
+                });
+                return bookmarks;
+            }
+        }
+        return undefined;
+    };
+    
+    this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
+        var bookmarks = [];
+        for(var spine in liveAnnotations) {
+            if (spines[spine].idref === spineIdRef) {
+                var annotationsForView = liveAnnotations[spine];
+                annotations = annotationsForView.addPlaceholdersForVideo(type, styles);
+                _.each(annotations, function (partialCfi) {
+                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
+                });
+                return bookmarks;
             }
         }
         return undefined;
@@ -223,23 +292,192 @@ console.debug(args);
     this.removeHighlight = function(id) {
         var result = undefined;
         for(var spine in liveAnnotations) {
-            var annotationsForView = liveAnnotations[spine]; 
+            var annotationsForView = liveAnnotations[spine];
             result  = annotationsForView.removeHighlight(id);
         }
         return result;
     };
+    
+    this.removeHighlightsByType = function(type) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result  = annotationsForView.removeHighlightsByType(type);
+        }
+        return result;
+    };
+    
+    this.getHighlight = function(id) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result  = annotationsForView.getHighlight(id);
+            if (result !== undefined)
+				return result;
+        }
+        return result;
+    };
 
+    this.updateAnnotation = function(id, type, styles) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.updateAnnotation(id, type, styles);
+            if(result) {
+                break;
+            }
+        }
+        return result;
+    };
 
+    this.replaceAnnotation = function(id, cfi, type, styles) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.replaceAnnotation(id, cfi, type, styles);
+            if(result) {
+                break;
+            }
+        }
+        return result;
+    };
 
-    function getPartialCfi(CFI) {
-        var cfiWrapperPattern = new RegExp("^.*!")
-        // remove epubcfi( and indirection step
-        var partiallyNakedCfi = CFI.replace(cfiWrapperPattern, "");
-        // remove last paren
-        var nakedCfi = partiallyNakedCfi.substring(0, partiallyNakedCfi.length -1);
-        return nakedCfi;
-    }
+    // redraw gets called on pagination change, so for progressive rendering we may have to add annotations that were previously not visible.
+    this.redrawAnnotations = function(options){
+        for(var spine in liveAnnotations) {
+            liveAnnotations[spine].redraw(options);
+        }
+    };
 
+    this.updateAnnotationView = function(id, styles) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.updateAnnotationView(id,styles);
+            if(result){
+                break;
+            }
+        }
+        return result;
+    };
+
+    this.setAnnotationViewState = function(id, state, value) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.setAnnotationViewState(id, state, value);
+            if(result){
+                break;
+            }
+        }
+        return result;
+    };
+
+    this.setAnnotationViewStateForAll = function(state, value) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.setAnnotationViewStateForAll(state, value);
+            if(result){
+                break;
+            }
+        }
+        return result;
+    };
+
+    this.cfiIsBetweenTwoCfis = function (cfi, lowBoundaryCfi, highBoundaryCfi) {
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.cfiIsBetweenTwoCfis(cfi, lowBoundaryCfi, highBoundaryCfi);
+            if(result){
+                break;
+            }
+        }
+        return result;
+    };
+
+    this.contentCfiComparator = function(contCfi1, contCfi2) { 
+        var result = undefined;
+        for(var spine in liveAnnotations) {
+            var annotationsForView = liveAnnotations[spine];
+            result = annotationsForView.contentCfiComparator(contCfi1, contCfi2);
+            if(result){
+                break;
+            }
+        }
+        return result;
+    };
+
+    this.getAnnotationMidpoints = function($elementSpineItemCollection){
+        var output = [];
+
+        _.each($elementSpineItemCollection, function (item){
+            var annotations = [];
+
+            var lastId = null;
+
+            var baseOffset = {top: 0, left: 0};
+            if (item.elements && item.elements.length > 0) {
+                var offsetElement = item.elements[0].element.ownerDocument.defaultView.frameElement.parentElement;
+                baseOffset = {top: offsetElement.offsetTop, left: offsetElement.offsetLeft};
+            }
+
+            _.each(item.elements, function(element){
+
+                var $element;
+                //TODO JC: yuck, we get two different collection structures from non fixed and fixed views.. must refactor..
+                if(element.element){
+                    $element = $(element.element);
+                    element = element.element;
+                }else{
+                    $element = $(element);
+                    element = element[0];
+                }
+                var elementId = $element.attr('data-id');
+
+                if(!elementId){
+                    console.warn('AnnotationsManager:getAnnotationMidpoints: Got an annotation element with no ID??')
+                    return;
+                }
+                if (elementId === lastId) return;
+                lastId = elementId;
+
+                //calculate position offsets with scaling
+                var scale = 1;
+                //figure out a better way to get the html parent from an element..
+                var $html = $element.parent();
+                //get transformation scale from content document
+                var matrix = ReadiumSDK.Helpers.CSSTransformMatrix.getMatrix($html);
+                if (matrix) {
+                    scale = ReadiumSDK.Helpers.CSSTransformMatrix.getScaleFromMatrix(matrix);
+                }
+                var offset = $element.offset();
+                offset.top += baseOffset.top;
+                offset.left += baseOffset.left;
+                if(scale !== 1){
+                    offset = {top: (offset.top * scale)*(1/scale)-12, left: offset.left }; //the 12 is a "padding"
+                }
+                var $highlighted = {id: elementId, position: offset, lineHeight: parseInt($element.css('line-height'),10)};
+                annotations.push($highlighted)
+            });
+
+            output.push({annotations:annotations, spineItem: item.spineItem});
+        });
+
+        return output;
+    };
+
+    this.getAnnotationsElementSelector = function () {
+        return 'div.highlight, div.highlight-border';
+    };
+
+    function removeAllHighlights(annotationModule) { 
+        console.debug("Removing all highlights..");
+        _.each(annotationModule.getHighlights(), function(annotation) {
+            annotationModule.removeHighlight(annotation.id);
+        });
+    };
 
 };
 

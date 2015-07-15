@@ -40,7 +40,7 @@ var CurrentPagesInfo = function(spine, isFixedLayout) {
 
     this.isRightToLeft = spine.isRightToLeft();
     this.isFixedLayout = isFixedLayout;
-    this.spineItemCount = spine.items.length
+    this.spineItemCount = spine.items.length;
     this.openPages = [];
 
     this.addOpenPage = function(spineItemPageIndex, spineItemPageCount, idref, spineItemIndex) {
@@ -69,8 +69,9 @@ var CurrentPagesInfo = function(spine, isFixedLayout) {
 
         // Removed, needs to be implemented properly as per above.
         // See https://github.com/readium/readium-shared-js/issues/108
-        // if(!spine.isValidLinearItem(lastOpenPage.spineItemIndex))
-        //     return false;
+        //EP EDIT: re-enabled
+        if(!spine.isValidLinearItem(lastOpenPage.spineItemIndex))
+             return false;
 
         return lastOpenPage.spineItemIndex < spine.last().index || lastOpenPage.spineItemPageIndex < lastOpenPage.spineItemPageCount - 1;
     };
@@ -87,8 +88,9 @@ var CurrentPagesInfo = function(spine, isFixedLayout) {
 
         // Removed, needs to be implemented properly as per above.
         // //https://github.com/readium/readium-shared-js/issues/108
-        // if(!spine.isValidLinearItem(firstOpenPage.spineItemIndex))
-        //     return false;
+        //EP EDIT: re-enabled
+        if(!spine.isValidLinearItem(firstOpenPage.spineItemIndex))
+             return false;
 
         return spine.first().index < firstOpenPage.spineItemIndex || 0 < firstOpenPage.spineItemPageIndex;
     };

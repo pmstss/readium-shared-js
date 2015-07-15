@@ -65,16 +65,15 @@ var Spine = function(epubPackage, spineDTO) {
         return !_handleLinear || item.linear !== "no";
     }
 
-
     this.isValidLinearItem = function(index) {
-        
+
         if(!isValidIndex(index)) {
             return undefined;
         }
 
         return isValidLinearItem(this.item(index));
     };
-
+    
     this.prevItem = function(item) {
 
         return lookForPrevValidItem(item.index - 1);

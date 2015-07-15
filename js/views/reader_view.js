@@ -1,27 +1,27 @@
 //  Created by Boris Schneiderman.
 // Modified by Daniel Weck
 //  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
-//  
-//  Redistribution and use in source and binary forms, with or without modification, 
+//
+//  Redistribution and use in source and binary forms, with or without modification,
 //  are permitted provided that the following conditions are met:
-//  1. Redistributions of source code must retain the above copyright notice, this 
+//  1. Redistributions of source code must retain the above copyright notice, this
 //  list of conditions and the following disclaimer.
-//  2. Redistributions in binary form must reproduce the above copyright notice, 
-//  this list of conditions and the following disclaimer in the documentation and/or 
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//  this list of conditions and the following disclaimer in the documentation and/or
 //  other materials provided with the distribution.
-//  3. Neither the name of the organization nor the names of its contributors may be 
-//  used to endorse or promote products derived from this software without specific 
+//  3. Neither the name of the organization nor the names of its contributors may be
+//  used to endorse or promote products derived from this software without specific
 //  prior written permission.
-//  
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 define(["jquery", "underscore", "eventEmitter", "./fixed_view", "../helpers", "./iframe_loader", "./internal_links_support",
@@ -64,12 +64,16 @@ var ReaderView = function (options) {
     var _mediaOverlayDataInjector;
     var _iframeLoader;
     var _$el;
+//FIXME: JCCR mj8
+    var _annotationsManager = new ReadiumSDK.Views.AnnotationsManager(self, options);
+    // initial value undefined, so that we do not do any boundary checks
+    var _boundaryData = undefined;
 
     //We will call onViewportResize after user stopped resizing window
     var lazyResize = Helpers.extendedThrottle(
         handleViewportResizeStart,
         handleViewportResizeTick,
-        handleViewportResizeEnd, 250, 1000, self);
+        handleViewportResizeEnd, 100, 300, self);
 
     $(window).on("resize.ReadiumSDK.readerView", lazyResize);
 
@@ -123,6 +127,12 @@ var ReaderView = function (options) {
                 createdView = new ScrollView(options, true, self);
                 break;
             default:
+                if (window.Modernizr && !window.Modernizr.csscolumns) {
+                    // IE9 doesn't support columnization, instead use a scroll doc view
+//FIXME: JCCR mj8
+                    createdView = new ReadiumSDK.Views.FallbackScrollView(options, false);
+                    break;
+                }
                 createdView = new ReflowableView(options, self);
                 break;
         }
@@ -154,6 +164,11 @@ var ReaderView = function (options) {
             }
 
             return ReaderView.VIEW_TYPE_SCROLLED_DOC;
+        }
+
+        if(_currentView instanceof ReadiumSDK.Views.FallbackScrollView) {
+            // fake a columnized view because it's a fallback of it
+            return ReadiumSDK.Views.ReaderView.VIEW_TYPE_COLUMNIZED;
         }
 
         console.error("Unrecognized view type");
@@ -233,6 +248,8 @@ var ReaderView = function (options) {
             _mediaOverlayDataInjector.attachMediaOverlayData($iframe, spineItem, _viewerSettings);
 
             _internalLinksSupport.processLinkElements($iframe, spineItem);
+//FIXME: JCCR mj8: annotations manager should be moved into plugin, and this line removed
+            _annotationsManager.attachAnnotations($iframe, spineItem, self.getLoadedSpineItems());
 
             var contentDoc = $iframe[0].contentDocument;
             Trigger.register(contentDoc);
@@ -245,15 +262,28 @@ var ReaderView = function (options) {
             self.emit(Globals.Events.CONTENT_DOCUMENT_LOAD_START, $iframe, spineItem);
         });
 
-        _currentView.on(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, function (pageChangeData) {
+        _currentView.on(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, function(pageChangeData, preventPublicTrigger) {
 
             //we call on onPageChanged explicitly instead of subscribing to the Globals.Events.PAGINATION_CHANGED by
             //mediaOverlayPlayer because we hve to guarantee that mediaOverlayPlayer will be updated before the host
             //application will be notified by the same Globals.Events.PAGINATION_CHANGED event
             _mediaOverlayPlayer.onPageChanged(pageChangeData);
 
-            self.emit(Globals.Events.PAGINATION_CHANGED, pageChangeData);
+            // This event trigger can be prevented if in some cases the page change action did not cause a view to redraw.
+            // Reading systems may do expensive operations on this event hook so we should not trigger it when the pagination state stayed the same.
+            if(!preventPublicTrigger){
+                _.defer(function(){
+                    self.emit(Globals.Events.PAGINATION_CHANGED, pageChangeData);
+                });
+            }
+
         });
+//FIXME: JCCR mj8: this is sometimes faulty, consider removal
+        // automatically redraw annotations.
+        self.on(ReadiumSDK.Events.PAGINATION_CHANGED, _.debounce(function () {
+            self.redrawAnnotations();
+        }, 10, true));
+
 
         _currentView.on(Globals.Events.FXL_VIEW_RESIZED, function () {
             self.emit(Globals.Events.FXL_VIEW_RESIZED);
@@ -293,7 +323,6 @@ var ReaderView = function (options) {
 
         self.emit(Globals.Events.READER_VIEW_DESTROYED);
 
-        _currentView.off(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED);
         _currentView.remove();
         _currentView = undefined;
     }
@@ -341,7 +370,7 @@ var ReaderView = function (options) {
      * @property {Globals.Models.Package} package - packageData (required)
      * @property {Globals.Models.PageOpenRequest} openPageRequest - openPageRequestData, (optional) data related to open page request
      * @property {Globals.Views.ReaderView.SettingsData} [settings]
-     * @property {Globals.Collections.StyleCollection} styles: [cssStyles]
+     * @property {Globals.Collections.StyleCollection} [styles]
      * @todo Define missing types
      */
 
@@ -440,30 +469,32 @@ var ReaderView = function (options) {
     }
 
     /**
-     * Flips the page from left to right.
-     * Takes to account the page progression direction to decide to flip to prev or next page.
+     * Flips the page from left to right. Takes to account the page progression direction to decide to flip to prev or next page.
+     *
+     * @returns {boolean} True if page successfully opened, false if page failed to open, undefined if the result is undetermined (as this depends on child view implementations)
      */
     this.openPageLeft = function () {
 
-        if (_package.spine.isLeftToRight()) {
-            self.openPagePrev();
+        if(_package.spine.isLeftToRight()) {
+            return self.openPagePrev();
         }
         else {
-            self.openPageNext();
+            return self.openPageNext();
         }
     };
 
     /**
-     * Flips the page from right to left.
-     * Takes to account the page progression direction to decide to flip to prev or next page.
+     * Flips the page from right to left. Takes to account the page progression direction to decide to flip to prev or next page.
+     *
+     * @returns {boolean} True if page successfully opened, false if page failed to open, undefined if the result is undetermined (as this depends on child view implementations)
      */
     this.openPageRight = function () {
 
-        if (_package.spine.isLeftToRight()) {
-            self.openPageNext();
+        if(_package.spine.isLeftToRight()) {
+            return self.openPageNext();
         }
         else {
-            self.openPagePrev();
+            return self.openPagePrev();
         }
 
     };
@@ -556,10 +587,6 @@ var ReaderView = function (options) {
 
                 initViewForItem(spineItem, function (isViewChanged) {
 
-                    if (!isViewChanged) {
-                        _currentView.setViewSettings(_viewerSettings);
-                    }
-
                     self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
 
                     if (wasPlaying) {
@@ -580,6 +607,8 @@ var ReaderView = function (options) {
 
     /**
      * Opens the next page.
+     *
+     * @returns {boolean} True if page successfully opened, false if page failed to open, undefined if the result is undetermined (as this depends on child view implementations)
      */
     this.openPageNext = function () {
 
@@ -591,14 +620,13 @@ var ReaderView = function (options) {
         var paginationInfo = _currentView.getPaginationInfo();
 
         if (paginationInfo.openPages.length == 0) {
-            return;
+            return false;
         }
 
         var lastOpenPage = paginationInfo.openPages[paginationInfo.openPages.length - 1];
 
         if (lastOpenPage.spineItemPageIndex < lastOpenPage.spineItemPageCount - 1) {
-            _currentView.openPageNext(self);
-            return;
+            return _currentView.openPageNext(self);
         }
 
         var currentSpineItem = _spine.getItemById(lastOpenPage.idref);
@@ -606,17 +634,19 @@ var ReaderView = function (options) {
         var nextSpineItem = _spine.nextItem(currentSpineItem);
 
         if (!nextSpineItem) {
-            return;
+            return false;
         }
 
         var openPageRequest = new PageOpenRequest(nextSpineItem, self);
         openPageRequest.setFirstPage();
 
-        openPage(openPageRequest, 2);
+        return openPage(openPageRequest, 2);
     };
 
     /**
      * Opens the previous page.
+     *
+     * @returns {boolean} True if page successfully opened, false if page failed to open, undefined if the result is undetermined (as this depends on child view implementations)
      */
     this.openPagePrev = function () {
 
@@ -628,14 +658,14 @@ var ReaderView = function (options) {
         var paginationInfo = _currentView.getPaginationInfo();
 
         if (paginationInfo.openPages.length == 0) {
-            return;
+            return false;
         }
 
         var firstOpenPage = paginationInfo.openPages[0];
 
         if (firstOpenPage.spineItemPageIndex > 0) {
-            _currentView.openPagePrev(self);
-            return;
+
+            return _currentView.openPagePrev(self);
         }
 
         var currentSpineItem = _spine.getItemById(firstOpenPage.idref);
@@ -643,13 +673,13 @@ var ReaderView = function (options) {
         var prevSpineItem = _spine.prevItem(currentSpineItem);
 
         if (!prevSpineItem) {
-            return;
+            return false;
         }
 
         var openPageRequest = new PageOpenRequest(prevSpineItem, self);
         openPageRequest.setLastPage();
 
-        openPage(openPageRequest, 1);
+        return openPage(openPageRequest, 1);
     };
 
     function getSpineItem(idref) {
@@ -686,7 +716,7 @@ var ReaderView = function (options) {
         }
 
         var pageData = new PageOpenRequest(spineItem, initiator);
-        if (elementCfi) {
+        if (elementCfi && elementCfi !== '') {
             pageData.setElementCfi(elementCfi);
         }
 
@@ -723,7 +753,12 @@ var ReaderView = function (options) {
             var spineItems = this.getLoadedSpineItems();
             if (spineItems.length > 0) {
                 pageRequest = new PageOpenRequest(spineItems[0], initiator);
-                pageRequest.setPageIndex(pageIndex);
+                if (pageIndex === -1) {
+                    pageRequest.setLastPage();
+                } else {
+                    pageRequest.setPageIndex(pageIndex);
+                }
+
             }
         }
 
@@ -732,19 +767,44 @@ var ReaderView = function (options) {
         return true;
     };
 
+
+    /**
+     * Opens spine item by a specified index
+     *
+     * @param {number} spineIndex Zero based index of the spine item
+     * @param {object} initiator optional
+     */
+    this.openSpineItemByIndex = function(spineIndex, initiator) {
+
+        if(!_currentView) {
+            return;
+        }
+
+        var pageRequest;
+        var spineItem;
+        if (spineIndex === -1) {
+            spineItem = _spine.last();
+        } else {
+            spineItem = _spine.items[spineIndex];
+        }
+
+        if(!spineItem) {
+            return;
+        }
+
+        pageRequest = new ReadiumSDK.Models.PageOpenRequest(spineItem, initiator);
+        pageRequest.setPageIndex(0);
+        openPage(pageRequest);
+    };
+
     // dir: 0 => new or same page, 1 => previous, 2 => next
-    function openPage(pageRequest, dir) {
+    var openPage = _.throttle(function (pageRequest, dir) {
 
         initViewForItem(pageRequest.spineItem, function (isViewChanged) {
 
-            if (!isViewChanged) {
-                _currentView.setViewSettings(_viewerSettings);
-            }
-
             _currentView.openPage(pageRequest, dir);
         });
-    }
-
+    }, 300);
 
     /**
      * Opens page index of the spine item with idref provided
@@ -820,10 +880,10 @@ var ReaderView = function (options) {
      * @param {string} selector                      The query selector
      * @returns {HTMLElement|undefined}
      */
-    this.getElement = function (spineItem, selector) {
+    this.getElement = function (spineItemIdref, selector) {
 
         if (_currentView) {
-            return _currentView.getElement(spineItem, selector);
+            return _currentView.getElement(spineItemIdref, selector);
         }
 
         return undefined;
@@ -832,14 +892,14 @@ var ReaderView = function (options) {
     /**
      * Gets an element from active content documents based on an element id.
      *
-     * @param {Models.SpineItem} spineItem      The spine item object associated with an active content document
+     * @param {string} spineItemIdref      The spine item idref associated with an active content document
      * @param {string} id                                  The element id
      * @returns {HTMLElement|undefined}
      */
-    this.getElementById = function (spineItem, id) {
+    this.getElementById = function (spineItemIdref, id) {
 
         if (_currentView) {
-            return _currentView.getElementById(spineItem, id);
+            return _currentView.getElementById(spineItemIdref, id);
         }
 
         return undefined;
@@ -848,17 +908,17 @@ var ReaderView = function (options) {
     /**
      * Gets an element from active content documents based on a content CFI.
      *
-     * @param {Models.SpineItem} spineItem     The spine item idref associated with an active content document
+     * @param {string} spineItemIdref     The spine item idref associated with an active content document
      * @param {string} cfi                                The partial content CFI
      * @param {string[]} [classBlacklist]
      * @param {string[]} [elementBlacklist]
      * @param {string[]} [idBlacklist]
      * @returns {HTMLElement|undefined}
      */
-    this.getElementByCfi = function (spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist) {
+    this.getElementByCfi = function (spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
 
         if (_currentView) {
-            return _currentView.getElementByCfi(spineItem, cfi, classBlacklist, elementBlacklist, idBlacklist);
+            return _currentView.getElementByCfi(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist);
         }
 
         return undefined;
@@ -902,6 +962,25 @@ var ReaderView = function (options) {
      */
     this.openContentUrl = function (contentRefUrl, sourceFileHref, initiator) {
 
+        var contentResolveInfo = self.resolveContentUrl(contentRefUrl, sourceFileHref, initiator);
+
+        if (contentResolveInfo && contentResolveInfo.idref) {
+            return self.openSpineItemElementId(contentResolveInfo.idref, contentResolveInfo.elementId, initiator);
+        } else {
+            return false;
+        }
+    };
+
+    /**
+     * Resolves a content url
+     *
+     * @param {string} contentRefUrl Url of the content document
+     * @param {string | undefined} sourceFileHref Url to the file that contentRefUrl is relative to. If contentRefUrl is
+     * relative ot the source file that contains it instead of the package file (ex. TOC file) We have to know the
+     * sourceFileHref to resolve contentUrl relative to the package file.
+     * @param {object} initiator optional
+     */
+    this.resolveContentUrl = function(contentRefUrl, sourceFileHref, initiator) {
         var combinedPath = Helpers.ResolveContentRef(contentRefUrl, sourceFileHref);
 
         var hashIndex = combinedPath.indexOf("#");
@@ -915,6 +994,7 @@ var ReaderView = function (options) {
             hrefPart = combinedPath;
             elementId = undefined;
         }
+
 
         var spineItem = _spine.getItemByHref(hrefPart);
         if (!spineItem) {
@@ -930,7 +1010,7 @@ var ReaderView = function (options) {
             }
         }
 
-        return self.openSpineItemElementId(spineItem.idref, elementId, initiator);
+        return {href: hrefPart, elementId: elementId, idref: spineItem.idref};
     };
 
     /**
@@ -962,10 +1042,12 @@ var ReaderView = function (options) {
     /**
      * Returns the bookmark associated with currently opened page.
      *
-     * @returns {string} Serialized Globals.Models.BookmarkData object as JSON string.
+     * @returns {string} Serialized ReadiumSDK.Models.BookmarkData object as JSON string.
+     *          {null} If a bookmark could not be created successfully.
      */
-    this.bookmarkCurrentPage = function () {
-        return JSON.stringify(_currentView.bookmarkCurrentPage());
+    this.bookmarkCurrentPage = function() {
+        var bookmark = _currentView.bookmarkCurrentPage();
+        return bookmark ? bookmark.toString() : null;
     };
 
     /**
@@ -1166,7 +1248,7 @@ var ReaderView = function (options) {
 
             initViewForItem(spineItem, function (isViewChanged) {
                 self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
-                return;
+                _currentView.onViewportResize();
             });
         }
         else {
@@ -1175,16 +1257,224 @@ var ReaderView = function (options) {
     };
 
     /**
-     * Lets user to subscribe to iframe's window events
+     * Returns current selection partial Cfi, useful for workflows that need to check whether the user has selected something.
+     *
+     * @returns {object | undefined} partial cfi object or undefined if nothing is selected
+     */
+    this.getCurrentSelectionCfi =  function() {
+        return _annotationsManager.getCurrentSelectionCfi();
+    };
+
+    /**
+     * Creates a higlight based on given parameters
+     *
+     * @param {string} spineIdRef		Spine idref that defines the partial Cfi
+     * @param {string} cfi				Partial CFI (withouth the indirection step) relative to the spine index
+     * @param {string} id				Id of the highlight. must be unique
+     * @param {string} type 			Name of the class selector rule in annotations stylesheet.
+     * 									The style of the class will be applied to the created hightlight
+     * @param {object} styles			Object representing CSS properties to be applied to the highlight.
+     * 									e.g., to apply background color pass in: {'background-color': 'green'}
+     *
+     * @returns {object | undefined} partial cfi object of the created highlight
+     */
+    this.addHighlight = function(spineIdRef, cfi, id, type, styles) {
+        var options = getCfisForVisibleRegion();
+        return _annotationsManager.addHighlight(spineIdRef, cfi, id, type, styles, options);
+    };
+
+    /**
+     * Draw placeholder around element addressed by CFI
+     *
+     * @param {string} spineIdRef spine idref that defines the partial Cfi
+     * @param {string} cfi Partial CFI (withouth the indirection step) relative to the spine index
+     * @param {string} id Id of the highlight. must be unique
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * The style of the class will be applied to the placeholder
+     * @param {object} styles - object representing CSS properties to be applied to the placeholder
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     *
+     * @returns {object | undefined} partial cfi object of the created placeholder
+     */
+    this.addPlaceholder = function(spineIdRef, cfi, id, type, styles) {
+        // get element by CFI
+        var $element = _currentView.getElementByCfi(spineIdRef, cfi);
+        if (!$element)
+            return undefined;
+        return _annotationsManager.addPlaceholder(spineIdRef, cfi, $element, id, type, styles);
+    };
+
+    /**
+     * Creates a higlight based on the current selection
+     *
+     * @param {string} id id of the highlight. must be unique
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * @param {boolean} clearSelection - set to true to clear the current selection
+     * after it is highlighted
+     * The style of the class will be applied to the created hightlight
+     * @param {object} styles - object representing CSS properties to be applied to the highlight.
+     * e.g., to apply background color pass this {'background-color': 'green'}
+     *
+     * @returns {object | undefined} partial cfi object of the created highlight
+     */
+    this.addSelectionHighlight =  function(id, type, clearSelection, styles) {
+        return _annotationsManager.addSelectionHighlight(id, type, clearSelection, styles);
+    };
+
+    /**
+     * Higlights all the occurences of the given text
+     *
+     * @param {string} text array of text occurences to be highlighted
+     * @param {string} spineIdRef spine idref where the text is searched for
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * The style of the class will be applied to the created hightlights
+     * @param {object} styles - object representing CSS properties to be applied to the highlights.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     *
+     * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the found text occurences
+     */
+    this.addHighlightsForText = function(text, spineIdRef, type, styles) {
+        return _annotationsManager.addHighlightsForText(text, spineIdRef, type, styles);
+    };
+
+    /**
+     * Draw placeholders around all "audio" elements in the rendered iFrame
+     *
+     * @param {string} spineIdRef spine idref where "audio" elements are searched for
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * The style of the class will be applied to the placeholders
+     * @param {object} styles - object representing CSS properties to be applied to the placeholders.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     *
+     * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the placeholders
+     */
+    this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
+        return _annotationsManager.addPlaceholdersForAudio(spineIdRef, type, styles);
+    };
+
+    /**
+     * Draw placeholders around all "video" elements in the rendered iFrame
+     *
+     * @param {string} spineIdRef spine idref where "video" elements are searched for
+     * @param {string} type - name of the class selector rule in annotations.css file.
+     * The style of the class will be applied to the placeholders
+     * @param {object} styles - object representing CSS properties to be applied to the placeholders.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     *
+     * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the placeholders
+     */
+    this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
+        return _annotationsManager.addPlaceholdersForVideo(spineIdRef, type, styles);
+    };
+
+    /**
+     * Removes a given highlight
+     *
+     * @param {string} id  The id associated with the highlight.
+     *
+     * @returns {undefined}
+     *
+     */
+    this.removeHighlight = function(id) {
+        return _annotationsManager.removeHighlight(id);
+    };
+
+    /**
+     * Removes highlights of a given type
+     *
+     * @param {string} type type of the highlight.
+     *
+     * @returns {undefined}
+     *
+     */
+    this.removeHighlightsByType = function(type) {
+        return _annotationsManager.removeHighlightsByType(type);
+    };
+
+    /**
+     * Client Rectangle
+     * @typedef {object} ReadiumSDK.Views.ReaderView.ClientRect
+     * @property {number} top
+     * @property {number} left
+     * @property {number} height
+     * @property {number} width
+     */
+
+    /**
+     * Highlight Info
+     *
+     * @typedef {object} ReadiumSDK.Views.ReaderView.HighlightInfo
+     * @property {string} id - unique id of the highlight
+     * @property {string} type - highlight type (css class)
+     * @property {string} CFI - partial CFI range of the highlight
+     * @property {ReadiumSDK.Views.ReaderView.ClientRect[]} rectangleArray - array of rectangles consituting the highlight
+     * @property {string} selectedText - concatenation of highlight nodes' text
+     */
+
+    /**
+     * Gets given highlight
+     *
+     * @param {string} id id of the highlight.
+     *
+     * @returns {ReadiumSDK.Views.ReaderView.HighlightInfo} Object describing the highlight
+     */
+    this.getHighlight = function(id) {
+        return _annotationsManager.getHighlight(id);
+    };
+
+    /**
+     * Update annotation by the id, reapplies CSS styles to the existing annotaion
+     *
+     * @param {string} id id of the annotation.
+     * @property {string} type - annotation type (name of css class)
+     * @param {object} styles - object representing CSS properties to be applied to the annotation.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     */
+    this.updateAnnotation = function(id, type, styles) {
+        _annotationsManager.updateAnnotation(id, type, styles);
+    };
+
+    /**
+     * Replace annotation with this id. Current annotation is removed and a new one is created.
+     *
+     * @param {string} id id of the annotation.
+     * @property {string} cfi - partial CFI range of the annotation
+     * @property {string} type - annotation type (name of css class)
+     * @param {object} styles - object representing CSS properties to be applied to the annotation.
+     * e.g., to apply background color pass this {'background-color': 'green'}.
+     */
+    this.replaceAnnotation = function(id, cfi, type, styles) {
+        _annotationsManager.replaceAnnotation(id, cfi, type, styles);
+    };
+
+    /**
+     * Allows the subscription of events that trigger inside the epub content iframe
      *
      * @param {string} eventName              Event name.
      * @param {function} callback             Callback function.
      * @param {object} context                User specified data passed to the callback function.
+     * @param {IframeEventOptions} [options]  Specify additional options
      * @returns {undefined}
      */
-    this.addIFrameEventListener = function (eventName, callback, context) {
-        _iframeLoader.addIFrameEventListener(eventName, callback, context);
+    this.addIFrameEventListener = function (eventName, callback, context, options) {
+        _iframeLoader.addIFrameEventListener(eventName, callback, context, options);
     };
+
+    /**
+     * Re-binds all registered iframe event listeners to the currently loaded content frames.
+     *
+     * @method updateIFrameEvents
+     * @returns {undefined}
+     */
+    this.updateIFrameEvents = function(){
+        var contentFrames = this.getLoadedContentFrames();
+        if (contentFrames) {
+            _.each(contentFrames, function (contentFrameInfo) {
+                _iframeLoader.updateIframeEvents(contentFrameInfo.$iframe[0]);
+            });
+        }
+    };
+
 
     var BackgroundAudioTrackManager = function () {
         var _spineItemIframeMap = {};
@@ -1427,6 +1717,613 @@ var ReaderView = function (options) {
         });
     };
     this.backgroundAudioTrackManager = new BackgroundAudioTrackManager();
+
+    /**
+     * Redraws all annotations
+     */
+    this.redrawAnnotations = function(){
+        if (_currentView) {
+            var options = getCfisForVisibleRegion();
+            _annotationsManager.redrawAnnotations(options);
+        }
+    };
+
+    function getCfisForVisibleRegion() {
+        return {firstVisibleCfi: self.getFirstVisibleCfi(), lastVisibleCfi: self.getLastVisibleCfi()};
+    }
+
+    /**
+     * Updates an annotation to use the supplied styles
+     *
+     * @param {string} id
+     * @param {string} styles
+     */
+    this.updateAnnotationView = function(id, styles) {
+        _annotationsManager.updateAnnotationView(id, styles);
+    };
+
+    /**
+     * Updates an annotation view state, such as whether its hovered in or not.
+     * @param {string} id       The id associated with the highlight.
+     * @param {string} state    The state type to be updated
+     * @param {string} value    The state value to apply to the highlight
+     * @returns {undefined}
+     */
+    this.setAnnotationViewState = function(id, state, value) {
+        return _annotationsManager.setAnnotationViewState(id, state, value);
+    };
+
+    /**
+     * Updates an annotation view state for all views.
+     * @param {string} state    The state type to be updated
+     * @param {string} value    The state value to apply to the highlights
+     * @returns {undefined}
+     */
+    this.setAnnotationViewStateForAll = function (state, value) {
+        return _annotationsManager.setAnnotationViewStateForAll(state, value);
+    };
+
+    /**
+     * Gets a list of the visible midpoint positions of all annotations
+     *
+     * @returns {HTMLElement[]}
+     */
+    this.getVisibleAnnotationMidpoints = function () {
+        if (_currentView) {
+            var $visibleElements = _currentView.getVisibleElements(_annotationsManager.getAnnotationsElementSelector(), true);
+
+            var elementMidpoints = _annotationsManager.getAnnotationMidpoints($visibleElements);
+            return elementMidpoints || [];
+        }
+        return [];
+    };
+
+    this.createMediaPlaceholders = function () {
+        if (_currentView) {
+            _currentView.createMediaPlaceholders();
+        }
+    };
+
+    this.isVisibleSpineItemElementCfi = function(spineIdRef, partialCfi){
+        var spineItem = getSpineItem(spineIdRef);
+
+        if (!spineItem) {
+            return false;
+        }
+
+        if (_currentView) {
+
+            if(!partialCfi || (partialCfi && partialCfi === '')){
+                var spines = _currentView.getLoadedSpineItems();
+                for(var i = 0, count = spines.length; i < count; i++) {
+                    if(spines[i].idref == spineIdRef){
+                        return true;
+                    }
+                }
+            }
+            return _currentView.isVisibleSpineItemElementCfi(spineIdRef, partialCfi);
+
+        }
+        return false;
+    };
+
+    /**
+     * Gets all elements from active content documents based on a query selector.
+     *
+     * @param {string} spineItemIdref    The spine item idref associated with the content document
+     * @param {string} selector          The query selector
+     * @returns {HTMLElement[]}
+     */
+    this.getElements = function(spineItemIdref, selector) {
+
+        if(_currentView) {
+            return _currentView.getElements(spineItemIdref, selector);
+        }
+
+        return undefined;
+    };
+
+    /**
+     * Determine if an element is visible on the active content documents
+     *
+     * @param {HTMLElement} element The element.
+     * @returns {boolean}
+     */
+    this.isElementVisible = function (element) {
+        return _currentView.isElementVisible($(element));
+
+    };
+
+    /**
+     * Resolve a range CFI into an object containing info about it.
+     * @param {string} spineIdRef    The spine item idref associated with the content document
+     * @param {string} partialCfi    The partial CFI that is the range CFI to resolve
+     * @returns {ReadiumSDK.Models.NodeRangeInfo}
+     */
+    this.getNodeRangeInfoFromCfi = function (spineIdRef, partialCfi) {
+        if (_currentView && spineIdRef && partialCfi) {
+            var nodeRangeInfo = _currentView.getNodeRangeInfoFromCfi(spineIdRef, partialCfi);
+            if (nodeRangeInfo) {
+                return new ReadiumSDK.Models.NodeRangeInfo(nodeRangeInfo.clientRect)
+                    .setStartInfo(nodeRangeInfo.startInfo)
+                    .setEndInfo(nodeRangeInfo.endInfo);
+            }
+        }
+        return undefined;
+    };
+
+    /**
+     * Get the pagination info from the current view
+     *
+     * @returns {ReadiumSDK.Models.CurrentPagesInfo}
+     */
+    this.getPaginationInfo = function(){
+        return _currentView.getPaginationInfo();
+    };
+
+
+    /**
+     * Opens page index of the spine item with index provided
+     *
+     * @param {string} spineIndex Zero based index of the item in the spine
+     * @param {number} pageIndex Zero based index of the page in the spine item
+     * @param {object} initiator optional
+     */
+    this.openSpineIndexPage = function(spineIndex, pageIndex, initiator) {
+
+        var spineItem;
+        if (spineIndex === -1) {
+            spineItem = _spine.last();
+        } else {
+            spineItem = _spine.items[spineIndex];
+        }
+        if(!spineItem) {
+            return;
+        }
+
+        var pageRequest = new ReadiumSDK.Models.PageOpenRequest(spineItem, initiator);
+
+        if (pageIndex === -1) {
+            pageRequest.setLastPage();
+        } else if(pageIndex) {
+            pageRequest.setPageIndex(pageIndex);
+        }
+
+        openPage(pageRequest, 0);
+    };
+
+    /**
+     * Used to determine if the next page is accessible.
+     * Useful for hiding page navigation buttons if the last page of a reading flow is reached.
+     *
+     * @returns {boolean}
+     */
+    this.doesNextPageExist = function() {
+        //TODO: this logic needs to take account of linear=no support, if that is ever added in
+        var _paginationInfo = self.getPaginationInfo();
+        var openPages = _paginationInfo.openPages;
+        if (!openPages || openPages.length === 0) {
+            //no open pages, called on bad state
+            return false;
+        }
+        var currentPage = openPages[openPages.length-1];
+        var lastSpineItemIndex = _paginationInfo.spineItemCount -1;
+        var lastPageIndex = currentPage.spineItemPageCount -1;
+        if (currentPage.spineItemIndex !== lastSpineItemIndex) {
+            return true;
+        } else {
+            return currentPage.spineItemPageIndex !== lastPageIndex;
+        }
+    };
+
+    /**
+     * Used to determine if the previous page is accessible.
+     * Useful for hiding page navigation buttons if we are on the first page of a reading flow.
+     *
+     * @returns {boolean}
+     */
+    this.doesPreviousPageExist = function() {
+        //TODO: this logic needs to take account of linear=no support, if that is ever added in
+        var _paginationInfo = self.getPaginationInfo();
+        var openPages = _paginationInfo.openPages;
+        if (!openPages || openPages.length === 0) {
+            //no open pages, called on bad state
+            return false;
+        }
+        var currentPage = openPages[0];
+        var firstSpineItemIndex = 0;
+        var firstPageIndex = 0;
+        if (currentPage.spineItemIndex !== firstSpineItemIndex) {
+            return true;
+        } else {
+            return currentPage.spineItemPageIndex !== firstPageIndex;
+        }
+    };
+
+    /**
+     * Used to determine if the page on the right is accessible.
+     * Takes into account of RTL page progression.
+     *
+     * @returns {boolean}
+     */
+    this.doesRightPageExist = function(){
+        var _paginationInfo = self.getPaginationInfo();
+        if (_paginationInfo.pageProgressionDirection === "rtl") {
+            return self.doesPreviousPageExist();
+        }
+        return self.doesNextPageExist();
+    };
+
+    /**
+     * Used to determine if the page on the left is accessible.
+     * Takes into account of RTL page progression.
+     *
+     * @returns {boolean}
+     */
+    this.doesLeftPageExist = function(){
+        var _paginationInfo = self.getPaginationInfo();
+        if (_paginationInfo.pageProgressionDirection === "rtl") {
+            return self.doesNextPageExist();
+        }
+        return self.doesPreviousPageExist();
+    };
+
+    this.getRenderedSythenticSpread = function(){
+        if (this.getCurrentViewType() === ReadiumSDK.Views.ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS) {
+            return 'single';
+        }
+        return self.getPaginationInfo().openPages.length === 2 ? 'double' : 'single';
+    };
+
+    /**
+     * Loaded content frame information
+     *
+     * @typedef {object} LoadedContentFrameInfo
+     * @property {jQueryElement} $iframe        The content document's iframe element, jquery wrapped.
+     * @proptery {ReadiumSDK.Models.SpineItem}  The spine item associated with the content frame.
+     */
+
+    /**
+     * Get a list of the currently loaded content iframe references, mapped with the respective spine item idrefs.
+     * @returns {LoadedContentFrameInfo[]}
+     */
+    this.getLoadedContentFrames = function () {
+        if (_currentView && _currentView.getLoadedContentFrames) {
+            return _currentView.getLoadedContentFrames();
+        }
+        return undefined;
+    };
+
+    /**
+     * Get CFI of the first element visible in the viewport
+     * @returns {ReadiumSDK.Models.BookmarkData}
+     */
+    this.getFirstVisibleCfi = function() {
+        if (_currentView) {
+            return _currentView.getFirstVisibleCfi();
+        }
+        return undefined;
+    };
+
+    /**
+     * Get CFI of the last element visible in the viewport
+     * @returns {ReadiumSDK.Models.BookmarkData}
+     */
+    this.getLastVisibleCfi = function() {
+        if (_currentView) {
+            return _currentView.getLastVisibleCfi();
+        }
+        return undefined;
+    };
+
+    /**
+     * Gets data for external and internal links, as well as "audio" and "video" elements.
+     *
+     * @param {ReadiumSDK.Models.BookmarkData} startCfi starting CFI
+     * @param {ReadiumSDK.Models.BookmarkData} [endCfi] ending CFI
+     * optional - may be omited if startCfi is a range CFI
+     * @returns an array of "items" each corresponding to the found "link".
+     * For every item we return:
+     - type: "external" (for external link), "internal" (for external link), "audio"
+     (for audio), "video" (for video)
+     - location - element's CFI
+     - target - meaningful only for "external"/"internal" - href of the link
+     - text - meaningful only for "external"/"internal" - text of the link
+     - links - meaningful only for "audio"/"video" - array of sources
+     - rectangle - only for "audio"/"video" onscreen coordinates of the element
+     */
+    this.getLinksFromRangeCfi = function(startCfi, endCfi) {
+        var that = this;
+        if (_currentView) {
+            var domRanges = this.getDomRangesFromRangeCfi(startCfi, endCfi);
+            var nodes = [];
+            _.each(domRanges, function (domRange) {
+                _.each((new rangy.WrappedRange(domRange)).getNodes(), function (node) {
+                    nodes.push(node);
+                })
+            });
+            var output = [];
+            _.each(nodes, function (node) {
+                var item = {};
+                var cfi = EPUBcfi.Generator.generateElementCFIComponent(node,
+                    ["cfi-marker"],
+                    [],
+                    ["MathJax_Message", "MathJax_SVG_Hidden"]);
+                var idref = null;
+                _.each(that.getLoadedContentFrames(), function (frame) {
+                    if (node.ownerDocument === frame.$iframe[0].contentDocument) {
+                      idref = frame.spineItem.idref;
+                    }
+                });
+                item.location = new ReadiumSDK.Models.BookmarkData(idref, cfi);
+                if (node.nodeName === "a") {
+                    // getAttribute rather than .href, because .href relative URLs resolved to absolute
+                    var href = node.getAttribute("href").trim();
+                    item.type = href.match(/^[a-zA-Z]*:\/\//) ? "external" : "internal";
+                    item.target = item.type === "external" ? node.href : href;
+                    item.text = node.textContent;
+                } else if (node.nodeName === "audio" || node.nodeName === "video") {
+                    item.type = node.nodeName;
+                    item.links = [];
+
+                    // get bounding rectangle for audio/video
+                    item.rectangle = {};
+                    var rect = node.getBoundingClientRect();
+                    item.rectangle.left = Math.ceil(rect.left);
+                    item.rectangle.top = Math.ceil(rect.top);
+                    item.rectangle.right = Math.ceil(rect.right);
+                    item.rectangle.bottom = Math.ceil(rect.bottom);
+
+                    if (node.src != "") {
+                        item.links.push(node.getAttribute("src").trim());
+                    }
+                    _.each(node.querySelectorAll("source"), function (source) {
+                        item.links.push(source.getAttribute("src").trim());
+                    });
+                }
+                if (item.type) {
+                    output.push(item);
+                }
+            });
+            return output;
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @param {string} rangeCfi
+     * @param {string} [rangeCfi2]
+     * @param {boolean} [inclusive]
+     * @returns {array}
+     */
+    this.getDomRangesFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
+        if (_currentView) {
+            if (_currentView.getDomRangesFromRangeCfi) {
+                return _currentView.getDomRangesFromRangeCfi(rangeCfi, rangeCfi2, inclusive);
+            } else {
+                return [_currentView.getDomRangeFromRangeCfi(rangeCfi, rangeCfi2, inclusive)];
+            }
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @param {ReadiumSDK.Models.BookmarkData} startCfi starting CFI
+     * @param {ReadiumSDK.Models.BookmarkData} [endCfi] ending CFI
+     * optional - may be omited if startCfi is a range CFI
+     * @param {boolean} [inclusive] optional indicating if the range should be inclusive
+     * @returns {array}
+     */
+    this.getDomRangesFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
+        if (_currentView) {
+            if (_currentView.getDomRangesFromRangeCfi) {
+                return _currentView.getDomRangesFromRangeCfi(rangeCfi, rangeCfi2, inclusive);
+            } else {
+                return [_currentView.getDomRangeFromRangeCfi(rangeCfi, rangeCfi2, inclusive)];
+            }
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @param {ReadiumSDK.Models.BookmarkData} startCfi starting CFI
+     * @param {ReadiumSDK.Models.BookmarkData} [endCfi] ending CFI
+     * optional - may be omited if startCfi is a range CFI
+     * @param {boolean} [inclusive] optional indicating if the range should be inclusive
+     * @returns {DOM Range} https://developer.mozilla.org/en-US/docs/Web/API/Range
+     */
+    this.getDomRangeFromRangeCfi = function(startCfi, endCfi, inclusive) {
+        if (_currentView) {
+            return _currentView.getDomRangeFromRangeCfi(startCfi, endCfi, inclusive);
+        }
+        return undefined;
+    };
+
+    /**
+     * Generate range CFI from DOM range
+     * @param {DOM Range} https://developer.mozilla.org/en-US/docs/Web/API/Range
+     * @returns {string} - represents Range CFI for the DOM range
+     */
+    this.getRangeCfiFromDomRange = function(domRange) {
+        if (_currentView) {
+            return _currentView.getRangeCfiFromDomRange(domRange);
+        }
+        return undefined;
+    };
+
+    /**
+     * @param x
+     * @param y
+     * @param [precisePoint]
+     * @param [spineItemIdref] Required for fixed layout views
+     * @returns {string}
+     */
+    this.getVisibleCfiFromPoint = function (x, y, precisePoint, spineItemIdref) {
+        if (_currentView) {
+            return _currentView.getVisibleCfiFromPoint(x, y, precisePoint, spineItemIdref);
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @param startX
+     * @param startY
+     * @param endX
+     * @param endY
+     * @param [spineItemIdref] Required for fixed layout views
+     * @returns {*}
+     */
+    this.getRangeCfiFromPoints = function(startX, startY, endX, endY, spineItemIdref) {
+        if (_currentView) {
+            return _currentView.getRangeCfiFromPoints(startX, startY, endX, endY, spineItemIdref);
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @param {HTMLElement} element
+     * @returns {*}
+     */
+    this.getCfiForElement = function(element) {
+        if (_currentView) {
+            return _currentView.getCfiForElement(element);
+        }
+        return undefined;
+    };
+
+    /**
+     *
+     * @param x
+     * @param y
+     * @param [spineItemIdref] Required for fixed layout views
+     * @returns {*}
+     */
+    this.getImageDataFromPoint = function (x, y, spineItemIdref) {
+        if (_currentView) {
+            var element = _currentView.getElementFromPoint(x, y, spineItemIdref);
+            if (element.tagName.toLowerCase() === "img") {
+                var cfi = _currentView.getCfiForElement(element);
+                var rect = element.getBoundingClientRect();
+                return {
+                    location: cfi,
+                    pathToLocation: $(element).data('rd-src') || $(element).attr('src'),
+                    topLeftX: Math.ceil(rect.left),
+                    topLeftY: Math.ceil(rect.top),
+                    bottomRightX: Math.ceil(rect.right),
+                    bottomRightY: Math.ceil(rect.bottom)
+                };
+            } else {
+                return null;
+            }
+        }
+        return undefined;
+    };
+
+    /**
+     * Sets a "boundary CFI" that defines the boundary, that can not be crossed
+       while rendering a book.
+     * @param {string} spineItemIdref Spine idref that defines the partial Cfi
+     * @param {string} cfi            Partial CFI (withouth the indirection step) relative
+                                      to the spine index
+     */
+    this.setRenderingRestriction = function (spineItemIdref, cfi) {
+        // if content CFI is a range CFI, replace it with the start CFI of the range
+        var startCfi = cfi;
+        var comps = cfi.split(",");
+        if (comps.length > 0) {
+            startCfi = comps[0] + comps[1];
+        }
+
+        // set boundary
+        _boundaryData = {
+            bookmark: new ReadiumSDK.Models.BookmarkData(spineItemIdref, startCfi),
+            spineItem: _spine.getItemById(spineItemIdref)
+        };
+    };
+
+    /**
+     * Clears book rendering restrictions
+     */
+    this.clearRenderingRestriction = function () {
+        // clear boundary
+        _boundaryData = undefined;
+
+        // make current page visible
+        _currentView.show();
+    };
+
+    // helper function to restrict rendering
+    this.boundaryCrossed = function () {
+        console.log("boundaryCrossed");
+
+        // make current page invisible
+        _currentView.hide();
+
+        // raise event that indicates boundary violation
+        self.trigger(ReadiumSDK.Events.BOUNDARY_CROSSED);
+    };
+
+    // constructor
+    var BoundaryChecker = function()
+    {
+// for testing only
+//        self.on(ReadiumSDK.Events.BOUNDARY_CROSSED, function () {
+//            console.log("BOUNDARY_CROSSED event received");
+//        });
+
+        // set PAGINATION_CHANGED handler to check if we "crossed the boundary"
+        // PAGINATION_CHANGED happened when we sequentially go through pages
+        // or  when we jump to the bookmark
+        self.on(ReadiumSDK.Events.PAGINATION_CHANGED, function (pageChangeData) {
+
+            // if boundary is set (rendering rerstricted)
+            if (_boundaryData) {
+
+                // get open pages array (for "fixed" with spread we may have
+                // several spine items rendered, so go through all of them)
+                var pages = pageChangeData.paginationInfo.openPages;
+                for(var i = 0; i < pages.length; i++) {
+                    page = pages[i];
+
+                    if (page.spineItemIndex < _boundaryData.spineItem.index)
+                        continue;
+                    if (page.spineItemIndex > _boundaryData.spineItem.index) {
+                        this.boundaryCrossed();
+                        return;
+                    }
+
+                    // current spine item id ref is the same as "boundary's"
+
+                    // get first and last visible CFIs
+                    visibleCfis = getCfisForVisibleRegion();
+
+                    // check if boundary content CFI is within the page that was just open
+                    if (_annotationsManager.cfiIsBetweenTwoCfis(_boundaryData.bookmark.contentCFI,
+                                                                visibleCfis.firstVisibleCfi.contentCFI,
+                                                                visibleCfis.lastVisibleCfi.contentCFI)) {
+                        this.boundaryCrossed();
+                        return;
+                    }
+
+                    // check if pages's first visible CFI is greater than the boundary
+                    var result = _annotationsManager.contentCfiComparator(
+                        visibleCfis.firstVisibleCfi.contentCFI,
+                        _boundaryData.bookmark.contentCFI);
+                    if (result >= 0) {
+                        this.boundaryCrossed();
+                        return;
+                    }
+                }
+            }
+        });
+    };
+
+    this.boundaryChecker = new BoundaryChecker();
 };
 
 /**

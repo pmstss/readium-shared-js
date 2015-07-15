@@ -31,31 +31,74 @@ define(["jquery", "underscore"], function($, _) {
  *
  * @constructor
  */
-var IFrameLoader = function() {
+var IFrameLoader = function(options) {
 
     var self = this;
     var eventListeners = {};
 
 
-    this.addIFrameEventListener = function (eventName, callback, context) {
+    this.addIFrameEventListener = function(eventName, callback, context, options) {
 
         if (eventListeners[eventName] == undefined) {
             eventListeners[eventName] = [];
         }
 
-        eventListeners[eventName].push({callback: callback, context: context});
+        eventListeners[eventName].push({callback: callback, context: context, options: options});
     };
 
     this.updateIframeEvents = function (iframe) {
 
-        _.each(eventListeners, function (value, key) {
-            for (var i = 0, count = value.length; i < count; i++) {
-                $(iframe.contentWindow).off(key);
-                $(iframe.contentWindow).on(key, value[i].callback, value[i].context);
-            }
+        _.each(eventListeners, function(eventHandlerList, eventName){
+            _.each(eventHandlerList,function(eventHandler){
+                var options = eventHandler.options;
+                var callback = eventHandler.callback;
+                var context = eventHandler.context;
+
+                function addJqueryEvent(obj) {
+                    obj.on(eventName, callback, context);
+                }
+
+                function addNativeEvent(obj) {
+                    obj.addEventListener(eventName, callback, context);
+                }
+
+                if (!iframe.contentWindow) {
+                    return;
+                }
+
+                if (!options) {
+                    addNativeEvent(iframe.contentWindow);
+                } else {
+                    if (options.onWindow) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(iframe.contentWindow));
+                        } else {
+                            addNativeEvent(iframe.contentWindow);
+                        }
+                    } else if (options.onDocument) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(iframe.contentDocument));
+                        } else {
+                            addNativeEvent(iframe.contentDocument);
+                        }
+                    } else if (options.onBody) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(iframe.contentDocument.body));
+                        } else {
+                            addNativeEvent(iframe.contentDocument.body);
+                        }
+                    } else if (options.onSelector) {
+                        if (options.jqueryEvent) {
+                            addJqueryEvent($(options.onSelector));
+                        } else {
+                            addNativeEvent($(options.onSelector)[0]);
+                        }
+                    }
+                }
+            });
         });
     };
-
+    
     this.loadIframe = function (iframe, src, callback, context, attachedData) {
 
         if (!iframe.baseURI) {
@@ -70,13 +113,16 @@ var IFrameLoader = function() {
         console.log("EPUB doc iframe base URI:");
         console.log(iframe.baseURI);
         
-        iframe.setAttribute("data-baseUri", iframe.baseURI);
+        iframe.setAttribute("data-baseUri", options.baseUrl || iframe.baseURI);
         iframe.setAttribute("data-src", src);
 
-        var loadedDocumentUri = new URI(src).absoluteTo(iframe.baseURI).search('').hash('').toString();
+        $(iframe).hide();
+        
+        var loadedDocumentUri = new URI(src).absoluteTo(options.baseUrl || iframe.baseURI).search('').hash('').toString();
 
         self._loadIframeWithUri(iframe, attachedData, loadedDocumentUri, function () {
-            
+
+            $(iframe).show();
             callback.call(context, true, attachedData);
         });
     };
@@ -85,11 +131,7 @@ var IFrameLoader = function() {
 
         iframe.onload = function () {
 
-            var doc = iframe.contentDocument || iframe.contentWindow.document;
-            $('svg', doc).load(function(){
-                console.log('SVG loaded');
-            });
-            
+
             self.updateIframeEvents(iframe);
 
             var mathJax = iframe.contentWindow.MathJax;
@@ -107,9 +149,29 @@ var IFrameLoader = function() {
             } else {
                 callback();
             }
-        };
 
-        iframe.setAttribute("src", contentUri);
+        };
+        
+        if (window.location.protocol
+            && window.location.protocol === 'http:'
+            || window.location.protocol === 'https:') {
+            //replace location history instead of setting src attribute
+            // because browsers like to create new history entries with the latter
+            // (this prevents unexpected behaviour when hitting a browser's back button
+            // but does not seem to work well with file:// protocols)
+            if (iframe.contentWindow
+                && iframe.contentWindow.location
+                && iframe.contentWindow.location.replace
+                && (typeof iframe.contentWindow.location.replace) === "function") {
+
+                iframe.contentWindow.location.replace(contentUri);
+            } else {
+                iframe.setAttribute("src", contentUri);
+            }
+        } else {
+            iframe.setAttribute("src", contentUri);
+        }
+        
     };
 
 };
