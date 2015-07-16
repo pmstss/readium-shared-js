@@ -27,11 +27,11 @@
 define(["jquery", "underscore", "eventEmitter", "./fixed_view", "../helpers", "./iframe_loader", "./internal_links_support",
         "./media_overlay_data_injector", "./media_overlay_player", "../models/package", "../models/page_open_request",
         "./reflowable_view", "./scroll_view", "../models/style_collection", "../models/switches", "../models/trigger",
-        "../models/viewer_settings", "../globals"],
+        "../models/viewer_settings", "../models/bookmark_data", "../models/node_range_info",  "../globals"],
     function ($, _, EventEmitter, FixedView, Helpers, IFrameLoader, InternalLinksSupport,
               MediaOverlayDataInjector, MediaOverlayPlayer, Package, PageOpenRequest,
               ReflowableView, ScrollView, StyleCollection, Switches, Trigger,
-              ViewerSettings, Globals) {
+              ViewerSettings, BookmarkData, NodeRangeInfo, Globals) {
 /**
  * Options passed on the reader from the readium loader/initializer
  *
@@ -64,10 +64,8 @@ var ReaderView = function (options) {
     var _mediaOverlayDataInjector;
     var _iframeLoader;
     var _$el;
-//FIXME: JCCR mj8
-    var _annotationsManager = new ReadiumSDK.Views.AnnotationsManager(self, options);
-    // initial value undefined, so that we do not do any boundary checks
-    var _boundaryData = undefined;
+
+
 
     //We will call onViewportResize after user stopped resizing window
     var lazyResize = Helpers.extendedThrottle(
@@ -248,8 +246,6 @@ var ReaderView = function (options) {
             _mediaOverlayDataInjector.attachMediaOverlayData($iframe, spineItem, _viewerSettings);
 
             _internalLinksSupport.processLinkElements($iframe, spineItem);
-//FIXME: JCCR mj8: annotations manager should be moved into plugin, and this line removed
-            _annotationsManager.attachAnnotations($iframe, spineItem, self.getLoadedSpineItems());
 
             var contentDoc = $iframe[0].contentDocument;
             Trigger.register(contentDoc);
@@ -278,16 +274,10 @@ var ReaderView = function (options) {
             }
 
         });
-//FIXME: JCCR mj8: this is sometimes faulty, consider removal
-        // automatically redraw annotations.
-        self.on(ReadiumSDK.Events.PAGINATION_CHANGED, _.debounce(function () {
-            self.redrawAnnotations();
-        }, 10, true));
-
 
         _currentView.on(Globals.Events.FXL_VIEW_RESIZED, function () {
             self.emit(Globals.Events.FXL_VIEW_RESIZED);
-        })
+        });
 
         _currentView.render();
         _currentView.setViewSettings(_viewerSettings);
@@ -1844,7 +1834,7 @@ var ReaderView = function (options) {
         if (_currentView && spineIdRef && partialCfi) {
             var nodeRangeInfo = _currentView.getNodeRangeInfoFromCfi(spineIdRef, partialCfi);
             if (nodeRangeInfo) {
-                return new ReadiumSDK.Models.NodeRangeInfo(nodeRangeInfo.clientRect)
+                return new NodeRangeInfo(nodeRangeInfo.clientRect)
                     .setStartInfo(nodeRangeInfo.startInfo)
                     .setEndInfo(nodeRangeInfo.endInfo);
             }
@@ -2055,7 +2045,7 @@ var ReaderView = function (options) {
                       idref = frame.spineItem.idref;
                     }
                 });
-                item.location = new ReadiumSDK.Models.BookmarkData(idref, cfi);
+                item.location = new BookmarkData(idref, cfi);
                 if (node.nodeName === "a") {
                     // getAttribute rather than .href, because .href relative URLs resolved to absolute
                     var href = node.getAttribute("href").trim();

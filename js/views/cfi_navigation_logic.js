@@ -144,7 +144,7 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
 
     function getCaretRangeFromPoint(x, y, document) {
         document = document || self.getRootDocument();
-        ReadiumSDK.Helpers.polyfillCaretRangeFromPoint(document);
+        Helpers.polyfillCaretRangeFromPoint(document);
         return document.caretRangeFromPoint(x, y);
     }
 
@@ -1339,7 +1339,7 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
 
         var $element = $(contentDoc.getElementById(id));
         //$("#" + Helpers.escapeJQuerySelector(id), contentDoc);
-        
+
         if($element.length == 0) {
             return undefined;
         }
@@ -1461,10 +1461,11 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         });
         var visibleElements = this.getVisibleElements($newElements, visibleContentOffset);
         return visibleElements;
-
+    };
 
     this.getVisibleElements = function ($elements, visibleContentOffsets) {
 
+        var visibleElements = [];
 
         _.each($elements, function ($node) {
             var isTextNode = ($node[0].nodeType === Node.TEXT_NODE);

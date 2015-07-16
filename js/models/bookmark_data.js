@@ -60,10 +60,10 @@ var BookmarkData = function(idref, contentCFI) {
  * @param str
  * @returns {ReadiumSDK.Models.BookmarkData}
  */
-ReadiumSDK.Models.BookmarkData.fromString = function(str) {
+BookmarkData.fromString = function(str) {
     var obj = JSON.parse(str);
     return new ReadiumSDK.Models.BookmarkData(obj.idref,obj.contentCFI);
 };
-
+ReadiumSDK.Models.BookmarkData = BookmarkData;
 return BookmarkData;
 });

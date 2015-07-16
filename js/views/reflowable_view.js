@@ -354,7 +354,7 @@ var ReflowableView = function(options, reader){
         updatePagination();
     }
 
-    this.applyStyles = function() {
+    function applyStyles() {
 
         Helpers.setStyles(_userStyles.getStyles(), _$el.parent());
 
@@ -377,7 +377,7 @@ var ReflowableView = function(options, reader){
         if(_$epubHtml) {
             Helpers.setStyles(_bookStyles.getStyles(), _$epubHtml);
         }
-    };
+    }
 
     this.applyBookStyles = function() {
 
@@ -385,7 +385,7 @@ var ReflowableView = function(options, reader){
 
         updatePaginationParameters();
         updatePagination();
-    }
+    };
 
     function openDeferredElement() {
 

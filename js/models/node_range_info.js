@@ -23,64 +23,69 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/**
- * @class ReadiumSDK.Models.NodeRangeInfo
- * @constructor
- */
-ReadiumSDK.Models.NodeRangeInfo = function(clientRect, startInfo, endInfo) {
-
-    var self = this;
-    /**
-     * Client rectangle information for the range content bounds
-     * @property clientRect
-     * @type {ClientRect}
-     */
-    this.clientRect = clientRect;
+define(function () {
 
     /**
-     * Node and position information providing where and which node the range starts with
-     * @property startInfo
-     * @type {ReadiumSDK.Models.NodeRangePositionInfo}
+     * @class ReadiumSDK.Models.NodeRangePositionInfo
+     * @constructor
      */
-    this.startInfo = startInfo;
+    var NodeRangePositionInfo = function (node, offset) {
 
-    /**
-     * Node and position information providing where and which node the range ends with
-     * @property endInfo
-     * @type {ReadiumSDK.Models.NodeRangePositionInfo}
-     */
-    this.endInfo = endInfo;
+        /**
+         * The actual DOM node
+         * @property node
+         * @type {Node}
+         */
+        this.node = node;
 
+        /**
+         * The position offsetf for the node
+         * @property offset
+         * @type {Number}
+         */
+        this.offset = offset;
 
-    this.setStartInfo = function (info) {
-        self.startInfo = new ReadiumSDK.Models.NodeRangePositionInfo(info);
-        return self;
     };
 
-    this.setEndInfo = function (info) {
-        self.endInfo = new ReadiumSDK.Models.NodeRangePositionInfo(info);
-        return self;
+    /**
+     * @class ReadiumSDK.Models.NodeRangeInfo
+     * @constructor
+     */
+    var NodeRangeInfo = function (clientRect, startInfo, endInfo) {
+
+        var self = this;
+        /**
+         * Client rectangle information for the range content bounds
+         * @property clientRect
+         * @type {ClientRect}
+         */
+        this.clientRect = clientRect;
+
+        /**
+         * Node and position information providing where and which node the range starts with
+         * @property startInfo
+         * @type {ReadiumSDK.Models.NodeRangePositionInfo}
+         */
+        this.startInfo = startInfo;
+
+        /**
+         * Node and position information providing where and which node the range ends with
+         * @property endInfo
+         * @type {ReadiumSDK.Models.NodeRangePositionInfo}
+         */
+        this.endInfo = endInfo;
+
+
+        this.setStartInfo = function (info) {
+            self.startInfo = new NodeRangePositionInfo(info);
+            return self;
+        };
+
+        this.setEndInfo = function (info) {
+            self.endInfo = new NodeRangePositionInfo(info);
+            return self;
+        };
     };
-};
 
-/**
- * @class ReadiumSDK.Models.NodeRangePositionInfo
- * @constructor
- */
-ReadiumSDK.Models.NodeRangePositionInfo = function(node, offset) {
-
-    /**
-     * The actual DOM node
-     * @property node
-     * @type {Node}
-     */
-    this.node = node;
-
-    /**
-     * The position offsetf for the node
-     * @property offset
-     * @type {Number}
-     */
-    this.offset = offset;
-
-};
+    return NodeRangeInfo;
+});

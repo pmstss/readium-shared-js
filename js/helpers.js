@@ -614,7 +614,7 @@ Helpers.extendedThrottle = function (startCb, tickCb, endCb, tickRate, waitThres
 };
 
 
-ReadiumSDK.Helpers.fitImages = function ($html, options) {
+Helpers.fitImages = function ($html, options) {
     if(!$html) {
         return;
     }
