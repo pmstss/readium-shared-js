@@ -40,6 +40,7 @@ var Globals = {
     version: function () {
         return "0.8.0";
     },
+    Models: {},
     /**
      * @namespace
      */
@@ -102,10 +103,6 @@ var Globals = {
          * @event
          */
         MEDIA_OVERLAY_TTS_STOP: "MediaOverlayTTSStop",
-        /**
-         * @event
-         */
-        BOUNDARY_CROSSED: "BoundaryCrossed",
         /**
          * @event
          */
