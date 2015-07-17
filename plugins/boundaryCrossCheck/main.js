@@ -1,4 +1,4 @@
-define(['readium_plugins', 'readium_shared_js/globals', 'readium_shared_js/models/bookmark_data'], function (Plugins, Globals, BookmarkData) {
+define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', 'readium_shared_js/models/bookmark_data'], function (Plugins, Globals, BookmarkData) {
     Plugins.register("boundaryCrossCheck",["annotations"], function (api) {
         var reader = api.reader, _annotationsManager = reader.plugins.annotations.getAnnotationsManager();
 

@@ -1,4 +1,4 @@
-define(['readium_plugins', 'readium_shared_js/globals', './annotations_manager'], function (Plugins, Globals, AnnotationsManager) {
+define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './annotations_manager'], function (Plugins, Globals, AnnotationsManager) {
     var config = {};
 
     Plugins.register("annotations", function (api) {
