@@ -257,7 +257,7 @@ var ScrollView = function (options, isContinuousScroll, reader) {
 
     function onScroll(e)
     {
-        if(    !_isPerformingLayoutModifications
+        if (   !_isPerformingLayoutModifications
             && !_isSettingScrollPosition
             && !_isLoadingNewSpineItemOnPageRequest) {
 
@@ -319,10 +319,10 @@ var ScrollView = function (options, isContinuousScroll, reader) {
 
         var delta = heightAfter - heightBefore;
 
-    if (Math.abs(delta) > 0)
-    {
-        if (_DEBUG)
+        if (Math.abs(delta) > 0)
         {
+            if (_DEBUG)
+            {
                 console.debug("IMMEDIATE SCROLL ADJUST: " + pageView.currentSpineItem().href + " == " + delta);
             }
             scrollTo(scrollPos + delta);
@@ -680,6 +680,11 @@ var ScrollView = function (options, isContinuousScroll, reader) {
             true, //enableBookStyleOverrides
             reader);
 
+        pageView.on(OnePageView.SPINE_ITEM_OPEN_START, function($iframe, spineItem) {
+
+            self.emit(Globals.Events.CONTENT_DOCUMENT_LOAD_START, $iframe, spineItem);
+        });
+
         pageView.render();
         if (_viewSettings) pageView.setViewSettings(_viewSettings);
 
@@ -802,7 +807,7 @@ var ScrollView = function (options, isContinuousScroll, reader) {
                     //successFlag should always be true as loadedView iFrame cannot be dead at this stage.
                 };
 
-            reachStableContentHeight(1, loadedView, $iframe[0], spineItem.href, spineItem.isFixedLayout(), spineItem.isFixedLayout() ? loadedView.meta_width() : 0, "openPage", continueCallback); // //onIFrameLoad called before this callback, so okay.
+                reachStableContentHeight(1, loadedView, $iframe[0], spineItem.href, spineItem.isFixedLayout(), spineItem.isFixedLayout() ? loadedView.meta_width() : 0, "openPage", continueCallback); // //onIFrameLoad called before this callback, so okay.
             }
             else {
                 console.error("Unable to load " + spineItem.href);
