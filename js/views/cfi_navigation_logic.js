@@ -1113,7 +1113,7 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
     };
 
     function generateCfiFromDomRange(range) {
-        return EPUBcfi.generateMixedRangeComponent(
+        return EPUBcfi.generateRangeComponent(
             range.startContainer, range.startOffset,
             range.endContainer, range.endOffset,
             range.commonAncestorContainer,
@@ -1121,7 +1121,7 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
     }
 
     function getRangeTargetNodes(rangeCfi) {
-        return EPUBcfi.getRangeTargetNodes(
+        return EPUBcfi.getRangeTargetElements(
             getWrappedCfiRelativeToContent(rangeCfi),
             self.getRootDocument(),
             ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"]);
@@ -1133,8 +1133,8 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         if (!rangeCfi2) {
             if (self.isRangeCfi(rangeCfi)) {
                 var rangeInfo = getRangeTargetNodes(rangeCfi);
-                range.setStart(rangeInfo.startNodes[0], rangeInfo.startOffset);
-                range.setEnd(rangeInfo.endNodes[0], rangeInfo.endOffset);
+                range.setStart(rangeInfo.startElement, rangeInfo.startOffset);
+                range.setEnd(rangeInfo.endElement, rangeInfo.endOffset);
             } else {
                 var element = self.getElementByCfi(rangeCfi,
                     ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"])[0];
@@ -1143,7 +1143,7 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         } else {
             if (self.isRangeCfi(rangeCfi)) {
                 var rangeInfo1 = getRangeTargetNodes(rangeCfi);
-                range.setStart(rangeInfo1.startNodes[0], rangeInfo1.startOffset);
+                range.setStart(rangeInfo1.startElement, rangeInfo1.startOffset);
             } else {
                 var startElement = self.getElementByCfi(rangeCfi,
                     ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"])[0];
@@ -1153,9 +1153,9 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
             if (self.isRangeCfi(rangeCfi2)) {
                 var rangeInfo2 = getRangeTargetNodes(rangeCfi2);
                 if (inclusive) {
-                    range.setEnd(rangeInfo2.endNodes[0], rangeInfo2.endOffset);
+                    range.setEnd(rangeInfo2.endElement, rangeInfo2.endOffset);
                 } else {
-                    range.setEnd(rangeInfo2.startNodes[0], rangeInfo2.startOffset);
+                    range.setEnd(rangeInfo2.startElement, rangeInfo2.startOffset);
                 }
             } else {
                 var endElement = self.getElementByCfi(rangeCfi2,
@@ -1241,7 +1241,7 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
 
             try {
                 //noinspection JSUnresolvedVariable
-                var nodeResult = EPUBcfi.Interpreter.getRangeTargetNodes(wrappedCfi, contentDoc,
+                var nodeResult = EPUBcfi.Interpreter.getRangeTargetElements(wrappedCfi, contentDoc,
                     ["cfi-marker"],
                     [],
                     ["MathJax_Message", "MathJax_SVG_Hidden"]);
@@ -1258,8 +1258,8 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
                 return undefined;
             }
 
-            var startRangeInfo = {node: nodeResult.startNodes[0], offset: nodeResult.startOffset};
-            var endRangeInfo = {node: nodeResult.endNodes[0], offset: nodeResult.endOffset};
+            var startRangeInfo = {node: nodeResult.startElement, offset: nodeResult.startOffset};
+            var endRangeInfo = {node: nodeResult.endElement, offset: nodeResult.endOffset};
             var nodeRangeClientRect =
                 startRangeInfo && endRangeInfo ?
                     getNodeRangeClientRect(

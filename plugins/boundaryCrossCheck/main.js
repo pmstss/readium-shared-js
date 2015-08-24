@@ -1,6 +1,6 @@
-define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', 'readium_shared_js/models/bookmark_data'], function (Plugins, Globals, BookmarkData) {
-    Plugins.register("boundaryCrossCheck",["annotations"], function (api) {
-        var reader = api.reader, _annotationsManager = reader.plugins.annotations.getAnnotationsManager();
+define(['readium_js_plugins', 'readium_shared_js/globals', 'readium_shared_js/models/bookmark_data'], function (Plugins, Globals, BookmarkData) {
+    Plugins.register("boundaryCrossCheck", ["highlights"], function (api) {
+        var reader = api.reader, _highlightsManager = reader.plugins.highlights.getHighlightsManager();
 
         var self = this;
 
@@ -82,7 +82,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', 're
                         var visibleCfis = reader.getCfisForVisibleRegion();
 
                         // check if boundary content CFI is within the page that was just open
-                        if (_annotationsManager.cfiIsBetweenTwoCfis(_boundaryData.bookmark.contentCFI,
+                        if (_highlightsManager.cfiIsBetweenTwoCfis(_boundaryData.bookmark.contentCFI,
                                 visibleCfis.firstVisibleCfi.contentCFI,
                                 visibleCfis.lastVisibleCfi.contentCFI)) {
                             self.boundaryCrossed();
@@ -90,7 +90,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', 're
                         }
 
                         // check if pages's first visible CFI is greater than the boundary
-                        var result = _annotationsManager.contentCfiComparator(
+                        var result = _highlightsManager.contentCfiComparator(
                             visibleCfis.firstVisibleCfi.contentCFI,
                             _boundaryData.bookmark.contentCFI);
                         if (result >= 0) {

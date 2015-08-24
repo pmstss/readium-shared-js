@@ -6,7 +6,7 @@ require(["readium_shared_js/globalsSetup"], function () {
         ReadiumSDK.on(ReadiumSDK.Events.PLUGINS_LOADED, function(reader) {
 
             // readium built-in (should have been require()'d outside this scope)
-            console.log(reader.plugins.annotations);
+            console.log(reader.plugins.highlights);
 
             // external (require()'d via Dependency Injection, see examplePluginConfig function parameter passed above)
             console.log(reader.plugins.example);

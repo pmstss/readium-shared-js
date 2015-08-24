@@ -24,97 +24,24 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/*
+define(['jquery', 'underscore', 'eventEmitter', './controller', './helpers', 'readium_shared_js/models/bookmark_data'], function($, _, EventEmitter, HighlightsController, HighlightHelpers, BookmarkData) {
 
-# Highlighting in Readium - A primer
+var defaultContext = {};
 
-Please note:
+//determine if browser is IE9 or IE10
+var div = document.createElement("div");
+div.innerHTML = "<!--[if IE 9]><i></i><![endif]-->";
+defaultContext.isIe9 = (div.getElementsByTagName("i").length == 1);
+// IE10 introduced a prefixed version of PointerEvent, but not unprefixed.
+defaultContext.isIe10 = window.MSPointerEvent && !window.PointerEvent;
 
-- only simple text highlighting is currently supported
-- it's the job of the reading system to keep track of annotations. readium-js simply displays your annotations.
-- full CFIs for annotations are not currently available. We use so called "partial CFI"s, a tuple containing idref of the spine item
-  and the CFI definition relative to the root of the spine item.
-
-Currently, the API exposed via `ReaderView` exposes 4 functions and 1 event which should be sufficient for a simple highlighting workflow.
-
-# API
-
-For the purposes of the examples below, `RReader` is a previously instantiated `ReaderView` instance.
-
-## Is anything selected (getCurrentSelectionCfi())
-
-Before proceeding with the highlighting workflow it is sometimes necessary to determine whether the user has in fact selected anything.
-This can be accomplished with the following:
-
-	> RReader.getCurrentSelectionCfi()
-        ReadiumSDK.Models.BookmarkData {idref: "id-id2635343", contentCFI: "/4/2[building_a_better_epub]/10,/4/1:12,/6/1:429", toString: function}
-
-The response contains a partial CFI that is sufficient to create a highlight based on selection. If nothing is selected *undefined* is returned.
-
-You can also use partial Cfi with `openSpineItemElementCfi()` to navigate to where this selection is later.
-
-## Highlighting (addHighlight and addSelectionHighlight)
-
-Once we've determined what needs to be highlighted (by generating a partial CFI from a selection, or having an existing partial CFI stored externally)
-we can add it to the reader by calling `addHighlight()`:
-
-	> RReader.addHighlight('id-id2604743', "/4/2/6,/1:74,/1:129", 123, "highlight")
-	Object {CFI: "/4/2/6,/1:74,/1:129", selectedElements: Array[1], idref: "id-id2604743"}
-
-*addHighligh*t takes the following parameters:
-
-- *id-id2604743* - `idref` is the idref value from `getCurrentSelectionCfi()
-- * /4/2/6,/1:74,/1:129* - `cfi` is the cfi value from `getCurrentSelectionCfi()
-- *123* - `id` is the unique id that defines this annotation
-- *highlight* - 'type' of annotation.
-
-### addSelectioHighlight
-
-Alternatively, you can call addSelectionHighlight(). It combines both getCurrentSelectionCfi() and addHighlight into one call:
-
-	> RReader.addSelectionHighlight(124, "highlight")
-	Object {CFI: "/4/2/4,/1:437,/1:503", selectedElements: Array[1], idref: "id-id2604743"}
-
-Note that it provides no validation. If nothing is selected, `undefined` is returned.
-
-
-## Removing highlights
-
-To remove the highlight, call `removeHighlight`:
-
-	> RReader.removeHighlight(123)
-	undefined
-
-
-# Handling annotation click events
-
-When a user clicks on a highlight `annotationClicked` event is dispatched with the following arguments:
-
-- type of annotation
-- idref of the spine item
-- partial Cfi of the annotation
-- annotationdId
-
-
-	> RReader.on('annotationClicked', function(type, idref, cfi, annotationId) { console.log (type, idref, cfi, annotationId)});
-	Views.ReaderView {on: function, once: function, off: function, trigger: function, listenTo: function???}
-	
-Then when the user clicks on the highlight the following will show up in the console:
-
-	highlight id-id2604743 /4/2/6,/1:74,/1:129 123
-
-Note that there are 2 more events that may be hadled in a similar manner - 'textSelection' and 'imgDblClicked'.
-The set of arguments passed to the event handling function is different though.
-
-*/
-define(['jquery', 'underscore', 'eventEmitter', './annotations_module'], function($, _, EventEmitter, EpubAnnotationsModule) {
 /**
  *
  * @param proxyObj
  * @param options
  * @constructor
  */
-var AnnotationsManager = function (proxyObj, options) {
+var HighlightsManager = function (proxyObj, options) {
 
     var self = this;
 
@@ -130,19 +57,14 @@ var AnnotationsManager = function (proxyObj, options) {
 
     _.extend(this, new EventEmitter());
 
-    // we want to bubble up all of the events that annotations module may trigger up.
-    // Note that annotations module produces "annotation" related events (triggered on HighlightViews of HighlightGroup):
-    // that are mangled, i.e., a new set of arguments is produced in mangleEvent function
-    // as well as these 2 events:  "textSelectionEvent" and "imgDblClicked", that are not mangled and propogated "as is"
-
     // this.on("all", function() {
     // });
     //TODO: EventEmitter3 does not support "all" or "*" (catch-all event sink)
     //https://github.com/primus/eventemitter3/blob/master/index.js#L61
     //...so instead we patch trigger() and emit() (which are synonymous, see Bootstrapper.js EventEmitter.prototype.trigger = EventEmitter.prototype.emit;)
-        
+
     var originalEmit = self['emit'];
-    
+
     var triggerEmitPatch = function() {
         var args = Array.prototype.slice.call(arguments);
         // mangle annotationClicked event. What really needs to happen is, the annotation_module needs to return a
@@ -173,7 +95,7 @@ var AnnotationsManager = function (proxyObj, options) {
         mangleEvent('annotationRightClicked');
         mangleEvent('annotationHoverIn');
         mangleEvent('annotationHoverOut');
-        
+
         originalEmit.apply(this, args);
         originalEmit.apply(proxy, args);
     };
@@ -182,8 +104,18 @@ var AnnotationsManager = function (proxyObj, options) {
     this.emit = triggerEmitPatch;
 
     this.attachAnnotations = function($iframe, spineItem, loadedSpineItems) {
-        var epubDocumentFrame = $iframe[0];
-        liveAnnotations[spineItem.index] = new EpubAnnotationsModule(epubDocumentFrame, self, annotationCSSUrl, spineItem);
+        var iframe = $iframe[0];
+
+        var context = _.extend({
+            document: iframe.contentDocument,
+            window: iframe.contentWindow,
+            iframe: iframe,
+            manager: self,
+            cssUrl: annotationCSSUrl,
+            isFixedLayout: spineItem.isFixedLayout()
+        }, defaultContext);
+
+        liveAnnotations[spineItem.index] = new HighlightsController(context);
         spines[spineItem.index] = spineItem;
 
         // check to see which spine indicies can be culled depending on the currently loaded spine items
@@ -199,7 +131,7 @@ var AnnotationsManager = function (proxyObj, options) {
             var annotationsForView = liveAnnotations[spine];
             var partialCfi = annotationsForView.getCurrentSelectionCFI();
             if (partialCfi) {
-                return new ReadiumSDK.Models.BookmarkData(spines[spine].idref, partialCfi);
+                return {"idref":spines[spine].idref, "cfi":partialCfi};
             }
         }
         return undefined;
@@ -211,79 +143,20 @@ var AnnotationsManager = function (proxyObj, options) {
             if (annotationsForView.getCurrentSelectionCFI()) {
                 var annotation = annotationsForView.addSelectionHighlight(
                     id, type, clearSelection, styles);
-                return new ReadiumSDK.Models.BookmarkData(spines[spine].idref, annotation.CFI);
+                return new BookmarkData(spines[spine].idref, annotation.CFI);
             }
         }
         return undefined;
     };
-    
+
     this.addHighlight = function(spineIdRef, partialCfi, id, type, styles, options) {
         for(var spine in liveAnnotations) {
             if (spines[spine].idref === spineIdRef) {
                 var annotationsForView = liveAnnotations[spine];
                 var annotation = annotationsForView.addHighlight(partialCfi, id, type, styles, options);
                 if (annotation) {
-                    return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
+                    return new BookmarkData(spineIdRef, annotation.CFI);
                 }
-            }
-        }
-        return undefined;
-    };
-    
-    this.addPlaceholder = function(spineIdRef, partialCfi, $element, id, type, styles) {
-        for(var spine in liveAnnotations) {
-            if (spines[spine].idref === spineIdRef) {
-                var annotationsForView = liveAnnotations[spine];
-                var annotation = annotationsForView.addPlaceholder(partialCfi, $element,
-                                                                   id, type, styles);
-                if (annotation) {
-                    return new ReadiumSDK.Models.BookmarkData(spineIdRef, annotation.CFI);
-                }
-            }
-        }
-        return undefined;
-    };
-
-    this.addHighlightsForText = function(text, spineIdRef, type, styles) {
-        var bookmarks = [];
-        for(var spine in liveAnnotations) {
-            if (spines[spine].idref === spineIdRef) {
-                var annotationsForView = liveAnnotations[spine];
-                annotations = annotationsForView.addHighlightsForText(text, type, styles);
-                _.each(annotations, function (partialCfi) {
-                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
-                });
-                return bookmarks;
-            }
-        }
-        return undefined;
-    };
-
-    this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
-        var bookmarks = [];
-        for(var spine in liveAnnotations) {
-            if (spines[spine].idref === spineIdRef) {
-                var annotationsForView = liveAnnotations[spine];
-                annotations = annotationsForView.addPlaceholdersForAudio(type, styles);
-                _.each(annotations, function (partialCfi) {
-                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
-                });
-                return bookmarks;
-            }
-        }
-        return undefined;
-    };
-    
-    this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
-        var bookmarks = [];
-        for(var spine in liveAnnotations) {
-            if (spines[spine].idref === spineIdRef) {
-                var annotationsForView = liveAnnotations[spine];
-                annotations = annotationsForView.addPlaceholdersForVideo(type, styles);
-                _.each(annotations, function (partialCfi) {
-                    bookmarks.push(new ReadiumSDK.Models.BookmarkData(spineIdRef, partialCfi));
-                });
-                return bookmarks;
             }
         }
         return undefined;
@@ -297,7 +170,7 @@ var AnnotationsManager = function (proxyObj, options) {
         }
         return result;
     };
-    
+
     this.removeHighlightsByType = function(type) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -306,7 +179,7 @@ var AnnotationsManager = function (proxyObj, options) {
         }
         return result;
     };
-    
+
     this.getHighlight = function(id) {
         var result = undefined;
         for(var spine in liveAnnotations) {
@@ -397,7 +270,7 @@ var AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
-    this.contentCfiComparator = function(contCfi1, contCfi2) { 
+    this.contentCfiComparator = function(contCfi1, contCfi2) {
         var result = undefined;
         for(var spine in liveAnnotations) {
             var annotationsForView = liveAnnotations[spine];
@@ -409,6 +282,11 @@ var AnnotationsManager = function (proxyObj, options) {
         return result;
     };
 
+    function getElementFromViewElement(element) {
+        //TODO JC: yuck, we get two different collection structures from non fixed and fixed views.. must refactor..
+        return element.element ? element.element : element;
+    }
+
     this.getAnnotationMidpoints = function($elementSpineItemCollection){
         var output = [];
 
@@ -419,21 +297,14 @@ var AnnotationsManager = function (proxyObj, options) {
 
             var baseOffset = {top: 0, left: 0};
             if (item.elements && item.elements.length > 0) {
-                var offsetElement = item.elements[0].element.ownerDocument.defaultView.frameElement.parentElement;
+                var firstElement = getElementFromViewElement(item.elements[0]);
+                var offsetElement = firstElement.ownerDocument.defaultView.frameElement.parentElement;
                 baseOffset = {top: offsetElement.offsetTop, left: offsetElement.offsetLeft};
             }
 
             _.each(item.elements, function(element){
 
-                var $element;
-                //TODO JC: yuck, we get two different collection structures from non fixed and fixed views.. must refactor..
-                if(element.element){
-                    $element = $(element.element);
-                    element = element.element;
-                }else{
-                    $element = $(element);
-                    element = element[0];
-                }
+                var $element = $(getElementFromViewElement(element));
                 var elementId = $element.attr('data-id');
 
                 if(!elementId){
@@ -448,15 +319,15 @@ var AnnotationsManager = function (proxyObj, options) {
                 //figure out a better way to get the html parent from an element..
                 var $html = $element.parent();
                 //get transformation scale from content document
-                var matrix = ReadiumSDK.Helpers.CSSTransformMatrix.getMatrix($html);
+                var matrix = HighlightHelpers.getMatrix($html);
                 if (matrix) {
-                    scale = ReadiumSDK.Helpers.CSSTransformMatrix.getScaleFromMatrix(matrix);
+                    scale = HighlightHelpers.getScaleFromMatrix(matrix);
                 }
                 var offset = $element.offset();
-                offset.top += baseOffset.top;
+                offset.top += baseOffset.top + ($element.height() / 2);
                 offset.left += baseOffset.left;
                 if(scale !== 1){
-                    offset = {top: (offset.top * scale)*(1/scale)-12, left: offset.left }; //the 12 is a "padding"
+                    offset = {top: (offset.top * scale)*(1/scale), left: offset.left };
                 }
                 var $highlighted = {id: elementId, position: offset, lineHeight: parseInt($element.css('line-height'),10)};
                 annotations.push($highlighted)
@@ -472,14 +343,7 @@ var AnnotationsManager = function (proxyObj, options) {
         return 'div.highlight, div.highlight-border';
     };
 
-    function removeAllHighlights(annotationModule) { 
-        console.debug("Removing all highlights..");
-        _.each(annotationModule.getHighlights(), function(annotation) {
-            annotationModule.removeHighlight(annotation.id);
-        });
-    };
-
 };
 
-return AnnotationsManager;
+return HighlightsManager;
 });

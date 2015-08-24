@@ -1,4 +1,4 @@
-define(['readium_shared_js/plugins_controller', 'jquery', 'hammer', 'jquery_hammer'], function(Plugins, $, Hammer, jqueryHammer) {
+define(['readium_js_plugins', 'jquery', 'hammer', 'jquery_hammer'], function(Plugins, $, Hammer, jqueryHammer) {
     Plugins.register("gestures", function(api) {
         var that = this;
         var reader = api.reader;

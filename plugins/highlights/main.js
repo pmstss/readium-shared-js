@@ -1,8 +1,8 @@
-define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './annotations_manager'], function (Plugins, Globals, AnnotationsManager) {
+define(['readium_js_plugins', 'readium_shared_js/globals', './manager'], function (Plugins, Globals, HighlightsManager) {
     var config = {};
 
-    Plugins.register("annotations", function (api) {
-        var reader = api.reader, _annotationsManager, _initialized = false, _initializedLate = false;
+    Plugins.register("highlights", function (api) {
+        var reader = api.reader, _highlightsManager, _initialized = false, _initializedLate = false;
 
         var self = this;
 
@@ -22,7 +22,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
                 return;
             }
 
-            _annotationsManager = new AnnotationsManager(self, options);
+            _highlightsManager = new HighlightsManager(self, options);
 
             if (_initializedLate) {
                 api.plugin.warn('Unable to attach to currently loaded content document.\n' +
@@ -32,8 +32,8 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
             _initialized = true;
         };
 
-        this.getAnnotationsManager = function() {
-            return _annotationsManager;
+        this.getHighlightsManager = function() {
+            return _highlightsManager;
         };
 
         /**
@@ -42,7 +42,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          * @returns {object | undefined} partial cfi object or undefined if nothing is selected
          */
         this.getCurrentSelectionCfi = function() {
-            return _annotationsManager.getCurrentSelectionCfi();
+            return _highlightsManager.getCurrentSelectionCfi();
         };
 
         /**
@@ -60,29 +60,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          */
         this.addHighlight = function(spineIdRef, cfi, id, type, styles) {
             var options = reader.getCfisForVisibleRegion();
-            return _annotationsManager.addHighlight(spineIdRef, cfi, id, type, styles, options);
-        };
-
-        /**
-         * Draw placeholder around element addressed by CFI
-         *
-         * @param {string} spineIdRef spine idref that defines the partial Cfi
-         * @param {string} cfi Partial CFI (withouth the indirection step) relative to the spine index
-         * @param {string} id Id of the highlight. must be unique
-         * @param {string} type - name of the class selector rule in annotations.css file.
-         * The style of the class will be applied to the placeholder
-         * @param {object} styles - object representing CSS properties to be applied to the placeholder
-         * e.g., to apply background color pass this {'background-color': 'green'}.
-         *
-         * @returns {object | undefined} partial cfi object of the created placeholder
-         */
-        this.addPlaceholder = function(spineIdRef, cfi, id, type, styles) {
-            // get element by CFI
-            var $element = reader.getCurrentView().getElementByCfi(spineIdRef, cfi);
-            if (!$element) {
-                return undefined;
-            }
-            return _annotationsManager.addPlaceholder(spineIdRef, cfi, $element, id, type, styles);
+            return _highlightsManager.addHighlight(spineIdRef, cfi, id, type, styles, options);
         };
 
         /**
@@ -99,53 +77,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          * @returns {object | undefined} partial cfi object of the created highlight
          */
         this.addSelectionHighlight =  function(id, type, clearSelection, styles) {
-            return _annotationsManager.addSelectionHighlight(id, type, clearSelection, styles);
-        };
-
-        /**
-         * Higlights all the occurences of the given text
-         *
-         * @param {string} text array of text occurences to be highlighted
-         * @param {string} spineIdRef spine idref where the text is searched for
-         * @param {string} type - name of the class selector rule in annotations.css file.
-         * The style of the class will be applied to the created hightlights
-         * @param {object} styles - object representing CSS properties to be applied to the highlights.
-         * e.g., to apply background color pass this {'background-color': 'green'}.
-         *
-         * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the found text occurences
-         */
-        this.addHighlightsForText = function(text, spineIdRef, type, styles) {
-            return _annotationsManager.addHighlightsForText(text, spineIdRef, type, styles);
-        };
-
-        /**
-         * Draw placeholders around all "audio" elements in the rendered iFrame
-         *
-         * @param {string} spineIdRef spine idref where "audio" elements are searched for
-         * @param {string} type - name of the class selector rule in annotations.css file.
-         * The style of the class will be applied to the placeholders
-         * @param {object} styles - object representing CSS properties to be applied to the placeholders.
-         * e.g., to apply background color pass this {'background-color': 'green'}.
-         *
-         * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the placeholders
-         */
-        this.addPlaceholdersForAudio = function(spineIdRef, type, styles) {
-            return _annotationsManager.addPlaceholdersForAudio(spineIdRef, type, styles);
-        };
-
-        /**
-         * Draw placeholders around all "video" elements in the rendered iFrame
-         *
-         * @param {string} spineIdRef spine idref where "video" elements are searched for
-         * @param {string} type - name of the class selector rule in annotations.css file.
-         * The style of the class will be applied to the placeholders
-         * @param {object} styles - object representing CSS properties to be applied to the placeholders.
-         * e.g., to apply background color pass this {'background-color': 'green'}.
-         *
-         * @returns {array<ReadiumSDK.Models.BookmarkData> | undefined} array of bookmarks data for the placeholders
-         */
-        this.addPlaceholdersForVideo = function(spineIdRef, type, styles) {
-            return _annotationsManager.addPlaceholdersForVideo(spineIdRef, type, styles);
+            return _highlightsManager.addSelectionHighlight(id, type, clearSelection, styles);
         };
 
         /**
@@ -157,7 +89,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          *
          */
         this.removeHighlight = function(id) {
-            return _annotationsManager.removeHighlight(id);
+            return _highlightsManager.removeHighlight(id);
         };
 
         /**
@@ -169,7 +101,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          *
          */
         this.removeHighlightsByType = function(type) {
-            return _annotationsManager.removeHighlightsByType(type);
+            return _highlightsManager.removeHighlightsByType(type);
         };
 
         /**
@@ -200,7 +132,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          * @returns {ReadiumSDK.Views.ReaderView.HighlightInfo} Object describing the highlight
          */
         this.getHighlight = function(id) {
-            return _annotationsManager.getHighlight(id);
+            return _highlightsManager.getHighlight(id);
         };
 
         /**
@@ -212,7 +144,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          * e.g., to apply background color pass this {'background-color': 'green'}.
          */
         this.updateAnnotation = function(id, type, styles) {
-            _annotationsManager.updateAnnotation(id, type, styles);
+            _highlightsManager.updateAnnotation(id, type, styles);
         };
 
         /**
@@ -225,7 +157,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          * e.g., to apply background color pass this {'background-color': 'green'}.
          */
         this.replaceAnnotation = function(id, cfi, type, styles) {
-            _annotationsManager.replaceAnnotation(id, cfi, type, styles);
+            _highlightsManager.replaceAnnotation(id, cfi, type, styles);
         };
 
 
@@ -235,7 +167,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
         this.redrawAnnotations = function(){
             if (reader.getCurrentView()) {
                 var options = reader.getCfisForVisibleRegion();
-                _annotationsManager.redrawAnnotations(options);
+                _highlightsManager.redrawAnnotations(options);
             }
         };
 
@@ -246,7 +178,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          * @param {string} styles
          */
         this.updateAnnotationView = function(id, styles) {
-            _annotationsManager.updateAnnotationView(id, styles);
+            _highlightsManager.updateAnnotationView(id, styles);
         };
 
         /**
@@ -257,7 +189,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          * @returns {undefined}
          */
         this.setAnnotationViewState = function(id, state, value) {
-            return _annotationsManager.setAnnotationViewState(id, state, value);
+            return _highlightsManager.setAnnotationViewState(id, state, value);
         };
 
         /**
@@ -267,7 +199,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
          * @returns {undefined}
          */
         this.setAnnotationViewStateForAll = function (state, value) {
-            return _annotationsManager.setAnnotationViewStateForAll(state, value);
+            return _highlightsManager.setAnnotationViewStateForAll(state, value);
         };
 
         /**
@@ -279,9 +211,9 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
             var _currentView = reader.getCurrentView();
 
             if (_currentView) {
-                var $visibleElements = _currentView.getVisibleElements(_annotationsManager.getAnnotationsElementSelector(), true);
+                var $visibleElements = _currentView.getVisibleElements(_highlightsManager.getAnnotationsElementSelector(), true);
 
-                var elementMidpoints = _annotationsManager.getAnnotationMidpoints($visibleElements);
+                var elementMidpoints = _highlightsManager.getAnnotationMidpoints($visibleElements);
                 return elementMidpoints || [];
             }
             return [];
@@ -289,7 +221,7 @@ define(['readium_shared_js/plugins_controller', 'readium_shared_js/globals', './
 
         reader.on(Globals.Events.CONTENT_DOCUMENT_LOADED, function ($iframe, spineItem) {
             if (_initialized) {
-                _annotationsManager.attachAnnotations($iframe, spineItem, reader.getLoadedSpineItems());
+                _highlightsManager.attachAnnotations($iframe, spineItem, reader.getLoadedSpineItems());
             } else {
                 _initializedLate = true;
             }

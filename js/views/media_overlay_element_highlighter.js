@@ -3,27 +3,27 @@
 //  Created by Boris Schneiderman.
 // Modified by Daniel Weck
 //  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
-//  
-//  Redistribution and use in source and binary forms, with or without modification, 
+//
+//  Redistribution and use in source and binary forms, with or without modification,
 //  are permitted provided that the following conditions are met:
-//  1. Redistributions of source code must retain the above copyright notice, this 
+//  1. Redistributions of source code must retain the above copyright notice, this
 //  list of conditions and the following disclaimer.
-//  2. Redistributions in binary form must reproduce the above copyright notice, 
-//  this list of conditions and the following disclaimer in the documentation and/or 
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//  this list of conditions and the following disclaimer in the documentation and/or
 //  other materials provided with the distribution.
-//  3. Neither the name of the organization nor the names of its contributors may be 
-//  used to endorse or promote products derived from this software without specific 
+//  3. Neither the name of the organization nor the names of its contributors may be
+//  used to endorse or promote products derived from this software without specific
 //  prior written permission.
-//  
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 define(['jquery', 'rangy', 'readium_cfi_js'], function($, rangy, epubCfi) {
@@ -38,7 +38,7 @@ var MediaOverlayElementHighlighter = function(reader) {
 
     var DEFAULT_MO_ACTIVE_CLASS = "mo-active-default";
     var DEFAULT_MO_SUB_SYNC_CLASS = "mo-sub-sync";
-    
+
     //var BACK_COLOR = "#99CCCC";
 
     var _highlightedElementPar = undefined;
@@ -46,7 +46,7 @@ var MediaOverlayElementHighlighter = function(reader) {
     {
         return _highlightedElementPar && par === _highlightedElementPar;
     };
-    
+
     var _highlightedCfiPar = undefined;
     this.isCfiHighlighted = function(par)
     {
@@ -57,21 +57,21 @@ var MediaOverlayElementHighlighter = function(reader) {
     var _playbackActiveClass = "";
 
     var _reader = reader;
-    
+
     var USE_RANGY = true && (typeof rangy !== "undefined");
     var _rangyCSS = undefined;
     var _rangyRange = undefined;
-    
+
     var HIGHLIGHT_ID = "MO_SPEAK";
-    
+
     var self = this;
 
     var $userStyle = undefined;
-    
+
     this.reDo = function()
     {
         //this.reset();
-        
+
         if ($userStyle)
         {
             $userStyle.remove();
@@ -82,7 +82,7 @@ var MediaOverlayElementHighlighter = function(reader) {
         var hc = _highlightedCfiPar;
         var c1 = _activeClass;
         var c2 = _playbackActiveClass;
-        
+
         if (_highlightedElementPar)
         {
             this.reset();
@@ -110,7 +110,7 @@ var MediaOverlayElementHighlighter = function(reader) {
             }
             catch (e)
             {
-                
+
             }
         }
 
@@ -120,9 +120,9 @@ var MediaOverlayElementHighlighter = function(reader) {
         $userStyle = $("<style type='text/css'> </style>");
 
         $userStyle.append("." + DEFAULT_MO_ACTIVE_CLASS + " {");
-        
+
         var fallbackUserStyle = "background-color: yellow !important; color: black !important; border-radius: 0.4em;";
-        
+
         var style = overrideWithUserStyle; //_reader.userStyles().findStyle("." + DEFAULT_MO_ACTIVE_CLASS);
         if (style)
         {
@@ -137,7 +137,7 @@ var MediaOverlayElementHighlighter = function(reader) {
                 atLeastOne = true;
                 $userStyle.append(prop + ": " + style.declarations[prop] + "; ");
             }
-            
+
             if (!atLeastOne && !hasAuthorStyle)
             {
                 $userStyle.append(fallbackUserStyle);
@@ -147,19 +147,19 @@ var MediaOverlayElementHighlighter = function(reader) {
         {
             $userStyle.append(fallbackUserStyle);
         }
-        
+
         $userStyle.append("}");
-        
-        
+
+
         // ---- CFI
         //$userStyle.append(" .highlight {background-color: blue; border: 2x solid green;}"); //.hover-highlight
-        
-        
+
+
         $userStyle.appendTo($head);
 
 //console.debug($userStyle[0].textContent);
     };
-    
+
     this.highlightElement = function(par, activeClass, playbackActiveClass) {
 
         if(!par || par === _highlightedElementPar) {
@@ -170,13 +170,13 @@ var MediaOverlayElementHighlighter = function(reader) {
 
         _highlightedElementPar = par;
         _highlightedCfiPar = undefined;
-        
+
         _activeClass = activeClass;
         _playbackActiveClass = playbackActiveClass;
 
         var seq = this.adjustParToSeqSyncGranularity(_highlightedElementPar);
         var element = seq.element;
-        
+
         if (_playbackActiveClass && _playbackActiveClass !== "")
         {
             //console.debug("MO playbackActiveClass: " + _playbackActiveClass);
@@ -190,7 +190,7 @@ var MediaOverlayElementHighlighter = function(reader) {
         var overrideWithUserStyle = _reader.userStyles().findStyle("." + DEFAULT_MO_ACTIVE_CLASS);
 
         ensureUserStyle($hel, hasAuthorStyle, overrideWithUserStyle);
-                
+
         if (overrideWithUserStyle || !hasAuthorStyle)
         {
             //console.debug("MO active NO CLASS: " + _activeClass);
@@ -199,7 +199,7 @@ var MediaOverlayElementHighlighter = function(reader) {
             {
                 $hel.addClass(_activeClass);
             }
-            
+
             $hel.addClass(DEFAULT_MO_ACTIVE_CLASS);
 
             //$(element).css("background", BACK_COLOR);
@@ -209,12 +209,12 @@ var MediaOverlayElementHighlighter = function(reader) {
             //console.debug("MO activeClass: " + _activeClass);
             $hel.addClass(_activeClass);
         }
-        
+
         if (this.includeParWhenAdjustingToSeqSyncGranularity || _highlightedElementPar !== seq)
         {
             $(_highlightedElementPar.element).addClass(DEFAULT_MO_SUB_SYNC_CLASS);
         }
-        
+
 // ---- CFI
 //         try
 //         {
@@ -223,27 +223,27 @@ var MediaOverlayElementHighlighter = function(reader) {
 //             // if(cfi[0] == "!") {
 //             //     cfi = cfi.substring(1);
 //             // }
-// 
+//
 // //console.log(element);
-//         
+//
 //             var firstTextNode = getFirstTextNode(element);
 //             var txtFirst = firstTextNode.textContent;
 // //console.log(txtFirst);
-// 
+//
 //             var lastTextNode = getLastTextNode(element);
 //             var txtLast = lastTextNode.textContent;
 // //console.log(txtLast);
-//         
+//
 //             var cfi = EPUBcfi.Generator.generateCharOffsetRangeComponent(
-//                     firstTextNode, 
-//                     0, 
-//                     lastTextNode, 
+//                     firstTextNode,
+//                     0,
+//                     lastTextNode,
 //                     txtLast.length,
 //                     ["cfi-marker"],
 //                     [],
 //                     ["MathJax_Message", "MathJax_SVG_Hidden"]
 //                     );
-//             
+//
 //             var id = $hel.data("mediaOverlayData").par.getSmil().spineItemId;
 //             _reader.addHighlight(id, cfi, HIGHLIGHT_ID,
 //             "highlight", //"underline"
@@ -253,11 +253,11 @@ var MediaOverlayElementHighlighter = function(reader) {
 //         catch(error)
 //         {
 //             console.error(error);
-//         
+//
 //             removeHighlight();
 //         }
     };
-    
+
     this.highlightCfi = function(par, activeClass, playbackActiveClass) {
 
         if(!par || par === _highlightedCfiPar) {
@@ -268,7 +268,7 @@ var MediaOverlayElementHighlighter = function(reader) {
 
         _highlightedElementPar = undefined;
         _highlightedCfiPar = par;
-        
+
         _activeClass = activeClass;
         _playbackActiveClass = playbackActiveClass;
 
@@ -300,28 +300,28 @@ var MediaOverlayElementHighlighter = function(reader) {
                 [],
                 ["MathJax_Message", "MathJax_SVG_Hidden"]);
 //console.log(infoEnd);
-            
+
             _rangyRange.setStartAndEnd(
                 infoStart.textNode[0], infoStart.textOffset,
                 infoEnd.textNode[0], infoEnd.textOffset
             );
-            
+
             if (false && // we use CssClassApplier instead, because surroundContents() has no trivial undoSurroundContents() function (inc. text nodes normalisation, etc.)
                 _rangyRange.canSurroundContents())
             {
                 _rangyRange.MO_createCssClassApplier = false;
-                
+
                 var span = doc.createElementNS("http://www.w3.org/1999/xhtml", 'span');
                 span.id = HIGHLIGHT_ID;
                 span.setAttribute("id", span.id);
                 span.setAttribute("class", clazz + " mo-cfi-highlight");
-            
+
                 _rangyRange.surroundContents(span);
             }
             else
             {
                 _rangyRange.MO_createCssClassApplier = true;
-                
+
                 if (!_rangyCSS || _rangyCSS.cssClass !== clazz)
                 {
                     _rangyCSS = rangy.createCssClassApplier(clazz,
@@ -338,13 +338,13 @@ var MediaOverlayElementHighlighter = function(reader) {
                 _rangyCSS.applyToRange(_rangyRange);
             }
         }
-        else if (_reader.plugins.annotations)
+        else if (_reader.plugins.highlights)
         {
             try
             {
                 //var id = $hel.data("mediaOverlayData").par.getSmil().spineItemId;
                 var id = par.getSmil().spineItemId;
-                _reader.plugins.annotations.addHighlight(id, par.cfi.partialRangeCfi, HIGHLIGHT_ID,
+                _reader.plugins.highlights.addHighlight(id, par.cfi.partialRangeCfi, HIGHLIGHT_ID,
                 "highlight", //"underline"
                 undefined // styles
                             );
@@ -355,9 +355,9 @@ var MediaOverlayElementHighlighter = function(reader) {
             }
         }
     };
-    
+
 // ---- CFI
-//     
+//
 //     function getFirstTextNode(node)
 //     {
 //         if (node.nodeType === Node.TEXT_NODE)
@@ -365,7 +365,7 @@ var MediaOverlayElementHighlighter = function(reader) {
 //             if (node.textContent.trim().length > 0)
 //                 return node;
 //         }
-//         
+//
 //         for (var i = 0; i < node.childNodes.length; i++)
 //         {
 //             var child = node.childNodes[i];
@@ -375,10 +375,10 @@ var MediaOverlayElementHighlighter = function(reader) {
 //                 return first;
 //             }
 //         }
-//         
+//
 //         return undefined;
 //     }
-//     
+//
 //     function getLastTextNode(node)
 //     {
 //         if (node.nodeType === Node.TEXT_NODE)
@@ -386,7 +386,7 @@ var MediaOverlayElementHighlighter = function(reader) {
 //             if (node.textContent.trim().length > 0)
 //                 return node;
 //         }
-//         
+//
 //         for (var i = node.childNodes.length-1; i >= 0; i--)
 //         {
 //             var child = node.childNodes[i];
@@ -396,13 +396,13 @@ var MediaOverlayElementHighlighter = function(reader) {
 //                 return last;
 //             }
 //         }
-//         
+//
 //         return undefined;
 //     }
-//     
+//
 
     this.reset = function() {
-        
+
         if (_highlightedCfiPar)
         {
             var doc = _highlightedCfiPar.cfi.cfiTextParent.ownerDocument;
@@ -419,21 +419,21 @@ var MediaOverlayElementHighlighter = function(reader) {
                     {
                         var txt = toRemove.textContent; // TODO: innerHTML? or better: hasChildNodes loop + detach and re-attach
                         var txtNode = doc.createTextNode(txt);
-                        
+
                         toRemove.parentNode.replaceChild(txtNode, toRemove);
                         txtNode.parentNode.normalize();
                     }
                 }
-        
+
                 //_rangyCSS = undefined;
                 _rangyRange = undefined;
             }
-            else if (_reader.plugins.annotations)
+            else if (_reader.plugins.highlights)
             {
                 try
                 {
-                    _reader.plugins.annotations.removeHighlight(HIGHLIGHT_ID);
-        
+                    _reader.plugins.highlights.removeHighlight(HIGHLIGHT_ID);
+
                     var toRemove = undefined;
                     while ((toRemove = doc.getElementById("start-" + HIGHLIGHT_ID)) !== null)
                     {
@@ -453,11 +453,11 @@ var MediaOverlayElementHighlighter = function(reader) {
                     console.error(error);
                 }
             }
-            
+
             _highlightedCfiPar = undefined;
         }
-        
-        
+
+
         
 
         if(_highlightedElementPar) {
@@ -468,7 +468,7 @@ var MediaOverlayElementHighlighter = function(reader) {
             {
                 $(_highlightedElementPar.element).removeClass(DEFAULT_MO_SUB_SYNC_CLASS);
             }
-            
+
             if (_playbackActiveClass && _playbackActiveClass !== "")
             {
                 //console.debug("MO RESET playbackActiveClass: " + _playbackActiveClass);
@@ -497,7 +497,7 @@ var MediaOverlayElementHighlighter = function(reader) {
     this.adjustParToSeqSyncGranularity = function(par)
     {
         if (!par) return undefined;
-        
+
         var sync = _reader.viewerSettings().mediaOverlaysSynchronizationGranularity;
         if (sync && sync.length > 0)
         {
@@ -514,7 +514,7 @@ var MediaOverlayElementHighlighter = function(reader) {
                 return seq;
             }
         }
-        
+
         return par;
     };
 };
