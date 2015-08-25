@@ -117,39 +117,6 @@ function($, _, Class, HighlightHelpers, HighlightGroup) {
             this.highlights = highlights;
         },
 
-        getTextNodesOfCurrentPage: function() {
-            var manager = this.context.manager;
-            var range;
-            if (this.context.isFixedLayout()) {
-                var doc = this.context.document;
-
-                range = doc.createRange();
-                range.selectNodeContents(doc.body);
-            } else {
-                // get first and last visible CFI
-                var firstVisibleCfi = manager.getFirstVisibleCfi();
-                if (!firstVisibleCfi.contentCFI) {
-                    console.warn("getTextNodesOfCurrentPage: firstVisibleCfi - invalid contentCFI!");
-                    return undefined;
-                }
-
-                var lastVisibleCfi = manager.getLastVisibleCfi();
-                if (!lastVisibleCfi.contentCFI) {
-                    console.warn("getTextNodesOfCurrentPage: lastVisibleCfi - invalid contentCFI!");
-                    return undefined;
-                }
-
-                range = manager.getDomRangeFromRangeCfi(firstVisibleCfi, lastVisibleCfi, false);
-            }
-
-            // wrap DOM range into "rangy" range and filter text nodes
-            var textNodes = (new rangy.WrappedRange(range)).getNodes().filter(function(node) {
-                return node.nodeType === document.TEXT_NODE;
-            });
-
-            return textNodes;
-        },
-
         // generate unique prefix for HL ids
         generateIdPrefix: function() {
             var idPrefix = 'xxxxxxxx'.replace(/[x]/g, function(c) {
@@ -402,7 +369,6 @@ function($, _, Class, HighlightHelpers, HighlightGroup) {
                 id: annotationId,
                 type: type,
                 scale: this.scale,
-                contentDocumentFrame: this.contentDocumentFrame,
                 selectionText: range ? range.toString() : "",
                 visible: visible,
                 rangeInfo: range ? {
@@ -475,8 +441,7 @@ function($, _, Class, HighlightHelpers, HighlightGroup) {
                 startNode,
                 startOffset,
                 endNode,
-                endOffset,
-                commonAncestor, ["cfi-marker", "cfi-blacklist", "mo-cfi-highlight"], [], ["MathJax_Message", "MathJax_SVG_Hidden"]
+                endOffset, ["cfi-marker", "cfi-blacklist", "mo-cfi-highlight"], [], ["MathJax_Message", "MathJax_SVG_Hidden"]
             );
             return rangeCFIComponent;
         },

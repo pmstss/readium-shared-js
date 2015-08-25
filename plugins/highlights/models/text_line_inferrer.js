@@ -1,11 +1,9 @@
 define(["../lib/class"], function(Class) {
     var TextLineInferrer = Class.extend({
-        lineHorizontalThreshold: 0,
-        lineHorizontalLimit: 0,
 
         init: function(options) {
-            this.lineHorizontalThreshold = options.lineHorizontalThreshold;
-            this.lineHorizontalLimit = options.lineHorizontalLimit;
+            this.lineHorizontalThreshold = options.lineHorizontalThreshold || 0;
+            this.lineHorizontalLimit = options.lineHorizontalLimit || 0;
         },
 
         // ----------------- PUBLIC INTERFACE --------------------------------------------------------------

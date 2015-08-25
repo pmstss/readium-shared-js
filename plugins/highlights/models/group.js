@@ -1,24 +1,17 @@
 define(["jquery", "underscore", "../lib/class", "./text_line_inferrer", "../views/view", "../views/border_view", "../helpers"],
 function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, HighlightHelpers) {
 
-    var debouncedHighlightCallbackTrigger = _.debounce(
-        function(view, eventName, type, cfi, id, event, documentFrame) {
-            view.trigger(eventName, type, cfi, id, event, documentFrame);
+    var debouncedTrigger = _.debounce(
+        function(fn, eventName) {
+            fn(eventName);
         }, 10);
 
     var HighlightGroup = Class.extend({
 
-        selectedNodes: [],
-        highlightViews: [],
-        highlightViewsSecondary: [],
-        boundHighlightContainers: [],
-        visible: false,
-        scale: 1,
-
         init: function(context, options) {
-            var that = this;
-
             this.context = context;
+
+            this.highlightViews = [];
 
             this.CFI = options.CFI;
             this.selectedNodes = options.selectedNodes;
@@ -28,7 +21,6 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
             this.id = options.id;
             this.type = options.type;
             this.scale = options.scale;
-            this.contentDocumentFrame = options.contentDocumentFrame;
             this.selectionText = options.selectionText;
             this.visible = options.visible;
             this.rangeInfo = options.rangeInfo;
@@ -36,45 +28,30 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
             this.constructHighlightViews();
         },
 
-        // --------------- PRIVATE HELPERS ---------------------------------------
-
-        highlightGroupCallback: function(event, type) {
+        onHighlightEvent: function(event, type) {
             var that = this;
             var documentFrame = this.context.iframe;
             var topView = this.context.manager;
+            var triggerEvent = _.partial(topView.trigger, _, that.type,
+                that.CFI, that.id, event, documentFrame);
 
             if (type === "click" || type === "touchend") {
-                debouncedHighlightCallbackTrigger(topView, "annotationClicked", that.type,
-                    that.CFI, that.id, event, documentFrame);
-                return;
-            }
+                debouncedTrigger(triggerEvent, "annotationClicked");
 
+            } else if (type === "contextmenu") {
+                triggerEvent("annotationRightClicked");
 
-            if (type === "contextmenu") {
-                topView.trigger("annotationRightClicked", that.type,
-                    that.CFI, that.id, event, documentFrame);
-                return;
-            }
+            } else if (type === "mousemove") {
+                triggerEvent("annotationMouseMove");
 
-            if (type === "mousemove") {
-                topView.trigger("annotationMouseMove", that.type,
-                    that.CFI, that.id, event, documentFrame);
-                return;
-            }
+            } else if (type === "mouseenter") {
+                triggerEvent("annotationHoverIn");
 
-            // "mouseenter" and "mouseleave" events not only trigger corresponding named event, but also
-            // affect the appearance
-            if (type === "mouseenter") {
-                topView.trigger("annotationHoverIn", that.type,
-                    that.CFI, that.id, event, documentFrame);
             } else if (type === "mouseleave") {
-                topView.trigger("annotationHoverOut", that.type,
-                    that.CFI, that.id, event, documentFrame);
-            }
+                triggerEvent("annotationHoverOut");
 
-
-            // prevent selection when right clicking
-            if (type === "mousedown") {
+            } else if (type === "mousedown") {
+                // prevent selection when right clicking
                 var preventEvent = function(event) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -88,16 +65,22 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
                     documentFrame.contentDocument.addEventListener("contextmenu", preventEvent);
                 }
             }
-            // Change appearance of highlightViews constituting this highlight group
-            // do not iterate over secondary highlight views (hightlightViewsSecondary)
-            _.each(this.highlightViews, function(highlightView) {
 
-                if (type === "mouseenter") {
-                    highlightView.setHoverHighlight();
-                } else if (type === "mouseleave") {
-                    highlightView.setBaseHighlight(false);
-                }
-            });
+            // "mouseenter" and "mouseleave" events not only trigger corresponding named event, but also
+            // affect the appearance
+            if (type === "mouseenter" || type === "mouseleave") {
+                // Change appearance of highlightViews constituting this highlight group
+                // do not iterate over secondary highlight views (hightlightViewsSecondary)
+                _.each(this.highlightViews, function(highlightView) {
+
+                    if (type === "mouseenter") {
+                        highlightView.setHoverHighlight();
+                    } else if (type === "mouseleave") {
+                        highlightView.setBaseHighlight(false);
+                    }
+                });
+            }
+
         },
 
         normalizeRectangle: function(rect) {
@@ -115,7 +98,7 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
         // bound HL container. We are adding namespace to the event names in order to be able to
         // remove them by specifying <eventname>.<namespace> only, rather than classic callback function
         getBoundHighlightContainerEvents: function() {
-            // these are the event names that we handle in "highlightGroupCallback"
+            // these are the event names that we handle in "onHighlightEvent"
             var boundHighlightContainerEvents = ["click", "touchstart", "touchend", "touchmove", "contextmenu",
                 "mouseenter", "mouseleave", "mousemove", "mousedown"
             ];
@@ -141,7 +124,6 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
             if (!this.visible)
                 return;
 
-            // this is an array of boundHighlightContainers
             var rectTextList = [];
 
             // this is an array of elements (not Node.TEXT_NODE) that are part of HL group
@@ -248,7 +230,7 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
             // if range is within one node
             if (rangeInfo && rangeInfo.startNode === rangeInfo.endNode) {
                 var node = rangeInfo.startNode;
-                var range = contentDocumentFrame.contentDocument.createRange();
+                var range = that.context.document.createRange();
                 range.setStart(node, rangeInfo.startOffset);
                 range.setEnd(node, rangeInfo.endOffset);
 
@@ -263,7 +245,7 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
             // multi-node range, for each selected node
             _.each(selectedNodes, function(node) {
                 // create new Range
-                var range = contentDocumentFrame.contentDocument.createRange();
+                var range = that.context.document.createRange();
                 if (node.nodeType === Node.TEXT_NODE) {
                     if (rangeInfo && node === rangeInfo.startNode && rangeInfo.startOffset !== 0) {
                         range.setStart(node, rangeInfo.startOffset);
@@ -288,7 +270,7 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
                 }
             });
 
-            var $html = $('html', contentDocumentFrame.contentDocument);
+            var $html = $(that.context.document.documentElement);
 
             function calculateScale() {
                 var scale = that.scale;
@@ -327,10 +309,8 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
                     right: highlightLeft + highlightWidth + hoverThreshold * 2,
                 });
 
-                //  we are creating 2 almost identical HighlightView s that "sandwich"
-                // HL rectangle between negative and "big positive" z-indexes
                 var highlightView = new HighlightView(that.context, {
-                    highlightId: that.id,
+                    id: that.id,
                     CFI: that.CFI,
                     type: that.type,
                     top: highlightTop,
@@ -341,8 +321,6 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
                         "z-index": "1000",
                         "pointer-events": "none"
                     }, highlightStyles),
-                    highlightGroupCallback: that.highlightGroupCallback,
-                    callbackContext: that,
                     contentRenderData: cloneTextMode ? {
                         data: renderData,
                         top: line.startTop,
@@ -373,9 +351,7 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
                     left: highlightLeft,
                     height: highlightHeight,
                     width: highlightWidth,
-                    styles: highlightStyles,
-                    highlightGroupCallback: that.highlightGroupCallback,
-                    callbackContext: that
+                    styles: highlightStyles
                 });
 
                 that.highlightViews.push(highlightView);
@@ -426,20 +402,20 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
 
                         if (isTouchEvent) {
                             // call "normal" event handler for HL group to touch capable devices
-                            that.highlightGroupCallback(e, e.type);
+                            that.onHighlightEvent(e, e.type);
                         }
 
                         // if this is the first time we are mouse entering in the area
                         if (!mouseEntered) {
                             // regardless of the actual event type we want highlightGroupCallback process "mouseenter"
-                            that.highlightGroupCallback(e, "mouseenter");
+                            that.onHighlightEvent(e, "mouseenter");
 
                             // set flag indicating that we are in HL group confines
                             mouseEntered = true;
                             return;
                         } else if (!isTouchEvent) {
                             // call "normal" event handler for HL group to desktop devices
-                            that.highlightGroupCallback(e, e.type);
+                            that.onHighlightEvent(e, e.type);
                         }
                     }
                 });
@@ -447,7 +423,7 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
                 if (!mouseIsInside && mouseEntered) {
                     // set flag indicating that we left HL group confines
                     mouseEntered = false;
-                    that.highlightGroupCallback(e, "mouseleave");
+                    that.onHighlightEvent(e, "mouseleave");
                 }
             };
             that.boundHighlightElement = $html;

@@ -6,18 +6,32 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
         // this is an element that highlight will be associated with, it is not styled at this point
         template: "<div></div>",
 
-        events: [
-            "mouseenter",
-            "mouseleave",
-            "click",
-            "touchstart",
-            "contextmenu"
-        ],
+        init: function(context, options) {
+            this.context = context;
+
+            this.lengthLib = new Length(this.context.document);
+
+            this.highlight = {
+                id: options.id,
+                CFI: options.CFI,
+                type: options.type,
+                top: options.top,
+                left: options.left,
+                height: options.height,
+                width: options.width,
+                styles: options.styles,
+                contentRenderData: options.contentRenderData
+            };
+
+            this.swipeThreshold = 10;
+            this.swipeVelocity = 0.65; // in px/ms
+        },
 
         render: function() {
             this.$el = $(this.template, this.context.document);
-            this.$el.on(this.events.join(' '), this.highlightEvent);
+            this.$el.attr('data-id', this.highlight.id);
             this.updateStyles();
+            this.renderContent();
             return this.$el;
         },
 
@@ -27,33 +41,7 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
             this.$el.remove();
         },
 
-        init: function(context, options) {
-            this.context = context;
 
-            this.lengthLib = new Length(this.context.document);
-
-
-            this.highlight = {
-                CFI: options.CFI,
-                type: options.type,
-                top: options.top,
-                left: options.left,
-                height: options.height,
-                width: options.width,
-                styles: options.styles,
-                highlightGroupCallback: options.highlightGroupCallback,
-                callbackContext: options.callbackContext,
-                contentRenderData: options.contentRenderData
-            };
-
-            this.render();
-
-            this.$el.attr('data-id', options.highlightId);
-
-            this.swipeThreshold = 10;
-            this.swipeVelocity = 0.65; // in px/ms
-            this.renderContent();
-        },
 
         resetPosition: function(top, left, height, width) {
             _.assign(this.highlight, {
@@ -287,44 +275,6 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
             }
         },
 
-        highlightEvent: function(event) {
-            var that = this;
-            var highlightGroupContext = this.highlight.callbackContext;
-            var $document = $(this.document);
-
-            //we call highlightGroupCallback on touchend if and only if the touch gesture was not a swipe
-            if (event.type === 'touchstart') {
-                var pointer = event.originalEvent.targetTouches[0];
-                var startingX = pointer.pageX;
-                var startingTime = Date.now();
-                var totalX = 0;
-                //we bind on the body element, to ensure that the touchend event is caught, or else we
-                var namespace = '.highlightEvent';
-
-                $document.on('touchmove' + namespace, function(moveEvent) {
-                    var moveEventPointer = moveEvent.originalEvent.targetTouches[0];
-                    totalX += Math.abs(moveEventPointer.pageX - startingX);
-                });
-
-                $document.on('touchend' + namespace, function(endEvent) {
-                    $document.off('touchmove' + namespace).off('touchend' + namespace);
-                    var endEventPointer = endEvent.originalEvent.targetTouches[0];
-                    var elapsedTime = Date.now() - startingTime;
-                    var pastThreshold = totalX > that.swipeThreshold;
-                    var velocity = (totalX / elapsedTime);
-                    var isSwipe = pastThreshold || (velocity >= that.swipeVelocity);
-
-                    //check totalDistance moved, or swipe velocity
-                    if (!isSwipe) {
-                        endEvent.stopPropagation();
-                        highlightGroupContext.highlightGroupCallback(event, event.type);
-                    }
-                });
-            } else {
-                event.stopPropagation();
-                highlightGroupContext.highlightGroupCallback(event, event.type);
-            }
-        }
     });
 
     return HighlightView;
