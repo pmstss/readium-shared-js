@@ -125,12 +125,6 @@ var ReaderView = function (options) {
                 createdView = new ScrollView(options, true, self);
                 break;
             default:
-                if (window.Modernizr && !window.Modernizr.csscolumns) {
-                    // IE9 doesn't support columnization, instead use a scroll doc view
-//FIXME: JCCR mj8
-                    createdView = new ReadiumSDK.Views.FallbackScrollView(options, false);
-                    break;
-                }
                 createdView = new ReflowableView(options, self);
                 break;
         }
