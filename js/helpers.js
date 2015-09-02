@@ -693,74 +693,24 @@ Helpers.escapeJQuerySelector = function (sel) {
     return selector;
 };
 
-
-/**
- *
- * @type {{getMatrix: getMatrix, getScaleFromMatrix: getScaleFromMatrix}}
- */
-Helpers.CSSTransformMatrix = {
-    /**
-     *
-     * @param $obj
-     * @returns {undefined}
-     */
-    getMatrix: function ($obj) {
-        var matrix = $obj.css("-webkit-transform") ||
-            $obj.css("-moz-transform") ||
-            $obj.css("-ms-transform") ||
-            $obj.css("-o-transform") ||
-            $obj.css("transform");
-        return matrix === "none" ? undefined : matrix;
-    },
-    /**
-     *
-     * @param matrix
-     * @returns {*}
-     */
-    getScaleFromMatrix: function (matrix) {
-        var matrixRegex = /matrix\((-?\d*\.?\d+),\s*0,\s*0,\s*(-?\d*\.?\d+),\s*0,\s*0\)/,
-            matches = matrix.match(matrixRegex);
-        return matches[1];
-    }
-};
-
-/**
- * @deprecated use triggerLayout helper instead
- * @param $iframe
- */
-Helpers.waitForRendering = function($iframe) {
-
-    var doc = $iframe[0].contentDocument;
-
-    if(!doc) {
-        return;
-    }
-
-    var el = doc.createElementNS("http://www.w3.org/1999/xhtml", "style");
-    el.appendChild(doc.createTextNode("*{}"));
-    doc.body.appendChild(el);
-    doc.body.removeChild(el);
-    var blocking = doc.body.offsetTop; // browser rendering / layout done
-};
-
-Helpers.polyfillCaretRangeFromPoint = function(dokument) {
-    //Taken from css-regions-polyfill:
-    // https://github.com/FremyCompany/css-regions-polyfill/blob/master/src/range-extensions.js
+Helpers.polyfillCaretRangeFromPoint = function(document) {
+    //Derived from css-regions-polyfill:
+    // https://github.com/FremyCompany/css-regions-polyfill/blob/bfbb6445ec2a2a883005ab8801d8463fa54b5701/src/range-extensions.js
     //Copyright (c) 2013 François REMY
     //Copyright (c) 2013 Adobe Systems Inc.
     //Licensed under the Apache License, Version 2.0
-    if (!dokument.caretRangeFromPoint) {
-        if (dokument.caretPositionFromPoint) {
-            dokument.caretRangeFromPoint = function caretRangeFromPoint(x, y) {
-                var r = dokument.createRange();
-                var p = dokument.caretPositionFromPoint(x, y);
+    if (!document.caretRangeFromPoint) {
+        if (document.caretPositionFromPoint) {
+            document.caretRangeFromPoint = function caretRangeFromPoint(x, y) {
+                var r = document.createRange();
+                var p = document.caretPositionFromPoint(x, y);
                 if (p.offsetNode) {
                     r.setStart(p.offsetNode, p.offset);
                     r.setEnd(p.offsetNode, p.offset);
                 }
                 return r;
             }
-        } else if ((dokument.body || dokument.createElement('body')).createTextRange) {
+        } else if ((document.body || document.createElement('body')).createTextRange) {
             //
             // we may want to convert TextRange to Range
             //
@@ -769,10 +719,10 @@ Helpers.polyfillCaretRangeFromPoint = function(dokument) {
             //Copyright (c) 2009 Tim Cameron Ryan
             //Released under the MIT/X License
             var TextRangeUtils = {
-                convertToDOMRange: function(textRange, dokument) {
+                convertToDOMRange: function(textRange, document) {
                     var adoptBoundary = function(domRange, textRangeInner, bStart) {
                         // iterate backwards through parent element to find anchor location
-                        var cursorNode = dokument.createElement('a'),
+                        var cursorNode = document.createElement('a'),
                             cursor = textRangeInner.duplicate();
                         cursor.collapse(bStart);
                         var parent = cursor.parentElement();
@@ -792,29 +742,29 @@ Helpers.polyfillCaretRangeFromPoint = function(dokument) {
                         cursorNode.parentNode.removeChild(cursorNode);
                     };
                     // return a DOM range
-                    var domRange = dokument.createRange();
+                    var domRange = document.createRange();
                     adoptBoundary(domRange, textRange, true);
                     adoptBoundary(domRange, textRange, false);
                     return domRange;
                 }
             };
 
-            dokument.caretRangeFromPoint = function caretRangeFromPoint(x, y) {
+            document.caretRangeFromPoint = function caretRangeFromPoint(x, y) {
                 // the accepted number of vertical backtracking, in CSS pixels
                 var IYDepth = 40;
                 // try to create a text range at the specified location
-                var tr = dokument.body.createTextRange();
+                var tr = document.body.createTextRange();
                 for (var iy = IYDepth; iy; iy = iy - 4) {
                     try {
                         tr.moveToPoint(x, iy + y - IYDepth);
-                        return TextRangeUtils.convertToDOMRange(tr, dokument);
+                        return TextRangeUtils.convertToDOMRange(tr, document);
                     } catch (ex) {
                     }
                 }
                 // if that fails, return the location just after the element located there
                 try {
-                    var elem = dokument.elementFromPoint(x - 1, y - 1);
-                    var r = dokument.createRange();
+                    var elem = document.elementFromPoint(x - 1, y - 1);
+                    var r = document.createRange();
                     r.setStartAfter(elem);
                     return r;
                 } catch (ex) {
