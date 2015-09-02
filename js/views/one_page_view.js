@@ -912,13 +912,6 @@ var OnePageView = function (options, classes, enableBookStyleOverrides, reader) 
         return undefined;
     };
 
-    /**
-     * @private
-     */
-    this._fitImages = function (options) {
-        return ReadiumSDK.Helpers.fitImages(_$epubHtml, options);
-    };
-
     this.getVisibleElementsWithFilter = function (filterFunction) {
         var navigation = self.getNavigator();
         var visibleContentOffsets = {top: 0, bottom: _$iframe.height()};

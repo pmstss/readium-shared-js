@@ -501,8 +501,6 @@ var ReflowableView = function(options, reader){
         _paginationInfo.pageOffset = (_paginationInfo.columnWidth + _paginationInfo.columnGap) * _paginationInfo.visibleColumnCount * _paginationInfo.currentSpreadIndex;
 
         redraw();
-        Helpers.triggerLayout(_$iframe);
-        fitImages();
         showBook(); // as it's no longer hidden by shifting the position
         if (_currentSpineItem) {
             self.trigger(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, { paginationInfo: self.getPaginationInfo(), initiator: initiator, spineItem: paginationRequest_spineItem, elementId: paginationRequest_elementId } );
@@ -694,7 +692,7 @@ var ReflowableView = function(options, reader){
         _$epubHtml.css({left: "0", right: "0", top: "0"});
 
         redraw();
-        fitImages();
+        resizeImages();
         Helpers.triggerLayout(_$iframe);
 
         calculateColumnCount();
@@ -817,8 +815,53 @@ var ReflowableView = function(options, reader){
     }
 
     //we need this styles for css columnizer not to chop big images
-    function fitImages() {
-        return Helpers.fitImages(_$epubHtml);
+    function resizeImages() {
+
+        if(!_$epubHtml) {
+            return;
+        }
+
+        var $elem;
+        var height;
+        var width;
+        var $body = $('body', _$epubHtml);
+        //maxHeight is (html el height) - (body el padding+margin+border)
+        //we add 3 to the maxHeight as a buffer, this fixes a strange scaling issue on IE11
+        // if we set max-width/max-height to 100% columnizing engine chops images embedded in the text
+        // (but not if we set it to 99-98%) go figure. (+3 helps for this)
+        var maxDimensions = {
+            maxHeight: _$epubHtml.height() - ($body.outerHeight(true) - $body.height() + 3),
+            maxWidth: $body[0].getClientRects()[0] ? $body[0].getClientRects()[0].width : _$epubHtml.width()
+        };
+
+        $('img, svg', _$epubHtml).each(function(){
+
+            $elem = $(this);
+
+            // Respect original styles if max-width or max-height are already set
+            if ($elem.css('max-width') !== 'none') {
+                delete maxDimensions.maxWidth;
+            }
+            if ($elem.css('max-height') !== 'none') {
+                delete maxDimensions.maxHeight;
+            }
+
+            // TODO: CSS min-w/h is content-box, not border-box (does not take into account padding + border)? => images may still overrun?
+            $elem.css(maxDimensions);
+
+            var ratiosUnbalanced = false;
+            if ($elem[0].tagName.toLowerCase() === "img") {
+                ratiosUnbalanced =
+                    (($elem[0].naturalWidth / $elem[0].naturalHeight) * 10 | 0) !==
+                    (($elem[0].clientWidth / $elem[0].clientHeight) * 10 | 0);
+            }
+            if (!$elem.css('height') || ratiosUnbalanced) {
+                $elem.css('height', 'auto');
+            }
+            if (!$elem.css('width') || ratiosUnbalanced) {
+                $elem.css('width', 'auto');
+            }
+        });
     }
 
     this.bookmarkCurrentPage = function() {
