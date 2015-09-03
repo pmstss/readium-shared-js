@@ -60,46 +60,6 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         return self.getRootDocument().createRange();
     }
 
-    //TODO JC: Decide when to remove this, it is no longer needed.
-    //function getTextNodeFragments(node, buffer, startOverride, endOverride) {
-    //
-    //    if (!buffer && ReadiumSDK.Overrides.TextNodeFragmentBuffer) {
-    //        buffer = ReadiumSDK.Overrides.TextNodeFragmentBuffer;
-    //    } else if (!buffer) {
-    //        buffer = 60;
-    //    }
-    //
-    //    //create our range
-    //    var range = createRange();
-    //    var collection = [];
-    //
-    //    //allow the range offsets to be specified explicitly, without iteration
-    //    if (startOverride && endOverride) {
-    //        range.setStart(node, startOverride);
-    //        range.setEnd(node, endOverride);
-    //        return [
-    //            {start: startOverride, end: endOverride, rect: normalizeRectangle(range.getBoundingClientRect(),0,0)}
-    //        ];
-    //    }
-    //
-    //    //go through a "buffer" of characters to create the fragments
-    //    for (var i = 0; i < node.length; i += buffer) {
-    //        var start = i;
-    //        var end = i + buffer;
-    //        //create ranges for the character buffer
-    //        range.setStart(node, start);
-    //        if (end > node.length) {
-    //            end = node.length;
-    //        }
-    //        range.setEnd(node, end);
-    //        //get the client rectangle for this character buffer
-    //        var rect = normalizeRectangle(range.getBoundingClientRect(),0,0);
-    //        //push the character offsets and client rectangle associated with this buffer iteration
-    //        collection.push({start: start, end: end, rect: rect})
-    //    }
-    //    return collection;
-    //}
-
     function getNodeClientRect(node) {
         var range = createRange();
         range.selectNode(node);
@@ -147,71 +107,6 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         Helpers.polyfillCaretRangeFromPoint(document);
         return document.caretRangeFromPoint(x, y);
     }
-
-    //TODO JC: Decide when to remove this, it is no longer needed.
-    //function getFirstVisibleTextNodeRange(textNode) {
-    //
-    //    //"split" the single textnode into fragments based on client rect calculations
-    //    //the function used for this could be optimized further with a binary search like approach
-    //    var fragments = getTextNodeFragments(textNode);
-    //    var found = false;
-    //    //go through each fragment, figure out which one is visible
-    //    $.each(fragments, function (n, fragment) {
-    //        var rect = fragment.rect;
-    //        if (!found) {
-    //            //if the fragment's left or right value is within the visible client boundaries
-    //            //then this is the one we want
-    //            if (isNodeClientRectVisible(rect)) {
-    //                found = fragment;
-    //                if (debugMode) {
-    //                    console.log("visible textnode fragment found:");
-    //                    console.log(fragment);
-    //                    console.log("------------");
-    //                }
-    //            }
-    //        }
-    //    });
-    //    if (!found) {
-    //        //if we didn't find a visible textnode fragment on the clientRect iteration
-    //        //it might still mean that its visible, just only at the very end
-    //        var endFragment = getTextNodeFragments(textNode, null, textNode.length > 3 ? (textNode.length - 2) : 0, textNode.length)[0];
-    //
-    //        if (endFragment && isNodeClientRectVisible(endFragment.rect)) {
-    //            found = endFragment;
-    //        } else {
-    //            console.error("Error! No visible textnode fragment found!");
-    //        }
-    //    }
-    //
-    //    //if the found fragment is small enough return it outright
-    //    if (found.end > 3) {
-    //        //create an optimized range to return based on the fragment results
-    //
-    //        //find the last printable character of the textnode fragment:
-    //        var lastPrintableIndex = found.start;
-    //        for (var i = found.end - 1; i < found.end && i >= found.start; i--) {
-    //            if (debugMode) {
-    //                console.log(i + " :: " + textNode.nodeValue.charAt(i) + " :: " + textNode.nodeValue.charCodeAt(i));
-    //            }
-    //            if (textNode.nodeValue.charCodeAt(i) > 32) {
-    //                lastPrintableIndex = i;
-    //                break;
-    //            }
-    //        }
-    //        var resultRangeData = {start: lastPrintableIndex, end: lastPrintableIndex + 1};
-    //        var resultRangeRect = getNodeRangeClientRect(textNode, resultRangeData.start, textNode, resultRangeData.end);
-    //        if (isNodeClientRectVisible(resultRangeRect)) {
-    //            return {start: resultRangeData.start, end: resultRangeData.end, rect: resultRangeRect};
-    //        } else {
-    //            return found;
-    //        }
-    //    } else {
-    //        return found;
-    //    }
-    //
-    //
-    //}
-
 
     var visibilityCheckerFunc = options.rectangleBased
         ? checkVisibilityByRectangles
@@ -726,54 +621,6 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         }
     }
 
-    //TODO JC: Decide when to remove this, it is no longer needed.
-    ////we look for text and images
-    //this.findFirstVisibleElement = function (props) {
-    //
-    //    if (typeof props !== 'object') {
-    //        // compatibility with legacy code, `props` is `topOffset` actually
-    //        props = { top: props };
-    //    }
-    //
-    //    var $elements;
-    //    var $firstVisibleTextNode = null;
-    //    var percentOfElementHeight = 0;
-    //    var foundTextNode = null;
-    //
-    //    $elements = $("body", this.getRootElement()).find(":not(iframe)").contents().filter(function () {
-    //        return isValidTextNode(this) || this.nodeName.toLowerCase() === 'img';
-    //    });
-    //
-    //    // Find the first visible text node
-    //    $.each($elements, function() {
-    //
-    //        var $element;
-    //
-    //        if(this.nodeType === Node.TEXT_NODE)  { //text node
-    //            $element = $(this).parent();
-    //            foundTextNode = this;
-    //        }
-    //        else {
-    //            $element = $(this); //image
-    //        }
-    //
-    //        var visibilityResult = visibilityCheckerFunc($element, props, true);
-    //        if (visibilityResult) {
-    //            $firstVisibleTextNode = $element;
-    //            percentOfElementHeight = 100 - visibilityResult;
-    //            return false;
-    //        } else if (foundTextNode === this) {
-    //            //if our textnode parent element is not visible
-    //            foundTextNode = null;
-    //            $firstVisibleTextNode = null;
-    //            //reset the textnode flags
-    //        }
-    //        return true;
-    //    });
-    //
-    //    return {$element: $firstVisibleTextNode, percentY: percentOfElementHeight, foundTextNode: foundTextNode};
-    //};
-
     this.getCfiForElement = function (element) {
         var cfi = EPUBcfi.Generator.generateElementCFIComponent(element,
             ["cfi-marker"],
@@ -812,30 +659,6 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
                 return null;
             }
         }
-
-        //TODO JC: Decide when to remove this, it is no longer needed.
-        //else if(paginationState) {
-        //
-        //    if (invalidElementFromPoint && paginationState === 2) {
-        //        //handle when targeting the very end of the document
-        //        elementFromPoint = $('*', document.body).last()[0];
-        //        if (elementFromPoint.lastChild && elementFromPoint.lastChild.nodeType === Node.TEXT_NODE) {
-        //            elementFromPoint = elementFromPoint.lastChild;
-        //        }
-        //        firstVisibleCaretRange = createRange();
-        //        firstVisibleCaretRange.setStart(elementFromPoint, elementFromPoint.length - 1);
-        //        firstVisibleCaretRange.setEnd(elementFromPoint, elementFromPoint.length);
-        //    } else if (invalidElementFromPoint && paginationState === 1) {
-        //        //handle when targeting the very start of the document
-        //        elementFromPoint = firstTextNode(document);
-        //        if (!elementFromPoint || elementFromPoint.length === 0) {
-        //            elementFromPoint = document.body.firstElementChild;
-        //        }
-        //        firstVisibleCaretRange = createRange();
-        //        firstVisibleCaretRange.setStart(elementFromPoint, 0);
-        //        firstVisibleCaretRange.setEnd(elementFromPoint, 1);
-        //    }
-        //}
 
         if (!firstVisibleCaretRange) {
             if (invalidElementFromPoint) {
@@ -922,50 +745,6 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         }
         return generateCfiFromDomRange(range);
     };
-
-    //TODO JC: Decide when to remove this, it is no longer needed.
-    //function getPaginationState() {
-    //    if (options.paginationInfo && options.paginationInfo.spreadCount !== 1) {
-    //        if ((options.paginationInfo.spreadCount - 1) === options.paginationInfo.currentSpreadIndex) {
-    //            return 2;
-    //        } else if (options.paginationInfo.currentSpreadIndex === 0) {
-    //            return 1;
-    //        }
-    //    }
-    //    return 0;
-    //}
-
-    //TODO JC: Decide when to remove this, it is no longer needed.
-    //// TODODM: determine the optimal step size
-    //function getFirstVisibleElementCfiWithStepperScanner() {
-    //    var STEP = 5;
-    //    for (var y = 0; y < $viewport.height(); y = y + STEP) {
-    //        for (var x = 0; x < getColumnFullWidth(); x = x + STEP) {
-    //            var element = self.getElementFromPoint(x,y);
-    //            var rect = element ? element.getBoundingClientRect() : null;
-    //
-    //            if (_.isElement(element) && element !== self.getRootElement() && rect.left >= 0) {
-    //                return self.getRangeCfiFromPoints(x,y,x+1,y+1);
-    //            }
-    //        }
-    //    }
-    //    return undefined;
-    //}
-    //
-    //function getLastVisibleElementCfiWithStepperScanner() {
-    //    var STEP = 5;
-    //    for (var y =  $viewport.height(); y > 0; y = y - STEP) {
-    //        for (var x = getColumnFullWidth(); x > 0; x = x - STEP) {
-    //            var element = self.getElementFromPoint(x,y);
-    //            var rect = element ? element.getBoundingClientRect() : null;
-    //            if (_.isElement(element) && element !== self.getRootElement() && rect.right <= $viewport.width()) {
-    //                return self.getRangeCfiFromPoints(x,y,x+1,y+1);
-    //            }
-    //        }
-    //    }
-    //    return undefined;
-    //}
-
 
     function getTextNodeRectCornerPairs(rect) {
         // top left corner & top right corner
@@ -1074,42 +853,10 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
 
     this.getFirstVisibleCfi = function () {
         return getFirstVisibleTextRangeCfi();
-
-        //TODO JC: Decide when to remove this, it is no longer needed.
-        //// get a few possible guesses for what the first element is, then generate the CFIs for each element
-        //// then sort CFIs by their position within the DOM tree and pick the first one.
-        //var cfiForFirstTextElement = getFirstVisibleTextRangeCfi();
-        //
-        //var cfiDiscoveredByStepperFunction = getFirstVisibleElementCfiWithStepperScanner();
-        //
-        //var cfiFromPoint = self.getVisibleCfiFromPoint(1, 1, false, getPaginationState());
-        //
-        //var possibleFirstElementCfis = [cfiForFirstTextElement, cfiDiscoveredByStepperFunction, cfiFromPoint];
-        //
-        //possibleFirstElementCfis.sort(contentCfiComparator);
-        //
-        //return _.first(possibleFirstElementCfis);
     };
 
     this.getLastVisibleCfi = function () {
         return getLastVisibleTextRangeCfi();
-
-        //TODO JC: Decide when to remove this, it is no longer needed.
-        //var lastVisibleTextNodeCfi = getLastVisibleTextRangeCfi();
-        //var cfiDiscoveredByStepperFunction = getLastVisibleElementCfiWithStepperScanner();
-        //
-        //// var cfiFromPoint = self.getVisibleCfiFromPoint(
-        ////     getRootDocumentClientWidth() - 1,
-        ////     getRootDocumentClientHeight() - 1,
-        ////     false,
-        ////     getPaginationState()
-        //// );
-        //
-        //var possibleLastElementCfis = [cfiDiscoveredByStepperFunction/*, cfiFromPoint*/, lastVisibleTextNodeCfi];
-        //
-        //possibleLastElementCfis.sort(contentCfiComparator);
-        //
-        //return _.last(possibleLastElementCfis);
     };
 
     function generateCfiFromDomRange(range) {
