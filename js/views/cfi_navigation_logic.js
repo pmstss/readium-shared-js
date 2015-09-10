@@ -747,10 +747,22 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
     };
 
     function getTextNodeRectCornerPairs(rect) {
+        //
+        //    top left             top right
+        //    ╲                   ╱
+        //  ── ▒T▒E▒X▒T▒ ▒R▒E▒C▒T▒ ──
+        //
         // top left corner & top right corner
         // but for y coord use the mid point between top and bottom
-        var y = rect.top + (rect.height / 2);
-        return [{x: rect.left, y: y}, {x: rect.right, y: y}];
+        
+        if (isVerticalWritingMode()) {
+            var x = rect.right - (rect.width / 2);
+            return [{x: x, y: rect.top}, {x: x, y: rect.bottom}];
+        } else {
+            var y = rect.top + (rect.height / 2);
+            var result = [{x: rect.left, y: y}, {x: rect.right, y: y}]
+            return isPageProgressionRightToLeft() ? result.reverse() : result;
+        }
     }
 
     function getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc) {
@@ -768,13 +780,13 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         }
         var fragmentCorner = pickerFunc(getTextNodeRectCornerPairs(fragment));
         var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
-        if (!caretRange) {
-            // Desperately try to find it from all angles!
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x-1, fragmentCorner.y);
-            if (!caretRange) {
-                caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y-1);
-                if (!caretRange) {
-                    caretRange = getCaretRangeFromPoint(fragmentCorner.x-1, fragmentCorner.y-1);
+        if (!caretRange || caretRange.startContainer !== textNode) {
+            // Desperately try to find it from all angles! Darn sub pixels..
+            caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y);
+            if (!caretRange || caretRange.startContainer !== textNode) {
+                caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1);
+                if (!caretRange || caretRange.startContainer !== textNode) {
+                    caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
                 }
             }
         }
@@ -1494,10 +1506,19 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         }
 
         function drawDebugOverlayFromRect(rect) {
-            var leftOffset = -getPaginationLeftOffset();
+            var leftOffset, topOffset;
+            
+            if (isVerticalWritingMode()) {
+                leftOffset = 0;
+                topOffset = -getPaginationLeftOffset();
+            } else {
+                leftOffset = -getPaginationLeftOffset();
+                topOffset = 0;
+            }
+            
             addOverlayRect({
                 left: rect.left + leftOffset,
-                top: rect.top,
+                top: rect.top + topOffset,
                 width: rect.width,
                 height: rect.height
             }, true, self.getRootDocument());
@@ -1520,7 +1541,7 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         function getPaginationLeftOffset() {
 
             var $htmlElement = $("html", self.getRootDocument());
-            var offsetLeftPixels = $htmlElement.css("left");
+            var offsetLeftPixels = $htmlElement.css(isVerticalWritingMode() ? "top" : "left");
             var offsetLeft = parseInt(offsetLeftPixels.replace("px", ""));
             if (isNaN(offsetLeft)) {
                 //for fixed layouts, $htmlElement.css("left") has no numerical value
