@@ -211,9 +211,49 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
                 left: 0
             };
         }
-        
     }
 
+    // Old (offsetTop-based) algorithm, useful in top-to-bottom layouts
+    function checkVisibilityByVerticalOffsets(
+            $element, visibleContentOffsets, shouldCalculateVisibilityOffset) {
+
+        var elementRect = Helpers.Rect.fromElement($element);
+        if (_.isNaN(elementRect.left)) {
+            // this is actually a point element, doesnt have a bounding rectangle
+            var position = $element.position();
+            elementRect = new Helpers.Rect(
+                    position.left, position.top, 0, 0);
+        }
+        var topOffset = visibleContentOffsets.top || 0;
+        var isBelowVisibleTop = elementRect.bottom() > topOffset;
+        var isAboveVisibleBottom = visibleContentOffsets.bottom !== undefined
+            ? elementRect.top < visibleContentOffsets.bottom
+            : true; //this check always passed, if corresponding offset isn't set
+
+        var percentOfElementHeight = 0;
+        if (isBelowVisibleTop && isAboveVisibleBottom) { // element is visible
+            if (!shouldCalculateVisibilityOffset) {
+                return 100;
+            }
+            else if (elementRect.top <= topOffset) {
+                percentOfElementHeight = Math.ceil(
+                    100 * (topOffset - elementRect.top) / elementRect.height
+                );
+
+                // below goes another algorithm, which has been used in getVisibleElements pattern,
+                // but it seems to be a bit incorrect
+                // (as spatial offset should be measured at the first visible point of the element):
+                //
+                // var visibleTop = Math.max(elementRect.top, visibleContentOffsets.top);
+                // var visibleBottom = Math.min(elementRect.bottom(), visibleContentOffsets.bottom);
+                // var visibleHeight = visibleBottom - visibleTop;
+                // var percentVisible = Math.round((visibleHeight / elementRect.height) * 100);
+            }
+            return 100 - percentOfElementHeight;
+        }
+        return 0; // element isn't visible
+    }
+    
     /**
      * New (rectangle-based) algorithm, useful in multi-column layouts
      *
