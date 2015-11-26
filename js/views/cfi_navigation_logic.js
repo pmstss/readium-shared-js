@@ -727,8 +727,8 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
     function getTextNodeRectCornerPairs(rect) {
         //
         //    top left             top right
-        //    ╲                   ╱
-        //  ── ▒T▒E▒X▒T▒ ▒R▒E▒C▒T▒ ──
+        //    ?                   ?
+        //  -- -T-E-X-T- -R-E-C-T- --
         //
         // top left corner & top right corner
         // but for y coord use the mid point between top and bottom

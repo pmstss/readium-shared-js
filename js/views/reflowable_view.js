@@ -217,10 +217,10 @@ var ReflowableView = function(options, reader){
             applyIFrameLoad(success);
             return;
         }
-        var fontLoader = new FontLoader(_$iframe);
-        fontLoader.waitForFonts(function () {
+        //var fontLoader = new FontLoader(_$iframe);
+        //fontLoader.waitForFonts(function () {
             applyIFrameLoad(success);
-        });
+        //});
     }
 
     function applyIFrameLoad(success) {
