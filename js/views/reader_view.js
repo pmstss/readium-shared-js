@@ -360,7 +360,12 @@ var ReaderView = function (options) {
 
         var packageData = openBookData.package ? openBookData.package : openBookData;
 
-        _package = new Package(packageData);
+        // ### tss: ability to use custom Package model
+        if (!options.CustomPackage) {
+            _package = new Package(packageData);
+        } else {
+            _package = new options.CustomPackage(packageData);
+        }
 
         _spine = _package.spine;
         _spine.handleLinear(true);
