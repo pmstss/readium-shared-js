@@ -28,12 +28,13 @@ function($, _, Class, HighlightHelpers, HighlightGroup) {
             var that = this;
             this.context.document.addEventListener("mouseup", function(event) {
                 var range = that._getCurrentSelectionRange();
-                if (range === undefined) {
+                // ### tss: firing textSelectionEvent for empty selection too - for possibility to catch selection removal
+                /*if (range === undefined) {
                     return;
-                }
-                if (range.startOffset - range.endOffset) {
+                }*/
+                //if (range.startOffset - range.endOffset) {
                     that.context.manager.trigger("textSelectionEvent", event, range, that.context.iframe);
-                }
+                //}
             });
 
             if (!rangy.initialized) {
