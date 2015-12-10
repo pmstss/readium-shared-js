@@ -1200,6 +1200,10 @@ var ReaderView = function (options) {
         _iframeLoader.addIFrameEventListener(eventName, callback, context);
     };
 
+    this.updateIframeEvents = function (iframe) {
+        _iframeLoader.updateIframeEvents(iframe);
+    };
+
     this.isElementCfiVisible = function (spineIdRef, contentCfi) {
         if (!_currentView) {
             return false;
