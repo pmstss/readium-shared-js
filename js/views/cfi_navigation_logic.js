@@ -920,7 +920,8 @@ var CfiNavigationLogic = function($viewport, $iframe, options){
         return EPUBcfi.generateRangeComponent(
             range.startContainer, range.startOffset,
             range.endContainer, range.endOffset,
-            range.commonAncestorContainer,
+            // ### tss: unexpected parameter bugfix
+            /*range.commonAncestorContainer,*/
             ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"]);
     }
 
