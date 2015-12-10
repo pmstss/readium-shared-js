@@ -9,8 +9,6 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
         init: function(context, options) {
             this.context = context;
 
-            this.lengthLib = new Length(this.context.document);
-
             this.highlight = {
                 id: options.id,
                 CFI: options.CFI,
@@ -28,8 +26,13 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
         },
 
         render: function() {
+            if (this.$el) {
+                this.$el.remove();
+            }
+            
             this.$el = $(this.template, this.context.document);
             this.$el.attr('data-id', this.highlight.id);
+
             this.updateStyles();
             this.renderContent();
             return this.$el;
@@ -38,7 +41,10 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
         remove: function() {
             this.highlight = null;
             this.context = null;
-            this.$el.remove();
+
+            if (this.$el) {
+                this.$el.remove();
+            }
         },
 
 
@@ -67,12 +73,14 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
                 styles: styles
             });
 
-            // we need to fully restyle view elements
-            // remove all the "inline" styles
-            this.$el.removeAttr("style");
+            if (this.$el) {
+                // we need to fully restyle view elements
+                // remove all the "inline" styles
+                this.$el.removeAttr("style");
 
-            // remove class applied by "type"
-            this.$el.removeClass(oldType);
+                // remove class applied by "type"
+                this.$el.removeClass(oldType);
+            }
 
             this.updateStyles();
         },
@@ -187,7 +195,7 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
                             delete copiedFirstLineStyles['text-transform'];
                             _.each(["font-size", "letter-spacing"], function(styleName) {
                                 if (copiedFirstLineStyles[styleName]) {
-                                    copiedFirstLineStyles[styleName] = that.lengthLib.toPx(data.ancestorEl, copiedFirstLineStyles[styleName]) + "px";
+                                    copiedFirstLineStyles[styleName] = that.getLengthLib().toPx(data.ancestorEl, copiedFirstLineStyles[styleName]) + "px";
                                 }
                             });
                         }
@@ -227,7 +235,20 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
             }
         },
 
+        getLengthLib: function() {
+            // lazy-load length lib has it takes ~300ms in some cases and we
+            // don't always need it
+            if (!this.lengthLib) {
+                this.lengthLib = new Length(this.context.document);
+            }
+
+            return this.lengthLib;
+        },
+
         setCSS: function() {
+            if (!this.$el)
+                return;
+
             // set highlight's absolute position
             this.$el.css({
                 "position": "absolute",
@@ -247,6 +268,9 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
         },
 
         setBaseHighlight: function(removeFocus) {
+            if (!this.$el)
+                return;
+
             var type = this.highlight.type;
             this.$el.addClass(type);
             this.$el.removeClass("hover-" + type);
@@ -256,18 +280,27 @@ function($, _, Class, Length, TextLineInferrer, CopiedTextStyles) {
         },
 
         setHoverHighlight: function() {
+            if (!this.$el)
+                return;
+
             var type = this.highlight.type;
             this.$el.addClass("hover-" + type);
             this.$el.removeClass(type);
         },
 
         setFocusedHighlight: function() {
+            if (!this.$el)
+                return;
+
             var type = this.highlight.type;
             this.$el.addClass("focused-" + type);
             this.$el.removeClass(type).removeClass("hover-" + type);
         },
 
         setVisibility: function(value) {
+            if (!this.$el)
+                return;
+
             if (value) {
                 this.$el.css('display', '');
             } else {
