@@ -672,7 +672,7 @@ var ReaderView = function (options) {
             return undefined;
         }
 
-        var spineItem = _spine.getItemById(idref);
+        var spineItem = typeof idref.spineIdx !== 'undefined' ? _spine.items[idref.spineIdx] : _spine.getItemById(idref);
         if (!spineItem) {
             console.log("Spine item with id " + idref + " not found!");
             return undefined;
