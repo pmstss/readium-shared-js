@@ -1,5 +1,5 @@
-define(["jquery", "underscore", "./lib/class", "./helpers", "./models/group"],
-function($, _, Class, HighlightHelpers, HighlightGroup) {
+define(["jquery", "underscore", "rangy", "./lib/class", "./helpers", "./models/group"],
+function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
     var HighlightsController = Class.extend({
 
         highlights: [],
