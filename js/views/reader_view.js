@@ -582,10 +582,10 @@ console.trace(JSON.stringify(status));
                 var spineItem = _spine.getItemById(bookMark.idref);
 
                 initViewForItem(spineItem, function (isViewChanged) {
-
-                    if (!isViewChanged) {
+                    // ### tss: setViewSettings will be indirectly called during openSpineItemElementCfi (via openPage)
+                    /*if (!isViewChanged) {
                         _currentView.setViewSettings(_viewerSettings);
-                    }
+                    }*/
 
                     self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
 
