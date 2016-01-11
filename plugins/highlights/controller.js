@@ -8,6 +8,7 @@ function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
         offsetLeftAddition: 0,
         readerBoundElement: undefined,
         scale: 0,
+        lastRange: null,
 
         init: function(context, options) {
             this.context = context;
@@ -29,9 +30,10 @@ function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
             this.context.document.addEventListener("mouseup", function(event) {
                 var range = that._getCurrentSelectionRange();
                 // ### tss: firing textSelectionEvent for empty selection too - for possibility to catch selection removal
-                /*if (range === undefined) {
+                if (!range && !this.lastRange) {
                     return;
-                }*/
+                }
+                this.lastRange = null;
                 //if (range.startOffset - range.endOffset) {
                     that.context.manager.trigger("textSelectionEvent", event, range, that.context.iframe);
                 //}
@@ -55,7 +57,7 @@ function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
             var that = this;
 
             var leftAddition = -this._getPaginationLeftOffset();
-            
+
             var isVerticalWritingMode = this.context.paginationInfo().isVerticalWritingMode;
 
             var visibleCfiRange = this.getVisibleCfiRange();
@@ -200,7 +202,7 @@ function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
             var contentDoc = this.context.document;
 
             this.calculateScaleIfNeeded();
-            
+
             // form fake full CFI to satisfy getRangeTargetNodes
             var arbitraryPackageDocCFI = "/99!"
             var fullFakeCFI = "epubcfi(" + arbitraryPackageDocCFI + CFI + ")";
@@ -582,7 +584,7 @@ function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
         },
 
         _getPaginationLeftOffset: function() {
-        
+
             var $htmlElement = $(this.context.document.documentElement);
             if (!$htmlElement || !$htmlElement.length) {
                 // if there is no html element, we might be dealing with a fxl with a svg spine item
@@ -595,9 +597,9 @@ function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
                 //for fixed layouts, $htmlElement.css("left") has no numerical value
                 offsetLeft = 0;
             }
-            
+
             if (this.context.isRTL && !this.context.paginationInfo().isVerticalWritingMode) return -offsetLeft;
-             
+
             return offsetLeft;
         },
 
