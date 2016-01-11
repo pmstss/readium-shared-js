@@ -26,8 +26,8 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-define(["jquery", "../helpers", "./audio_player", "./media_overlay_element_highlighter", "../globals", "../models/smil_iterator", "rangy", 'readium_cfi_js', './scroll_view'],
-    function($, Helpers, AudioPlayer, MediaOverlayElementHighlighter, Globals, SmilIterator, rangy, epubCfi, ScrollView) {
+define(["../globals", "jquery", "../helpers", "./audio_player", "./media_overlay_element_highlighter", "../models/smil_iterator", "rangy", 'readium_cfi_js', './scroll_view'],
+    function(Globals, $, Helpers, AudioPlayer, MediaOverlayElementHighlighter, SmilIterator, rangy, epubCfi, ScrollView) {
 /**
  *
  * @param reader
@@ -65,9 +65,9 @@ var MediaOverlayPlayer = function(reader, onStatusChanged) {
     var _elementHighlighter = new MediaOverlayElementHighlighter(reader);
 
     reader.on(Globals.Events.READER_VIEW_DESTROYED, function(){
-
+        Globals.logEvent("READER_VIEW_DESTROYED", "ON", "media_overlay_player.js");
+        
         self.reset();
-
     });
 
 
@@ -92,8 +92,12 @@ var MediaOverlayPlayer = function(reader, onStatusChanged) {
         _audioPlayer.setVolume(_settings.mediaOverlaysVolume / 100.0);
     };
     self.onSettingsApplied();
-    //Globals.
-    reader.on(Globals.Events.SETTINGS_APPLIED, this.onSettingsApplied, this);
+    
+    reader.on(Globals.Events.SETTINGS_APPLIED, function() {
+        
+        Globals.logEvent("SETTINGS_APPLIED", "ON", "media_overlay_player.js");
+        this.onSettingsApplied();
+    }, this);
 
     /*
     var lastElement = undefined;
@@ -1107,6 +1111,7 @@ var MediaOverlayPlayer = function(reader, onStatusChanged) {
 
         if (!_enableHTMLSpeech)
         {
+            Globals.logEvent("MEDIA_OVERLAY_TTS_SPEAK", "EMIT", "media_overlay_player.js");
             reader.emit(Globals.Events.MEDIA_OVERLAY_TTS_SPEAK, {tts: txt}); // resume if txt == undefined
             return;
         }
@@ -1399,12 +1404,20 @@ console.debug("TTS resume");
 
     var speakStop = function()
     {
-        onStatusChanged({isPlaying: false});
+        var wasPlaying = _ttsIsPlaying;
+
+        if (wasPlaying) {
+            onStatusChanged({isPlaying: false});
+        }
+        
         _ttsIsPlaying = false;
 
         if (!_enableHTMLSpeech)
         {
-            reader.emit(Globals.Events.MEDIA_OVERLAY_TTS_STOP, undefined);
+            if (wasPlaying) {
+                Globals.logEvent("MEDIA_OVERLAY_TTS_STOP", "EMIT", "media_overlay_player.js");
+                reader.emit(Globals.Events.MEDIA_OVERLAY_TTS_STOP, undefined);
+            }
             return;
         }
 
@@ -1691,25 +1704,36 @@ console.debug("textAbsoluteRef: " + textAbsoluteRef);
     };
 
     this.resetBlankPage = function() {
+        var wasPlaying = false;
+        
         if (_blankPagePlayer)
         {
+            wasPlaying = true;
+            
             var timer = _blankPagePlayer;
             _blankPagePlayer = undefined;
             clearTimeout(timer);
         }
         _blankPagePlayer = undefined;
 
-        onStatusChanged({isPlaying: false});
+        if (wasPlaying) {
+            onStatusChanged({isPlaying: false});
+        }
     };
 
     this.resetEmbedded = function() {
+        var wasPlaying = _embeddedIsPlaying;
+        
         if (_currentEmbedded)
         {
             $(_currentEmbedded).off("ended", self.onEmbeddedEnd);
             _currentEmbedded.pause();
         }
         _currentEmbedded = undefined;
-        onStatusChanged({isPlaying: false});
+        
+        if (wasPlaying) {
+            onStatusChanged({isPlaying: false});
+        }
         _embeddedIsPlaying = false;
     };
 

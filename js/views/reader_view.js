@@ -24,14 +24,14 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-define(["jquery", "underscore", "eventEmitter", "./fixed_view", "../helpers", "./iframe_loader", "./internal_links_support",
+define(["../globals", "jquery", "underscore", "eventEmitter", "./fixed_view", "../helpers", "./iframe_loader", "./internal_links_support",
         "./media_overlay_data_injector", "./media_overlay_player", "../models/package", "../models/page_open_request",
         "./reflowable_view", "./scroll_view", "../models/style_collection", "../models/switches", "../models/trigger",
-        "../models/viewer_settings", "../models/bookmark_data", "../models/node_range_info",  "../globals"],
-    function ($, _, EventEmitter, FixedView, Helpers, IFrameLoader, InternalLinksSupport,
+        "../models/viewer_settings", "../models/bookmark_data", "../models/node_range_info"],
+    function (Globals, $, _, EventEmitter, FixedView, Helpers, IFrameLoader, InternalLinksSupport,
               MediaOverlayDataInjector, MediaOverlayPlayer, Package, PageOpenRequest,
               ReflowableView, ScrollView, StyleCollection, Switches, Trigger,
-              ViewerSettings, BookmarkData, NodeRangeInfo, Globals) {
+              ViewerSettings, BookmarkData, NodeRangeInfo) {
 /**
  * Options passed on the reader from the readium loader/initializer
  *
@@ -227,9 +227,13 @@ var ReaderView = function (options) {
 
 
         _currentView = self.createViewForType(desiredViewType, viewCreationParams);
+        
+        Globals.logEvent("READER_VIEW_CREATED", "EMIT", "reader_view.js");
         self.emit(Globals.Events.READER_VIEW_CREATED, desiredViewType);
 
         _currentView.on(Globals.Events.CONTENT_DOCUMENT_LOADED, function ($iframe, spineItem) {
+            
+            Globals.logEvent("CONTENT_DOCUMENT_LOADED", "ON", "reader_view.js (current view) [ " + spineItem.href + " ]");
 
             if (!Helpers.isIframeAlive($iframe[0])) return;
 
@@ -242,14 +246,18 @@ var ReaderView = function (options) {
             Trigger.register(contentDoc);
             Switches.apply(contentDoc);
 
+            Globals.logEvent("CONTENT_DOCUMENT_LOADED", "EMIT", "reader_view.js [ " + spineItem.href + " ]");
             self.emit(Globals.Events.CONTENT_DOCUMENT_LOADED, $iframe, spineItem);
         });
 
         _currentView.on(Globals.Events.CONTENT_DOCUMENT_LOAD_START, function ($iframe, spineItem) {
+            Globals.logEvent("CONTENT_DOCUMENT_LOAD_START", "EMIT", "reader_view.js [ " + spineItem.href + " ]");
             self.emit(Globals.Events.CONTENT_DOCUMENT_LOAD_START, $iframe, spineItem);
         });
 
         _currentView.on(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, function (pageChangeData) {
+            
+            Globals.logEvent("InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED", "ON", "reader_view.js");
 
             //we call on onPageChanged explicitly instead of subscribing to the Globals.Events.PAGINATION_CHANGED by
             //mediaOverlayPlayer because we hve to guarantee that mediaOverlayPlayer will be updated before the host
@@ -257,11 +265,13 @@ var ReaderView = function (options) {
             _mediaOverlayPlayer.onPageChanged(pageChangeData);
 
             _.defer(function () {
+                Globals.logEvent("PAGINATION_CHANGED", "EMIT", "reader_view.js");
                 self.emit(Globals.Events.PAGINATION_CHANGED, pageChangeData);
             });
         });
 
         _currentView.on(Globals.Events.FXL_VIEW_RESIZED, function () {
+            Globals.logEvent("FXL_VIEW_RESIZED", "EMIT", "reader_view.js");
             self.emit(Globals.Events.FXL_VIEW_RESIZED);
         })
 
@@ -297,9 +307,13 @@ var ReaderView = function (options) {
             return;
         }
 
+        Globals.logEvent("READER_VIEW_DESTROYED", "EMIT", "reader_view.js");
         self.emit(Globals.Events.READER_VIEW_DESTROYED);
 
+
+        Globals.logEvent("InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED", "OFF", "reader_view.js");
         _currentView.off(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED);
+        
         _currentView.remove();
         _currentView = undefined;
     }
@@ -447,6 +461,8 @@ var ReaderView = function (options) {
     };
 
     function onMediaPlayerStatusChanged(status) {
+        Globals.logEvent("MEDIA_OVERLAY_STATUS_CHANGED", "EMIT", "reader_view.js (via MediaOverlayPlayer + AudioPlayer)");
+console.trace(JSON.stringify(status));
         self.emit(Globals.Events.MEDIA_OVERLAY_STATUS_CHANGED, status);
     }
 
@@ -580,6 +596,7 @@ var ReaderView = function (options) {
                         // }, 60);
                     }
 
+                    Globals.logEvent("SETTINGS_APPLIED 1 (view update)", "EMIT", "reader_view.js");
                     self.emit(Globals.Events.SETTINGS_APPLIED);
                 });
                 
@@ -587,6 +604,8 @@ var ReaderView = function (options) {
             }
         }
 
+        Globals.logEvent("SETTINGS_APPLIED 2 (no view update)", "EMIT", "reader_view.js");
+console.trace(JSON.stringify(settingsData));
         self.emit(Globals.Events.SETTINGS_APPLIED);
     };
 
@@ -1211,7 +1230,7 @@ var ReaderView = function (options) {
         return _currentView.isElementCfiVisible(spineIdRef, contentCfi);
     };
 
-    var BackgroundAudioTrackManager = function () {
+    var BackgroundAudioTrackManager = function (readerView) {
         var _spineItemIframeMap = {};
         var _wasPlaying = false;
 
@@ -1278,7 +1297,9 @@ var ReaderView = function (options) {
             _wasPlaying = wasPlaying;
         };
 
-        self.on(Globals.Events.CONTENT_DOCUMENT_LOADED, function ($iframe, spineItem) {
+        readerView.on(Globals.Events.CONTENT_DOCUMENT_LOADED, function ($iframe, spineItem) {
+            Globals.logEvent("CONTENT_DOCUMENT_LOADED", "ON", "reader_view.js (via BackgroundAudioTrackManager) [ " + spineItem.href + " ]");;
+            
             try {
                 if (spineItem && spineItem.idref && $iframe && $iframe[0]) {
                     // console.log("CONTENT_DOCUMENT_LOADED");
@@ -1293,7 +1314,9 @@ var ReaderView = function (options) {
             }
         });
 
-        self.on(Globals.Events.PAGINATION_CHANGED, function (pageChangeData) {
+        readerView.on(Globals.Events.PAGINATION_CHANGED, function (pageChangeData) {
+            Globals.logEvent("PAGINATION_CHANGED", "ON", "reader_view.js (via BackgroundAudioTrackManager)");
+            
             // console.log("PAGINATION_CHANGED");
             // console.debug(pageChangeData);
             //
@@ -1409,9 +1432,11 @@ var ReaderView = function (options) {
             }
         });
 
-        self.on(Globals.Events.MEDIA_OVERLAY_STATUS_CHANGED, function (value) {
+        readerView.on(Globals.Events.MEDIA_OVERLAY_STATUS_CHANGED, function (value) {
+            Globals.logEvent("MEDIA_OVERLAY_STATUS_CHANGED", "ON", "reader_view.js (via BackgroundAudioTrackManager)");
+            
             if (!value.smilIndex) return;
-            var package = self.package();
+            var package = readerView.package();
             var smil = package.media_overlay.smilAt(value.smilIndex);
             if (!smil || !smil.spineItemId) return;
 
@@ -1451,7 +1476,7 @@ var ReaderView = function (options) {
             }
         });
     };
-    this.backgroundAudioTrackManager = new BackgroundAudioTrackManager();
+    this.backgroundAudioTrackManager = new BackgroundAudioTrackManager(self);
 
     function getCfisForVisibleRegion() {
         return {firstVisibleCfi: self.getFirstVisibleCfi(), lastVisibleCfi: self.getLastVisibleCfi()};

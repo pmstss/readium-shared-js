@@ -112,7 +112,10 @@ var HighlightsManager = function (proxyObj, options) {
             iframe: iframe,
             manager: self,
             cssUrl: annotationCSSUrl,
-            isFixedLayout: spineItem.isFixedLayout()
+            isFixedLayout: spineItem.isFixedLayout(),
+            isRTL: spineItem.spine.isRightToLeft(),
+            paginationInfo: function() { return spineItem.paginationInfo; }
+            
         }, defaultContext);
 
         liveAnnotations[spineItem.index] = new HighlightsController(context, {getVisibleCfiRangeFn: options.getVisibleCfiRangeFn});
