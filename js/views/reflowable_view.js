@@ -138,19 +138,25 @@ var ReflowableView = function(options, reader){
 
     var _viewSettings = undefined;
     this.setViewSettings = function(settings) {
-
+        // ### tss: saving old settings and call updateHtmlFontSize/updateColumnGap only if necessary
+        var oldSettings = $.extend({}, _viewSettings);
         _viewSettings = settings;
 
         _paginationInfo.columnGap = settings.columnGap;
         _fontSize = settings.fontSize;
 
-        updateHtmlFontSize();
-        updateColumnGap();
+        if (oldSettings.fontSize !== settings.fontSize) {
+            updateHtmlFontSize();
+        }
+        if (oldSettings.columnGap !== settings.columnGap) {
+            updateColumnGap();
+        }
 
-        updateViewportSize();
+        // ### tss: updateViewportSize will be anyway called in updatePagination
+        //updateViewportSize();
         updatePagination();
     };
-    
+
     function getFrameDimensions() {
         return {
             width: _$iframe[0].clientWidth,
@@ -195,14 +201,14 @@ var ReflowableView = function(options, reader){
             _paginationInfo.pageOffset = 0;
             _paginationInfo.currentSpreadIndex = 0;
             _currentSpineItem = spineItem;
-            
+
             // TODO: this is a dirty hack!!
-            _currentSpineItem.paginationInfo = _paginationInfo; 
-            
+            _currentSpineItem.paginationInfo = _paginationInfo;
+
             _isWaitingFrameRender = true;
 
             var src = _spine.package.resolveRelativeUrl(spineItem.href);
-            
+
             Globals.logEvent("CONTENT_DOCUMENT_LOAD_START", "EMIT", "reflowable_view.js [ " + spineItem.href + " -- " + src + " ]");
             self.emit(Globals.Events.CONTENT_DOCUMENT_LOAD_START, _$iframe, spineItem);
 
@@ -326,7 +332,7 @@ var ReflowableView = function(options, reader){
             _htmlBodyIsLTRWritingMode = false;
         }
 
-        _paginationInfo.isVerticalWritingMode = _htmlBodyIsVerticalWritingMode; 
+        _paginationInfo.isVerticalWritingMode = _htmlBodyIsVerticalWritingMode;
 
         hideBook();
         _$iframe.css("opacity", "1");
@@ -488,11 +494,11 @@ var ReflowableView = function(options, reader){
     function onPaginationChanged_(initiator, paginationRequest_spineItem, paginationRequest_elementId) {
 
         _paginationInfo.pageOffset = (_paginationInfo.columnWidth + _paginationInfo.columnGap) * _paginationInfo.visibleColumnCount * _paginationInfo.currentSpreadIndex;
-        
+
         redraw();
 
         _.defer(function () {
-            
+
             Globals.logEvent("InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED", "EMIT", "reflowable_view.js");
             self.emit(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, {
                 paginationInfo: self.getPaginationInfo(),
