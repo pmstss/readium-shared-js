@@ -1204,9 +1204,11 @@ console.trace(JSON.stringify(settingsData));
         if (_currentView.isReflowable && _currentView.isReflowable() && bookMark && bookMark.idref) {
             var spineItem = _spine.getItemById(bookMark.idref);
 
+            // ### tss: related to resize remake in reflowable_view
+            _currentView.onViewportResize();
+
             initViewForItem(spineItem, function (isViewChanged) {
                 self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
-                return;
             });
         }
         else {
