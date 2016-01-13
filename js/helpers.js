@@ -140,9 +140,8 @@ Helpers.Rect.fromElement = function ($element) {
 };
 
 Helpers.UpdateHtmlFontSize = function ($epubHtml, fontSize) {
-
-
-    var factor = fontSize / 100;
+    // ### tss: skip custom absolutely sized elements for now; code below needs optimization
+    /*var factor = fontSize / 100;
     var win = $epubHtml[0].ownerDocument.defaultView;
     var $textblocks = $('p, div, span, h1, h2, h3, h4, h5, h6, li, blockquote, td, pre', $epubHtml);
     var originalLineHeight;
@@ -188,7 +187,7 @@ Helpers.UpdateHtmlFontSize = function ($epubHtml, fontSize) {
             $(ele).css("line-height", (originalLineHeight * factor) + 'px');
         }
 
-    }
+    }*/
     $epubHtml.css("font-size", fontSize + "%");
 };
 
