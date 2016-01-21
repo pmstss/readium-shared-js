@@ -2,27 +2,27 @@
 //
 //  Created by Boris Schneiderman.
 //  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
-//  
-//  Redistribution and use in source and binary forms, with or without modification, 
+//
+//  Redistribution and use in source and binary forms, with or without modification,
 //  are permitted provided that the following conditions are met:
-//  1. Redistributions of source code must retain the above copyright notice, this 
+//  1. Redistributions of source code must retain the above copyright notice, this
 //  list of conditions and the following disclaimer.
-//  2. Redistributions in binary form must reproduce the above copyright notice, 
-//  this list of conditions and the following disclaimer in the documentation and/or 
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//  this list of conditions and the following disclaimer in the documentation and/or
 //  other materials provided with the distribution.
-//  3. Neither the name of the organization nor the names of its contributors may be 
-//  used to endorse or promote products derived from this software without specific 
+//  3. Neither the name of the organization nor the names of its contributors may be
+//  used to endorse or promote products derived from this software without specific
 //  prior written permission.
-//  
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /**
@@ -86,7 +86,7 @@ var CfiNavigationLogic = function(options) {
 
     function getNodeClientRectList(node, visibleContentOffsets) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
-        
+
         var range = createRange();
         range.selectNode(node);
         return _.map(range.getClientRects(), function (rect) {
@@ -98,7 +98,7 @@ var CfiNavigationLogic = function(options) {
         if (options.frameDimensions) {
             return options.frameDimensions();
         }
-        
+
         console.error('CfiNavigationLogic: No frame dimensions specified!');
         return null;
     }
@@ -158,10 +158,10 @@ var CfiNavigationLogic = function(options) {
         }
 
         if (isPaginatedView()) {
-            return (rect.left >= 0 && rect.left < frameDimensions.width) || 
+            return (rect.left >= 0 && rect.left < frameDimensions.width) ||
                 (!ignorePartiallyVisible && rect.left < 0 && rect.right >= 0);
         } else {
-            return (rect.top >= 0 && rect.top < frameDimensions.height) || 
+            return (rect.top >= 0 && rect.top < frameDimensions.height) ||
                 (!ignorePartiallyVisible && rect.top < 0 && rect.bottom >= 0);
         }
 
@@ -202,7 +202,7 @@ var CfiNavigationLogic = function(options) {
                 left: 0
             };
         }
-        
+
         if (isPaginatedView()) {
             return {
                 top: 0,
@@ -247,7 +247,7 @@ var CfiNavigationLogic = function(options) {
 
         if (clientRectangles.length === 1) {
             var adjustedRect = clientRectangles[0];
-            
+
             if (isPaginatedView()) {
                 if (adjustedRect.bottom > frameDimensions.height || adjustedRect.top < 0) {
                     // because of webkit inconsistency, that single rectangle should be adjusted
@@ -364,7 +364,7 @@ var CfiNavigationLogic = function(options) {
     function findPageBySingleRectangle(clientRectangle, visibleContentOffsets, frameDimensions) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
-        
+
         var normalizedRectangle = normalizeRectangle(
             clientRectangle, visibleContentOffsets.left, visibleContentOffsets.top);
 
@@ -616,12 +616,9 @@ var CfiNavigationLogic = function(options) {
     };
 
     //TODO JC: Can now use getFirstVisibleCfi instead, use that instead of this at top levels
-    this.getFirstVisibleElementCfi = function (topOffset) {
-
+    this.getFirstVisibleElementCfi = function () {
         return self.getFirstVisibleCfi();
-
     };
-
 
     this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
         var document = self.getRootDocument();
@@ -749,7 +746,7 @@ var CfiNavigationLogic = function(options) {
 
     function getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc, visibleContentOffsets, frameDimensions) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
-        
+
         var textNodeFragments = getNodeClientRectList(textNode, visibleContentOffsets);
 
         var visibleFragments = _.filter(textNodeFragments, function (rect) {
@@ -765,7 +762,7 @@ var CfiNavigationLogic = function(options) {
         // Reverse taking into account of visible content offsets
         fragmentCorner.x -= visibleContentOffsets.left;
         fragmentCorner.y -= visibleContentOffsets.top;
-        
+
         var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
         //console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a0');
         // Desperately try to find it from all angles! Darn sub pixeling..
@@ -861,7 +858,7 @@ var CfiNavigationLogic = function(options) {
 
     // get an array of visible text elements and then select one based on the func supplied
     // and generate a CFI for the first visible text subrange.
-    function getVisibleTextRangeCfiForTextElementSelectedByFunc(pickerFunc, visibleContentOffsets, frameDimensions) {        
+    function getVisibleTextRangeCfiForTextElementSelectedByFunc(pickerFunc, visibleContentOffsets, frameDimensions) {
         var visibleLeafNodeList = self.getVisibleLeafNodes(visibleContentOffsets, frameDimensions);
         return findVisibleLeafNodeCfi(visibleLeafNodeList, pickerFunc, null, visibleContentOffsets, frameDimensions);
     }
@@ -1572,7 +1569,7 @@ var CfiNavigationLogic = function(options) {
                 //for fixed layouts, $htmlElement.css("left") has no numerical value
                 offsetLeft = 0;
             }
-            if (isPageProgressionRightToLeft() && !isVerticalWritingMode()) return -offsetLeft; 
+            if (isPageProgressionRightToLeft() && !isVerticalWritingMode()) return -offsetLeft;
             return offsetLeft;
         }
 

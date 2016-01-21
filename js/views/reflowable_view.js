@@ -740,9 +740,9 @@ var ReflowableView = function(options, reader){
     }
 
     this.getFirstVisibleElementCfi = function() {
-
-        var contentOffsets = getVisibleContentOffsets();
-        return _navigationLogic.getFirstVisibleElementCfi(contentOffsets);
+        // ### tss _navigationLogic.getFirstVisibleElementCfi has no parameters
+        //var contentOffsets = getVisibleContentOffsets();
+        return _navigationLogic.getFirstVisibleElementCfi();
     };
 
     this.getPaginationInfo = function() {
