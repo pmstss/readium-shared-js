@@ -1233,6 +1233,9 @@ var CfiNavigationLogic = function(options) {
     };
 
     this.getVisibleElements = function ($elements, visibleContentOffsets, frameDimensions) {
+        // ### tss: precalculate visibleContentOffsets and frameDimensions to avoid calculation in large loop
+        visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
+        frameDimensions = frameDimensions || getFrameDimensions();
 
         var visibleElements = [];
 
