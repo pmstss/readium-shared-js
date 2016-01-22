@@ -102,6 +102,8 @@ var CfiNavigationLogic = function(options) {
         console.error('CfiNavigationLogic: No frame dimensions specified!');
         return null;
     }
+    // ### tss: making part of external interface
+    this.getFrameDimensions = getFrameDimensions;
 
     function getCaretRangeFromPoint(x, y, document) {
         document = document || self.getRootDocument();
@@ -215,6 +217,8 @@ var CfiNavigationLogic = function(options) {
             };
         }
     }
+    // ### tss: making part of external interface
+    this.getVisibleContentOffsets = getVisibleContentOffsets;
 
     /**
      * New (rectangle-based) algorithm, useful in multi-column layouts
