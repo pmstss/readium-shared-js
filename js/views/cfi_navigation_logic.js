@@ -832,11 +832,7 @@ var CfiNavigationLogic = function(options) {
 
         // Still nothing? fall through..
         if (!caretRange) {
-            
-            if (DEBUG) {
-                console.warn('getVisibleTextRangeOffsetsSelectedByFunc: no caret range result');
-            }
-            
+            console.warn('getVisibleTextRangeOffsetsSelectedByFunc: no caret range result');
             return null;
         }
 
