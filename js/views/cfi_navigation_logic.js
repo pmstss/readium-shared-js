@@ -748,6 +748,8 @@ var CfiNavigationLogic = function(options) {
         }
     }
 
+    var DEBUG = false;
+
     function getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc, visibleContentOffsets, frameDimensions) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
 
@@ -768,44 +770,73 @@ var CfiNavigationLogic = function(options) {
         fragmentCorner.y -= visibleContentOffsets.top;
 
         var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
-        //console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a0');
+        
+        if (DEBUG) {
+            console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a0');
+        }
+        
         // Desperately try to find it from all angles! Darn sub pixeling..
         //TODO: remove the need for this brute-force method, since it's making the result non-deterministic
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y);
-            //console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a1');
+            
+            if (DEBUG) {
+                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a1');
+            }
         }
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1);
-            //console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a2');
+            
+            if (DEBUG) {
+                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a2');
+            }
         }
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
-            //console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a3');
+            
+            if (DEBUG) {
+                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a3');
+            }
         }
         if (!caretRange || caretRange.startContainer !== textNode) {
             fragmentCorner.x = Math.floor(fragmentCorner.x);
             fragmentCorner.y = Math.floor(fragmentCorner.y);
             caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
-            //console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b0');
+            
+            if (DEBUG) {
+                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b0');
+            }
         }
         // Desperately try to find it from all angles! Darn sub pixeling..
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y);
-            //console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b1');
+            
+            if (DEBUG) {
+                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b1');
+            }
         }
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1);
-            //console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b2');
+            
+            if (DEBUG) {
+                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b2');
+            }
         }
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
-            //console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b3');
+            
+            if (DEBUG) {
+                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b3');
+			}
         }
 
         // Still nothing? fall through..
         if (!caretRange) {
-            console.warn('getVisibleTextRangeOffsetsSelectedByFunc: no caret range result');
+            
+            if (DEBUG) {
+                console.warn('getVisibleTextRangeOffsetsSelectedByFunc: no caret range result');
+            }
+            
             return null;
         }
 
@@ -887,8 +918,6 @@ var CfiNavigationLogic = function(options) {
         return EPUBcfi.generateRangeComponent(
             range.startContainer, range.startOffset,
             range.endContainer, range.endOffset,
-            // ### tss: unexpected parameter bugfix
-            /*range.commonAncestorContainer,*/
             ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"]);
     }
 
