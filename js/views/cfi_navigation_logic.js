@@ -770,30 +770,30 @@ var CfiNavigationLogic = function(options) {
         fragmentCorner.y -= visibleContentOffsets.top;
 
         var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
-        
+
         if (DEBUG) {
             console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a0');
         }
-        
+
         // Desperately try to find it from all angles! Darn sub pixeling..
         //TODO: remove the need for this brute-force method, since it's making the result non-deterministic
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y);
-            
+
             if (DEBUG) {
                 console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a1');
             }
         }
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1);
-            
+
             if (DEBUG) {
                 console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a2');
             }
         }
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
-            
+
             if (DEBUG) {
                 console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a3');
             }
@@ -802,7 +802,7 @@ var CfiNavigationLogic = function(options) {
             fragmentCorner.x = Math.floor(fragmentCorner.x);
             fragmentCorner.y = Math.floor(fragmentCorner.y);
             caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
-            
+
             if (DEBUG) {
                 console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b0');
             }
@@ -810,24 +810,24 @@ var CfiNavigationLogic = function(options) {
         // Desperately try to find it from all angles! Darn sub pixeling..
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y);
-            
+
             if (DEBUG) {
                 console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b1');
             }
         }
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1);
-            
+
             if (DEBUG) {
                 console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b2');
             }
         }
         if (!caretRange || caretRange.startContainer !== textNode) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
-            
+
             if (DEBUG) {
                 console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b3');
-			}
+            }
         }
 
         // Still nothing? fall through..
