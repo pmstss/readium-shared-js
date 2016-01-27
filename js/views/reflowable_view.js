@@ -744,6 +744,11 @@ var ReflowableView = function(options, reader){
         return _navigationLogic.getFirstVisibleCfi(visibleContentOffsets, frameDimensions);
     };
 
+    //### tss: new method
+    this.getLastVisibleElementCfi = function (visibleContentOffsets, frameDimensions) {
+        return _navigationLogic.getLastVisibleCfi(visibleContentOffsets, frameDimensions);
+    };
+
     //### tss: new method for getting first visible cfi on second spread in case of double-page view
     this.getSecondSpreadFirstVisibleElementCfi = function () {
         var visibleContentOffsets = _navigationLogic.getVisibleContentOffsets();
