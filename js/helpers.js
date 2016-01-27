@@ -671,8 +671,10 @@ Helpers.polyfillCaretRangeFromPoint = function(document) {
         if (document.caretPositionFromPoint) {
             document.caretRangeFromPoint = function caretRangeFromPoint(x, y) {
                 var r = document.createRange();
-                var p = document.caretPositionFromPoint(x, y);
-                if (p.offsetNode) {
+                //### tss: sometimes fails on boundary values (FF), bruteforce similar to getVisibleTextRangeOffsetsSelectedByFunc added
+                var p = document.caretPositionFromPoint(x, y) || document.caretPositionFromPoint(x - 1, y) ||
+                    document.caretPositionFromPoint(x, y - 1) || document.caretPositionFromPoint(x - 1, y - 1);
+                if (p && p.offsetNode) {
                     r.setStart(p.offsetNode, p.offset);
                     r.setEnd(p.offsetNode, p.offset);
                 }
