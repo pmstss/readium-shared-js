@@ -108,7 +108,12 @@ var CfiNavigationLogic = function(options) {
     function getCaretRangeFromPoint(x, y, document) {
         document = document || self.getRootDocument();
         Helpers.polyfillCaretRangeFromPoint(document); //only polyfills once, no-op afterwards
-        return document.caretRangeFromPoint(x, y);
+        //### tss: hiding highlights to prevent their selection by caretRangeFromPoint
+        var $highlights = $('.rd-highlight', document);
+        $highlights.hide();
+        var res = document.caretRangeFromPoint(x, y);
+        $highlights.show();
+        return res;
     }
 
     function isPaginatedView() {
@@ -134,7 +139,6 @@ var CfiNavigationLogic = function(options) {
     function isVerticalWritingMode() {
         return options.paginationInfo && !!options.paginationInfo.isVerticalWritingMode;
     }
-
 
     /**
      * @private
@@ -750,6 +754,14 @@ var CfiNavigationLogic = function(options) {
 
     var DEBUG = false;
 
+    //### tss: IE caretRangeFromPoint polyfill returns parent element instead of text node itself,
+    // but it seems to be not a problem for later use
+    function isCorrectCaretRange(caretRange, textNode) {
+        return caretRange && (caretRange.startContainer === textNode  || caretRange.startContainer &&
+            caretRange.startContainer.childNodes.length === 1 && caretRange.startContainer.childNodes[0] === textNode);
+    }
+
+    //### tss: caretRange check replaced with isCorrectCaretRange()
     function getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc, visibleContentOffsets, frameDimensions) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
 
@@ -777,56 +789,25 @@ var CfiNavigationLogic = function(options) {
 
         // Desperately try to find it from all angles! Darn sub pixeling..
         //TODO: remove the need for this brute-force method, since it's making the result non-deterministic
-        if (!caretRange || caretRange.startContainer !== textNode) {
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y);
-
+        // ### tss: condition checks beatifications
+        if (!isCorrectCaretRange(caretRange, textNode)) {
+            caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y) ||
+                getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1) ||
+                getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
             if (DEBUG) {
-                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a1');
+                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a');
             }
         }
-        if (!caretRange || caretRange.startContainer !== textNode) {
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1);
 
-            if (DEBUG) {
-                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a2');
-            }
-        }
-        if (!caretRange || caretRange.startContainer !== textNode) {
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
-
-            if (DEBUG) {
-                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a3');
-            }
-        }
-        if (!caretRange || caretRange.startContainer !== textNode) {
+        if (!isCorrectCaretRange(caretRange, textNode)) {
             fragmentCorner.x = Math.floor(fragmentCorner.x);
             fragmentCorner.y = Math.floor(fragmentCorner.y);
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
-
+            caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y) ||
+                getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y) ||
+                getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1) ||
+                getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
             if (DEBUG) {
-                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b0');
-            }
-        }
-        // Desperately try to find it from all angles! Darn sub pixeling..
-        if (!caretRange || caretRange.startContainer !== textNode) {
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y);
-
-            if (DEBUG) {
-                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b1');
-            }
-        }
-        if (!caretRange || caretRange.startContainer !== textNode) {
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1);
-
-            if (DEBUG) {
-                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b2');
-            }
-        }
-        if (!caretRange || caretRange.startContainer !== textNode) {
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
-
-            if (DEBUG) {
-                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b3');
+                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b');
             }
         }
 
@@ -836,13 +817,14 @@ var CfiNavigationLogic = function(options) {
             return null;
         }
 
-        if (caretRange.startContainer === textNode) {
+        if (isCorrectCaretRange(caretRange, textNode)) {
             return pickerFunc(
                 [{start: caretRange.startOffset, end: caretRange.startOffset + 1},
                 {start: caretRange.startOffset - 1, end: caretRange.startOffset}]
             );
         } else {
-            console.warn('getVisibleTextRangeOffsetsSelectedByFunc: incorrect caret range result');
+            console.log('getVisibleTextRangeOffsetsSelectedByFunc: incorrect caret range result, caretRange.startContainer: %o',
+                caretRange.startContainer);
             return null;
         }
     }
@@ -1014,6 +996,7 @@ var CfiNavigationLogic = function(options) {
             var $element = EPUBcfi.getTargetElementWithPartialCFI(wrappedCfi, contentDoc, classBlacklist, elementBlacklist, idBlacklist);
 
         } catch (ex) {
+            console.log('getTargetElementWithPartialCFI exception, wrappedCfi: %o, e: %o', wrappedCfi, e);
             //EPUBcfi.Interpreter can throw a SyntaxError
         }
 
