@@ -83,7 +83,7 @@ function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
                         visibleCfiRange.lastVisibleCfi.contentCFI);
                 }
                 highlightGroup.visible = visible;
-                highlightGroup.resetHighlights(that.readerBoundElement,
+                highlightGroup.resetHighlights(
                     isVerticalWritingMode ? leftAddition : 0,
                     isVerticalWritingMode ? 0 : leftAddition
                     );
