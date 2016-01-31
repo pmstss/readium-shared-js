@@ -370,9 +370,19 @@ function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
             if (!firstVisibleCfi || !lastVisibleCfi) {
                 return null;
             }
-            var first = this._contentCfiComparator(cfi, firstVisibleCfi);
-            var second = this._contentCfiComparator(cfi, lastVisibleCfi);
-            return first >= 0 && second <= 0;
+
+            // ### tss: fix for the sace when range cfi intersects with [firstVisibleCfi, lastVisibleCfi] range
+            var cfiRangeParts = cfi.split(',');
+            if (cfiRangeParts.length === 3) {
+                var cfi1 = cfiRangeParts[0] + cfiRangeParts[1];
+                var cfi2 = cfiRangeParts[0] + cfiRangeParts[2];
+                return !(this._contentCfiComparator(cfi2, firstVisibleCfi) < 0 || this._contentCfiComparator(cfi1, lastVisibleCfi) > 0);
+            } else {
+                // legacy
+                var first = this._contentCfiComparator(cfi, firstVisibleCfi);
+                var second = this._contentCfiComparator(cfi, lastVisibleCfi);
+                return first >= 0 || second <= 0;
+            }
         },
 
         _addHighlightHelper: function(CFI, annotationId, type, styles, highlightedNodes,
