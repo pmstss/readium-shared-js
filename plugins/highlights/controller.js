@@ -371,7 +371,7 @@ function($, _, rangy, Class, HighlightHelpers, HighlightGroup) {
                 return null;
             }
 
-            // ### tss: fix for the sace when range cfi intersects with [firstVisibleCfi, lastVisibleCfi] range
+            // ### tss: fix for the case when range cfi intersects with [firstVisibleCfi, lastVisibleCfi] range
             var cfiRangeParts = cfi.split(',');
             if (cfiRangeParts.length === 3) {
                 var cfi1 = cfiRangeParts[0] + cfiRangeParts[1];
