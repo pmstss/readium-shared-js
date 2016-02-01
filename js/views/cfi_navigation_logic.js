@@ -48,9 +48,9 @@ var CfiNavigationLogic = function(options) {
 
         return options.$iframe[0].contentDocument.documentElement;
     };
-    
+
     this.getBodyElement = function () {
-        
+
         // In SVG documents the root element can be considered the body.
         return this.getRootDocument().body || this.getRootElement();
     };
@@ -1274,10 +1274,15 @@ var CfiNavigationLogic = function(options) {
         return visibleElements;
     };
 
+    this.getCacheKey = function (paginationInfo, visibleContentOffsets, frameDimensions) {
+        return JSON.stringify($.extend({}, paginationInfo, visibleContentOffsets, frameDimensions));
+    };
+
     this.getVisibleLeafNodes = function (visibleContentOffsets, frameDimensions) {
 
         if (_cacheEnabled) {
-            var cacheKey = (options.paginationInfo || {}).currentSpreadIndex || 0;
+            //var cacheKey = (options.paginationInfo || {}).currentSpreadIndex || 0;
+            var cacheKey = this.getCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions);
             var fromCache = _cache.visibleLeafNodes.get(cacheKey);
             if (fromCache) {
                 return fromCache;
@@ -1450,7 +1455,7 @@ var CfiNavigationLogic = function(options) {
 
     var _cache = new Cache();
 
-    var _cacheEnabled = false;
+    var _cacheEnabled = true;
 
     this.invalidateCache = function () {
         _cache._invalidate();
