@@ -105,7 +105,9 @@ var ReflowableView = function(options, reader){
         // See ReaderView.handleViewportResize
         // var lazyResize = _.debounce(self.onViewportResize, 100);
         // $(window).on("resize.ReadiumSDK.reflowableView", _.bind(lazyResize, self));
-        renderIframe();
+
+        // ### tss: seems to be not required here, because will be called also in loadSpineItem
+        //renderIframe();
 
         return self;
     };
