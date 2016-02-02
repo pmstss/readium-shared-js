@@ -35,7 +35,7 @@
  *      - $iframe                   Iframe reference, and needs to be set.
  * @constructor
  */
-define(["jquery", "underscore", "../helpers", 'readium_cfi_js'], function($, _, Helpers, epubCfi) {
+define(["jquery", "underscore", "js-lru-cache", "../helpers", 'readium_cfi_js'], function($, _, Cache, Helpers, epubCfi) {
 
 var CfiNavigationLogic = function(options) {
 
@@ -43,6 +43,14 @@ var CfiNavigationLogic = function(options) {
     options = options || {};
 
     var debugMode = ReadiumSDK.DEBUG_MODE;
+
+
+    // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
+    // this caches will be recreated on spine change
+    var _cacheEnabled = true;
+    var _cacheVisibleLeafNodes = new LRUCache(100, 60 * 60 * 1000);
+    var _cacheVisibleLeafCfi = new LRUCache(100, 60 * 60 * 1000);
+    var _cacheAllLeafNodes = new LRUCache(1, 60 * 60 * 1000);
 
     this.getRootElement = function() {
 
@@ -878,8 +886,23 @@ var CfiNavigationLogic = function(options) {
     // get an array of visible text elements and then select one based on the func supplied
     // and generate a CFI for the first visible text subrange.
     function getVisibleTextRangeCfiForTextElementSelectedByFunc(pickerFunc, visibleContentOffsets, frameDimensions) {
+        var cacheKey;
+        if (_cacheEnabled) {
+            cacheKey = _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions) + pickerFunc.toString();
+            var fromCache = _cacheVisibleLeafCfi.get(cacheKey);
+            if (fromCache) {
+                return fromCache;
+            }
+        }
+
         var visibleLeafNodeList = self.getVisibleLeafNodes(visibleContentOffsets, frameDimensions);
-        return findVisibleLeafNodeCfi(visibleLeafNodeList, pickerFunc, null, visibleContentOffsets, frameDimensions);
+        var nodeCfi = findVisibleLeafNodeCfi(visibleLeafNodeList, pickerFunc, null, visibleContentOffsets, frameDimensions);
+
+        if (_cacheEnabled) {
+            _cacheVisibleLeafCfi.set(cacheKey, nodeCfi);
+        }
+
+        return nodeCfi;
     }
 
     function getLastVisibleTextRangeCfi(visibleContentOffsets, frameDimensions) {
@@ -1179,8 +1202,8 @@ var CfiNavigationLogic = function(options) {
 
     // returns raw DOM element (not $ jQuery-wrapped)
     this.getFirstVisibleMediaOverlayElement = function(visibleContentOffsets) {
-        var $root = $(this.getBodyElement());
-        if (!$root || !$root.length || !$root[0]) return undefined;
+        var root = this.getBodyElement();
+        if (!root) return undefined;
 
         var that = this;
 
@@ -1212,12 +1235,9 @@ var CfiNavigationLogic = function(options) {
             return undefined;
         }
 
-        var el = traverseArray([$root[0]]);
+        var el = traverseArray([root]);
         if (!el) el = firstPartial;
         return el;
-
-        // var $elements = this.getMediaOverlayElements($root);
-        // return this.getVisibleElements($elements, visibleContentOffsets);
     };
 
     this.getElementVisibility = function ($element, visibleContentOffsets) {
@@ -1228,12 +1248,12 @@ var CfiNavigationLogic = function(options) {
     this.isElementVisible = checkVisibilityByRectangles;
 
     this.getVisibleElementsWithFilter = function (visibleContentOffsets, filterFunction) {
-        var $elements = this.getElementsWithFilter($(this.getBodyElement()), filterFunction);
+        var $elements = this.getElementsWithFilter(this.getBodyElement(), filterFunction);
         return this.getVisibleElements($elements, visibleContentOffsets);
     };
 
     this.getAllElementsWithFilter = function (filterFunction) {
-        var $elements = this.getElementsWithFilter($(this.getBodyElement()), filterFunction);
+        var $elements = this.getElementsWithFilter(this.getBodyElement(), filterFunction);
         return $elements;
     };
 
@@ -1274,33 +1294,35 @@ var CfiNavigationLogic = function(options) {
         return visibleElements;
     };
 
-    this.getCacheKey = function (paginationInfo, visibleContentOffsets, frameDimensions) {
+    //### tss: visible leaf nodes cache key depends on paginationInfo, visibleContentOffsets and frameDimensions as part of cache key
+    function _getVisibleLeafNodesCacheKey(paginationInfo, visibleContentOffsets, frameDimensions) {
+        visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
+        frameDimensions = frameDimensions || getFrameDimensions();
+
         return JSON.stringify($.extend({}, paginationInfo, visibleContentOffsets, frameDimensions));
-    };
+    }
 
     this.getVisibleLeafNodes = function (visibleContentOffsets, frameDimensions) {
-
         if (_cacheEnabled) {
-            //var cacheKey = (options.paginationInfo || {}).currentSpreadIndex || 0;
-            var cacheKey = this.getCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions);
-            var fromCache = _cache.visibleLeafNodes.get(cacheKey);
+            var cacheKey = 'vln' + _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions);
+            var fromCache = _cacheVisibleLeafNodes.get(cacheKey);
             if (fromCache) {
                 return fromCache;
             }
         }
 
-        var $elements = this.getLeafNodeElements($(this.getBodyElement()));
+        var $elements = this.getLeafNodeElements(this.getBodyElement());
 
         var visibleElements = this.getVisibleElements($elements, visibleContentOffsets, frameDimensions);
 
         if (_cacheEnabled) {
-            _cache.visibleLeafNodes.set(cacheKey, visibleElements);
+            _cacheVisibleLeafNodes.set(cacheKey, visibleElements);
         }
 
         return visibleElements;
     };
 
-    this.getElementsWithFilter = function ($root, filterFunction) {
+    this.getElementsWithFilter = function (root, filterFunction) {
 
         var $elements = [];
 
@@ -1322,7 +1344,7 @@ var CfiNavigationLogic = function(options) {
             }
         }
 
-        traverseCollection([$root[0]]);
+        traverseCollection([root]);
 
         return $elements;
     };
@@ -1355,17 +1377,18 @@ var CfiNavigationLogic = function(options) {
         return isBlacklisted;
     }
 
-    this.getLeafNodeElements = function ($root) {
+    this.getLeafNodeElements = function (root) {
 
         if (_cacheEnabled) {
-            var fromCache = _cache.leafNodeElements.get($root);
+            //### tss: for leaf node elements root element is cache key by itself
+            var fromCache = _cacheAllLeafNodes.get(root);
             if (fromCache) {
                 return fromCache;
             }
         }
 
         var nodeIterator = document.createNodeIterator(
-            $root[0],
+            root,
             NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
             function() {
                 return NodeFilter.FILTER_ACCEPT;
@@ -1388,7 +1411,7 @@ var CfiNavigationLogic = function(options) {
         }
 
         if (_cacheEnabled) {
-            _cache.leafNodeElements.set($root, $leafNodeElements);
+            _cacheAllLeafNodes.set(root, $leafNodeElements);
         }
 
         return $leafNodeElements;
@@ -1430,44 +1453,6 @@ var CfiNavigationLogic = function(options) {
 
         return undefined;
     };
-
-    function Cache() {
-        var that = this;
-
-        //true = survives invalidation
-        var props = {
-            leafNodeElements: true,
-            visibleLeafNodes: false
-        };
-
-        _.each(props, function (val, key) {
-            that[key] = new Map();
-        });
-
-        this._invalidate = function () {
-            _.each(props, function (val, key) {
-                if (!val) {
-                    that[key] = new Map();
-                }
-            });
-        }
-    }
-
-    var _cache = new Cache();
-
-    var _cacheEnabled = true;
-
-    this.invalidateCache = function () {
-        _cache._invalidate();
-    };
-
-
-    // dmitry debug
-    // dmitry debug
-    // dmitry debug
-    // dmitry debug
-    // dmitry debug
-    // dmitry debug
 
     var parseContentCfi = function(cont) {
         return cont.replace(/\[(.*?)\]/, "").split(/[\/,:]/).map(function(n) { return parseInt(n); }).filter(Boolean);
