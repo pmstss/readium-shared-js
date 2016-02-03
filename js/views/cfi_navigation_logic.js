@@ -436,14 +436,30 @@ var CfiNavigationLogic = function(options) {
      * @returns {Object}
      */
     function getNormalizedRectangles($el, visibleContentOffsets) {
-
         visibleContentOffsets = visibleContentOffsets || {};
+
+        var visibleContentOffsetsStr = JSON.stringify(visibleContentOffsets);
+
+        //### tss: caching normalizedRectangles as object property
+        var boundingClientRect = $el[0].getBoundingClientRect();
+        var boundingClientRectStr = JSON.stringify({
+            l: boundingClientRect.left,
+            t: boundingClientRect.top,
+            r: boundingClientRect.right,
+            b: boundingClientRect.bottom
+        });
+
+        if ($el[0].normalizedRectangles && $el[0].visibleContentOffsetsStr === visibleContentOffsetsStr &&
+                $el[0].boundingClientRectStr === boundingClientRectStr) {
+            return $el[0].normalizedRectangles;
+        }
+
         var leftOffset = visibleContentOffsets.left || 0;
         var topOffset = visibleContentOffsets.top || 0;
 
         // union of all rectangles wrapping the element
         var wrapperRectangle = normalizeRectangle(
-            $el[0].getBoundingClientRect(), leftOffset, topOffset);
+            boundingClientRect, leftOffset, topOffset);
 
         // all the separate rectangles (for detecting position of the element
         // split between several columns)
@@ -459,20 +475,27 @@ var CfiNavigationLogic = function(options) {
             }
         }
 
+        var res;
         if (clientRectangles.length === 0) {
             // sometimes an element is either hidden or empty, and that means
             // Webkit-based browsers fail to assign proper clientRects to it
             // in this case we need to go for its sibling (if it exists)
-            $el = $el.next();
-            if ($el.length) {
-                return getNormalizedRectangles($el, visibleContentOffsets);
+            var $sibling = $el.next();
+            if ($sibling.length) {
+                res = getNormalizedRectangles($sibling, visibleContentOffsets);
             }
         }
 
-        return {
-            wrapperRectangle: wrapperRectangle,
-            clientRectangles: clientRectangles
-        };
+        if (!res) {
+            res = {
+                wrapperRectangle: wrapperRectangle,
+                clientRectangles: clientRectangles
+            };
+        }
+        $el[0].normalizedRectangles = res;
+        $el[0].visibleContentOffsetsStr = visibleContentOffsetsStr;
+        $el[0].boundingClientRectStr = boundingClientRectStr;
+        return res;
     }
 
     /**
@@ -1433,7 +1456,7 @@ var CfiNavigationLogic = function(options) {
         // If we don't do this, we may get a reference to a node that doesn't get rendered
         // (such as for example a node that has tab character and a bunch of spaces)
         // this is would be bad! ask me why.
-        return text.replace(/[\s\n\r\t]/g, "").length > 0;
+        return text.trim().length > 0;
     }
 
     this.getElements = function (selector) {
@@ -1453,162 +1476,6 @@ var CfiNavigationLogic = function(options) {
 
         return undefined;
     };
-
-    var parseContentCfi = function(cont) {
-        return cont.replace(/\[(.*?)\]/, "").split(/[\/,:]/).map(function(n) { return parseInt(n); }).filter(Boolean);
-    };
-
-    var contentCfiComparator = function(cont1, cont2) {
-        cont1 = this.parseContentCfi(cont1);
-        cont2 = this.parseContentCfi(cont2);
-
-        //compare cont arrays looking for differences
-        for (var i=0; i<cont1.length; i++) {
-            if (cont1[i] > cont2[i]) {
-                return 1;
-            }
-            else if (cont1[i] < cont2[i]) {
-                return -1;
-            }
-        }
-
-        //no differences found, so confirm that cont2 did not have values we didn't check
-        if (cont1.length < cont2.length) {
-            return -1;
-        }
-
-        //cont arrays are identical
-        return 0;
-    };
-
-
-    // end dmitry debug
-
-    //if (debugMode) {
-
-        var $debugOverlays = [];
-
-        //used for visual debug atm
-        function getRandomColor() {
-            var letters = '0123456789ABCDEF'.split('');
-            var color = '#';
-            for (var i = 0; i < 6; i++) {
-                color += letters[Math.round(Math.random() * 15)];
-            }
-            return color;
-        }
-
-        //used for visual debug atm
-        function addOverlayRect(rects, color, doc) {
-            var random = getRandomColor();
-            if (!(rects instanceof Array)) {
-                rects = [rects];
-            }
-            for (var i = 0; i != rects.length; i++) {
-                var rect = rects[i];
-                var overlayDiv = doc.createElement('div');
-                overlayDiv.style.position = 'absolute';
-                $(overlayDiv).css('z-index', '1000');
-                $(overlayDiv).css('pointer-events', 'none');
-                $(overlayDiv).css('opacity', '0.4');
-                overlayDiv.style.border = '1px solid white';
-                if (!color && !random) {
-                    overlayDiv.style.background = 'purple';
-                } else if (random && !color) {
-                    overlayDiv.style.background = random;
-                } else {
-                    if (color === true) {
-                        color = 'red';
-                    }
-                    overlayDiv.style.border = '1px dashed ' + color;
-                    overlayDiv.style.background = 'yellow';
-                }
-
-                overlayDiv.style.margin = overlayDiv.style.padding = '0';
-                overlayDiv.style.top = (rect.top ) + 'px';
-                overlayDiv.style.left = (rect.left ) + 'px';
-                // we want rect.width to be the border width, so content width is 2px less.
-                overlayDiv.style.width = (rect.width - 2) + 'px';
-                overlayDiv.style.height = (rect.height - 2) + 'px';
-                doc.documentElement.appendChild(overlayDiv);
-                $debugOverlays.push($(overlayDiv));
-            }
-        }
-
-        function drawDebugOverlayFromRect(rect) {
-            var leftOffset, topOffset;
-
-            if (isVerticalWritingMode()) {
-                leftOffset = 0;
-                topOffset = -getPaginationLeftOffset();
-            } else {
-                leftOffset = -getPaginationLeftOffset();
-                topOffset = 0;
-            }
-
-            addOverlayRect({
-                left: rect.left + leftOffset,
-                top: rect.top + topOffset,
-                width: rect.width,
-                height: rect.height
-            }, true, self.getRootDocument());
-        }
-
-        function drawDebugOverlayFromDomRange(range) {
-            var rect = getNodeRangeClientRect(
-                range.startContainer,
-                range.startOffset,
-                range.endContainer,
-                range.endOffset);
-            drawDebugOverlayFromRect(rect);
-            return rect;
-        }
-
-        function drawDebugOverlayFromNode(node) {
-            drawDebugOverlayFromRect(getNodeClientRect(node));
-        }
-
-        function getPaginationLeftOffset() {
-
-            var $htmlElement = $("html", self.getRootDocument());
-            var offsetLeftPixels = $htmlElement.css(isVerticalWritingMode() ? "top" : (isPageProgressionRightToLeft() ? "right" : "left"));
-            var offsetLeft = parseInt(offsetLeftPixels.replace("px", ""));
-            if (isNaN(offsetLeft)) {
-                //for fixed layouts, $htmlElement.css("left") has no numerical value
-                offsetLeft = 0;
-            }
-            if (isPageProgressionRightToLeft() && !isVerticalWritingMode()) return -offsetLeft;
-            return offsetLeft;
-        }
-
-        function clearDebugOverlays() {
-            _.each($debugOverlays, function($el){
-                $el.remove();
-            });
-            $debugOverlays.clear();
-        }
-
-        ReadiumSDK._DEBUG_CfiNavigationLogic = {
-            clearDebugOverlays: clearDebugOverlays,
-            drawDebugOverlayFromRect: drawDebugOverlayFromRect,
-            drawDebugOverlayFromDomRange: drawDebugOverlayFromDomRange,
-            drawDebugOverlayFromNode: drawDebugOverlayFromNode,
-            debugVisibleCfis: function () {
-                console.log(JSON.stringify(ReadiumSDK.reader.getPaginationInfo().openPages));
-
-                var cfi1 = ReadiumSDK.reader.getFirstVisibleCfi();
-                var range1 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi1);
-                console.log(cfi1, range1, drawDebugOverlayFromDomRange(range1));
-
-                var cfi2 = ReadiumSDK.reader.getLastVisibleCfi();
-                var range2 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi2);
-                console.log(cfi2, range2, drawDebugOverlayFromDomRange(range2));
-            }
-        };
-
-        //
-   // }
-
 };
 return CfiNavigationLogic;
 });
