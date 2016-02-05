@@ -37,20 +37,21 @@
  */
 define(["jquery", "underscore", "js-lru-cache", "../helpers", 'readium_cfi_js'], function($, _, Cache, Helpers, epubCfi) {
 
+// jscs:disable disallowMultipleVarDecl
+
 var CfiNavigationLogic = function(options) {
 
     var self = this;
     options = options || {};
 
     var debugMode = ReadiumSDK.DEBUG_MODE;
-
+    var tssDebug = false;
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
     var _cacheEnabled = true;
-    var _cacheVisibleLeafNodes = new LRUCache(100, 60 * 60 * 1000);
-    var _cacheVisibleLeafCfi = new LRUCache(100, 60 * 60 * 1000);
-    var _cacheAllLeafNodes = new LRUCache(1, 60 * 60 * 1000);
+    var _cacheVisibleLeafNodes = new LRUCache(50, 60 * 60 * 1000);
+    var _cacheVisibleLeafCfi = new LRUCache(200, 60 * 60 * 1000);
 
     this.getRootElement = function() {
 
@@ -238,13 +239,22 @@ var CfiNavigationLogic = function(options) {
     // ### tss: making part of external interface
     this.getVisibleContentOffsets = getVisibleContentOffsets;
 
+    // ### tss: new method used for shouldCalculateVisibilityPercentage calculations
+    function _getRectanglesIntersection(a, b) {
+        var x = Math.max(a.x, b.x);
+        var num1 = Math.min(a.x + a.w, b.x + b.w);
+        var y = Math.max(a.y, b.y);
+        var num2 = Math.min(a.y + a.h, b.y + b.h);
+        return num1 >= x && num2 >= y && {x: x, y: y, w: num1 - x, h: num2 - y};
+    }
+
     /**
      * New (rectangle-based) algorithm, useful in multi-column layouts
      *
      * Note: the second param (props) is ignored intentionally
      * (no need to use those in normalization)
      *
-     * @param {jQuery} $element
+     * @param {Node} element or jquery (### tss)
      * @param {Object} _props
      * @param {boolean} shouldCalculateVisibilityPercentage
      * @param {Object} [frameDimensions]
@@ -254,11 +264,13 @@ var CfiNavigationLogic = function(options) {
      *      (will just give 100, if `shouldCalculateVisibilityPercentage` => false)
      *      null for elements with display:none
      */
-    function checkVisibilityByRectangles($element, shouldCalculateVisibilityPercentage, visibleContentOffsets, frameDimensions) {
+    function checkVisibilityByRectangles(element, shouldCalculateVisibilityPercentage, visibleContentOffsets, frameDimensions) {
+        element = element instanceof jQuery ? element[0] : element;
+
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
 
-        var elementRectangles = getNormalizedRectangles($element, visibleContentOffsets);
+        var elementRectangles = getNormalizedRectangles(element, visibleContentOffsets);
 
         var clientRectangles = elementRectangles.clientRectangles;
         if (clientRectangles.length === 0) { // elements with display:none, etc.
@@ -279,10 +291,30 @@ var CfiNavigationLogic = function(options) {
             }
 
             if (isRectVisible(adjustedRect, false, frameDimensions)) {
+                // ### tss: shouldCalculateVisibilityPercentage fix based on new getRectanglesIntersection
                 //it might still be partially visible in webkit
-                if (shouldCalculateVisibilityPercentage && adjustedRect.top < 0) {
-                    visibilityPercentage =
-                        Math.floor(100 * (adjustedRect.height + adjustedRect.top) / adjustedRect.height);
+                if (shouldCalculateVisibilityPercentage/* && adjustedRect.top < 0*/) {
+                    /*visibilityPercentage =
+                        Math.floor(100 * (adjustedRect.height + adjustedRect.top) / adjustedRect.height);*/
+
+                    var intersection = _getRectanglesIntersection({
+                        x: 0,
+                        y: 0,
+                        w: frameDimensions.width,
+                        h: frameDimensions.height
+                    }, {
+                        x: adjustedRect.left,
+                        y: adjustedRect.top,
+                        w: adjustedRect.width,
+                        h: adjustedRect.height
+                    });
+                    if (intersection === false) {
+                        console.error('invalid visibility calculations - no intersection for visible rectangle');
+                        visibilityPercentage = 0;
+                    } else {
+                        visibilityPercentage = Math.min(100, Math.ceil(100 * (intersection.w / adjustedRect.width) *
+                                (intersection.h / adjustedRect.height)));
+                    }
                 } else {
                     visibilityPercentage = 100;
                 }
@@ -291,13 +323,18 @@ var CfiNavigationLogic = function(options) {
             // for an element split between several CSS columns,z
             // both Firefox and IE produce as many client rectangles;
             // each of those should be checked
+            var visibleCounter = 0;
             for (var i = 0, l = clientRectangles.length; i < l; ++i) {
                 if (isRectVisible(clientRectangles[i], false, frameDimensions)) {
-                    visibilityPercentage = shouldCalculateVisibilityPercentage
+                    //TODO ### improve accuracy; for now - raw calculation based on number of visible rectangles
+                    /*visibilityPercentage = shouldCalculateVisibilityPercentage
                         ? measureVisibilityPercentageByRectangles(clientRectangles, i)
                         : 100;
-                    break;
+                     break;*/
+                    ++visibleCounter;
                 }
+
+                visibilityPercentage = Math.ceil(100 * visibleCounter / clientRectangles.length);
             }
         }
 
@@ -315,7 +352,7 @@ var CfiNavigationLogic = function(options) {
     function findPageByRectangles($element, spatialVerticalOffset) {
 
         var visibleContentOffsets = getVisibleContentOffsets();
-        var elementRectangles = getNormalizedRectangles($element, visibleContentOffsets);
+        var elementRectangles = getNormalizedRectangles($element[0], visibleContentOffsets);
 
         var clientRectangles  = elementRectangles.clientRectangles;
         if (clientRectangles.length === 0) { // elements with display:none, etc.
@@ -431,17 +468,17 @@ var CfiNavigationLogic = function(options) {
      * @private
      * Retrieves the position of $element in multi-column layout
      *
-     * @param {jQuery} $el
+     * @param {Node} el (### tss)
      * @param {Object} [visibleContentOffsets]
      * @returns {Object}
      */
-    function getNormalizedRectangles($el, visibleContentOffsets) {
+    function getNormalizedRectangles(el, visibleContentOffsets) {
         visibleContentOffsets = visibleContentOffsets || {};
 
         var visibleContentOffsetsStr = JSON.stringify(visibleContentOffsets);
 
         //### tss: caching normalizedRectangles as object property
-        var boundingClientRect = $el[0].getBoundingClientRect();
+        var boundingClientRect = el.getBoundingClientRect();
         var boundingClientRectStr = JSON.stringify({
             l: boundingClientRect.left,
             t: boundingClientRect.top,
@@ -449,9 +486,9 @@ var CfiNavigationLogic = function(options) {
             b: boundingClientRect.bottom
         });
 
-        if ($el[0].normalizedRectangles && $el[0].visibleContentOffsetsStr === visibleContentOffsetsStr &&
-                $el[0].boundingClientRectStr === boundingClientRectStr) {
-            return $el[0].normalizedRectangles;
+        if (el.cacheNormalizedRectangles && el.cacheVisibleContentOffsetsStr === visibleContentOffsetsStr &&
+                el.cacheBoundingClientRectStr === boundingClientRectStr) {
+            return el.cacheNormalizedRectangles;
         }
 
         var leftOffset = visibleContentOffsets.left || 0;
@@ -464,7 +501,7 @@ var CfiNavigationLogic = function(options) {
         // all the separate rectangles (for detecting position of the element
         // split between several columns)
         var clientRectangles = [];
-        var clientRectList = $el[0].getClientRects();
+        var clientRectList = el.getClientRects();
         for (var i = 0, l = clientRectList.length; i < l; ++i) {
             if (clientRectList[i].height > 0) {
                 // Firefox sometimes gets it wrong,
@@ -480,10 +517,12 @@ var CfiNavigationLogic = function(options) {
             // sometimes an element is either hidden or empty, and that means
             // Webkit-based browsers fail to assign proper clientRects to it
             // in this case we need to go for its sibling (if it exists)
-            var $sibling = $el.next();
-            if ($sibling.length) {
-                res = getNormalizedRectangles($sibling, visibleContentOffsets);
-            }
+
+            //### tss: commented, can't reproduce this in webkit
+            /*var nextSibling = $(el).next()[0];
+            if (nextSibling) {
+                res = getNormalizedRectangles(nextSibling, visibleContentOffsets);
+            }*/
         }
 
         if (!res) {
@@ -492,9 +531,11 @@ var CfiNavigationLogic = function(options) {
                 clientRectangles: clientRectangles
             };
         }
-        $el[0].normalizedRectangles = res;
-        $el[0].visibleContentOffsetsStr = visibleContentOffsetsStr;
-        $el[0].boundingClientRectStr = boundingClientRectStr;
+
+        //### tss: caching normalizedRectangles as object property
+        el.cacheNormalizedRectangles = res;
+        el.cacheVisibleContentOffsetsStr = visibleContentOffsetsStr;
+        el.cacheBoundingClientRectStr = boundingClientRectStr;
         return res;
     }
 
@@ -749,7 +790,7 @@ var CfiNavigationLogic = function(options) {
 
         //This should not happen but if it does print some output, just in case
         if (cfi && cfi.indexOf('NaN') !== -1) {
-            console.log('Did not generate a valid CFI:' + cfi);
+            console.error('Did not generate a valid CFI:' + cfi);
             return undefined;
         }
 
@@ -854,16 +895,15 @@ var CfiNavigationLogic = function(options) {
             return null;
         }
 
-        if (isCorrectCaretRange(caretRange, textNode)) {
-            return pickerFunc(
-                [{start: caretRange.startOffset, end: caretRange.startOffset + 1},
-                {start: caretRange.startOffset - 1, end: caretRange.startOffset}]
-            );
-        } else {
-            console.log('getVisibleTextRangeOffsetsSelectedByFunc: incorrect caret range result, caretRange.startContainer: %o',
+        if (!isCorrectCaretRange(caretRange, textNode)) {
+            console.error('getVisibleTextRangeOffsetsSelectedByFunc: incorrect caret range result, caretRange.startContainer: %o',
                 caretRange.startContainer);
-            return null;
         }
+
+        return pickerFunc(
+            [{start: caretRange.startOffset, end: caretRange.startOffset + 1},
+            {start: caretRange.startOffset - 1, end: caretRange.startOffset}]
+        );
     }
 
     function findVisibleLeafNodeCfi(leafNodeList, pickerFunc, targetLeafNode, visibleContentOffsets, frameDimensions) {
@@ -911,14 +951,14 @@ var CfiNavigationLogic = function(options) {
     function getVisibleTextRangeCfiForTextElementSelectedByFunc(pickerFunc, visibleContentOffsets, frameDimensions) {
         var cacheKey;
         if (_cacheEnabled) {
-            cacheKey = _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions) + pickerFunc.toString();
+            cacheKey = _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions, pickerFunc);
             var fromCache = _cacheVisibleLeafCfi.get(cacheKey);
             if (fromCache) {
                 return fromCache;
             }
         }
 
-        var visibleLeafNodeList = self.getVisibleLeafNodes(visibleContentOffsets, frameDimensions);
+        var visibleLeafNodeList = self.getVisibleLeafNodes(visibleContentOffsets, frameDimensions, pickerFunc);
         var nodeCfi = findVisibleLeafNodeCfi(visibleLeafNodeList, pickerFunc, null, visibleContentOffsets, frameDimensions);
 
         if (_cacheEnabled) {
@@ -1048,12 +1088,12 @@ var CfiNavigationLogic = function(options) {
             var $element = EPUBcfi.getTargetElementWithPartialCFI(wrappedCfi, contentDoc, classBlacklist, elementBlacklist, idBlacklist);
 
         } catch (ex) {
-            console.log('getTargetElementWithPartialCFI exception, wrappedCfi: %o, e: %o', wrappedCfi, e);
+            console.error('getTargetElementWithPartialCFI exception, wrappedCfi: %o, e: %o', wrappedCfi, e);
             //EPUBcfi.Interpreter can throw a SyntaxError
         }
 
         if (!$element || $element.length == 0) {
-            console.log("Can't find element for CFI: " + cfi);
+            console.error("Can't find element for CFI: " + cfi);
             return undefined;
         }
 
@@ -1086,7 +1126,7 @@ var CfiNavigationLogic = function(options) {
             }
 
             if (!nodeResult) {
-                console.log("Can't find nodes for range CFI: " + cfi);
+                console.error("Can't find nodes for range CFI: " + cfi);
                 return undefined;
             }
 
@@ -1114,7 +1154,7 @@ var CfiNavigationLogic = function(options) {
                 ["MathJax_Message", "MathJax_SVG_Hidden"]);
 
             var visibleContentOffsets = getVisibleContentOffsets();
-            var normRects = getNormalizedRectangles($element, visibleContentOffsets);
+            var normRects = getNormalizedRectangles($element[0], visibleContentOffsets);
 
             return {startInfo: null, endInfo: null, clientRect: normRects.wrapperRectangle }
         }
@@ -1210,7 +1250,7 @@ var CfiNavigationLogic = function(options) {
                 ret.y = parseInt(terminus.substr(colIx + 1));
             }
             else {
-                console.log("Unexpected terminating step format");
+                console.error("Unexpected terminating step format");
             }
 
             ret.cfi = cfi.substring(0, ix);
@@ -1290,53 +1330,117 @@ var CfiNavigationLogic = function(options) {
         return visibleElements;
     };
 
-    this.getVisibleElements = function ($elements, visibleContentOffsets, frameDimensions) {
+    this.getVisibleElements = function ($elements, visibleContentOffsets, frameDimensions, pickerFunc) {
         // ### tss: precalculate visibleContentOffsets and frameDimensions to avoid calculation in large loop
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
 
+        // ### tss: algo changes: breaking on first/last fully visible element,
+        // if pickerFunc is either _.first or _.last
         var visibleElements = [];
+        var i = 0;
+        var len = $elements.length;
+        var visibilityPercentage;
+        var next = function () {
+            return i < len && $elements[i++];
+        };
+        if (pickerFunc === _.first) {
+            // will break on first found element
+            next = function () {
+                return visibilityPercentage !== 100 && i < len && $elements[i++];
+            };
+        } else if (pickerFunc === _.last) {
+            // will break on first (from the end) found element
+            i = len - 1;
+            next = function () {
+                return visibilityPercentage !== 100 && i >= 0 && $elements[i--];
+            };
+        }
 
-        _.each($elements, function ($node) {
-            var isTextNode = ($node[0].nodeType === Node.TEXT_NODE);
+        var $node;
+        while ($node = next()) {
+            var isTextNode = $node[0].nodeType === Node.TEXT_NODE;
             var $element = isTextNode ? $node.parent() : $node;
-            var visibilityPercentage = checkVisibilityByRectangles(
+            visibilityPercentage = checkVisibilityByRectangles(
                 $element, true, visibleContentOffsets, frameDimensions);
 
             if (visibilityPercentage) {
-                var $visibleElement = $element;
-
                 visibleElements.push({
-                    element: $visibleElement[0], // DOM Element is pushed
+                    element: $element[0], // DOM Element is pushed
                     textNode: isTextNode ? $node[0] : null,
                     percentVisible: visibilityPercentage
                 });
             }
-        });
+        }
+
+        if (pickerFunc === _.last) {
+            visibleElements.reverse();
+        }
 
         return visibleElements;
     };
 
-    //### tss: visible leaf nodes cache key depends on paginationInfo, visibleContentOffsets and frameDimensions as part of cache key
-    function _getVisibleLeafNodesCacheKey(paginationInfo, visibleContentOffsets, frameDimensions) {
+    //### tss: visible leaf nodes cache key depends on paginationInfo, visibleContentOffsets, frameDimensions and pickerFunc
+    function _getVisibleLeafNodesCacheKey(paginationInfo, visibleContentOffsets, frameDimensions, pickerFunc) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
 
-        return JSON.stringify($.extend({}, paginationInfo, visibleContentOffsets, frameDimensions));
+        return JSON.stringify($.extend({}, paginationInfo, visibleContentOffsets, frameDimensions)) + pickerFunc.toString();
     }
 
-    this.getVisibleLeafNodes = function (visibleContentOffsets, frameDimensions) {
+    // ### tss: skip getting leaves if parent node is fully not visible
+    // (originally this.getLeafNodeElements(this.getBodyElement()) was here)
+    this._getVisibleCandidates = function (root, visibleContentOffsets, frameDimensions) {
+        var $candidates = [];
+        var initialCandidatesSize = $candidates.length;
+        var hiddenContCounter = 0;
+        var visibleCounter = 0;
+        for (var i = 0, len = root.childNodes.length; i < len; ++i) {
+            if (hiddenContCounter > 10 && visibleCounter) {
+                break;
+            }
+
+            var childElement = root.childNodes[i];
+            if (childElement.nodeType === 1) {
+                var visibilityPercentage = checkVisibilityByRectangles(childElement, true, visibleContentOffsets, frameDimensions);
+                if (visibilityPercentage > 0) {
+                    if (visibilityPercentage === 100) {
+                        Array.prototype.push.apply($candidates, this.getLeafNodeElements(childElement));
+                    } else {
+                        Array.prototype.push.apply($candidates, this._getVisibleCandidates(childElement));
+                    }
+                    hiddenContCounter = 0;
+                    ++visibleCounter;
+                } else {
+                    ++hiddenContCounter;
+                }
+            } else if (childElement.nodeType === 3 && isValidTextNodeContent(childElement.nodeValue)) {
+                $candidates.push($(childElement));
+            }
+        }
+
+        return $candidates;
+    };
+
+    this.getVisibleLeafNodes = function (visibleContentOffsets, frameDimensions, pickerFunc) {
         if (_cacheEnabled) {
-            var cacheKey = 'vln' + _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions);
+            var cacheKey = _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions, pickerFunc);
             var fromCache = _cacheVisibleLeafNodes.get(cacheKey);
             if (fromCache) {
                 return fromCache;
             }
         }
 
-        var $elements = this.getLeafNodeElements(this.getBodyElement());
-
-        var visibleElements = this.getVisibleElements($elements, visibleContentOffsets, frameDimensions);
+        // ### tss: new _getVisibleCandidates instead of getting all leaf nodes based algo
+        var start = Date.now();
+        var $candidates = this._getVisibleCandidates(this.getBodyElement());
+        if ($candidates.length === 0) {
+            console.error('getVisibleLeafNodes: no visible candidates');
+        }
+        var visibleElements = this.getVisibleElements($candidates, visibleContentOffsets, frameDimensions, pickerFunc);
+        if (tssDebug) {
+            console.log('getVisibleLeafNodes time: ' + (Date.now() - start) + 'ms');
+        }
 
         if (_cacheEnabled) {
             _cacheVisibleLeafNodes.set(cacheKey, visibleElements);
@@ -1401,13 +1505,9 @@ var CfiNavigationLogic = function(options) {
     }
 
     this.getLeafNodeElements = function (root) {
-
-        if (_cacheEnabled) {
-            //### tss: for leaf node elements root element is cache key by itself
-            var fromCache = _cacheAllLeafNodes.get(root);
-            if (fromCache) {
-                return fromCache;
-            }
+        //### tss: caching leaf nodes in object property
+        if (_cacheEnabled && root.leafNodes) {
+            return root.cacheLeafNodes;
         }
 
         var nodeIterator = document.createNodeIterator(
@@ -1434,7 +1534,7 @@ var CfiNavigationLogic = function(options) {
         }
 
         if (_cacheEnabled) {
-            _cacheAllLeafNodes.set(root, $leafNodeElements);
+            root.cacheLeafNodes = $leafNodeElements;
         }
 
         return $leafNodeElements;
@@ -1476,6 +1576,182 @@ var CfiNavigationLogic = function(options) {
 
         return undefined;
     };
+
+    var parseContentCfi = function(cont) {
+        return cont.replace(/\[(.*?)\]/, "").split(/[\/,:]/).map(function(n) { return parseInt(n); }).filter(Boolean);
+    };
+
+    var contentCfiComparator = function(cont1, cont2) {
+        cont1 = this.parseContentCfi(cont1);
+        cont2 = this.parseContentCfi(cont2);
+
+        //compare cont arrays looking for differences
+        for (var i=0; i<cont1.length; i++) {
+            if (cont1[i] > cont2[i]) {
+                return 1;
+            }
+            else if (cont1[i] < cont2[i]) {
+                return -1;
+            }
+        }
+
+        //no differences found, so confirm that cont2 did not have values we didn't check
+        if (cont1.length < cont2.length) {
+            return -1;
+        }
+
+        //cont arrays are identical
+        return 0;
+    };
+
+    //if (debugMode) {
+
+    var $debugOverlays = [];
+
+    //used for visual debug atm
+    function getRandomColor() {
+        var letters = '0123456789ABCDEF'.split('');
+        var color = '#';
+        for (var i = 0; i < 6; i++) {
+            color += letters[Math.round(Math.random() * 15)];
+        }
+        return color;
+    }
+
+    //used for visual debug atm
+    function addOverlayRect(rects, color, doc) {
+        var random = getRandomColor();
+        if (!(rects instanceof Array)) {
+            rects = [rects];
+        }
+        for (var i = 0; i != rects.length; i++) {
+            var rect = rects[i];
+            var overlayDiv = doc.createElement('div');
+            overlayDiv.style.position = 'absolute';
+            $(overlayDiv).css('z-index', '1000');
+            $(overlayDiv).css('pointer-events', 'none');
+            $(overlayDiv).css('opacity', '0.4');
+            overlayDiv.style.border = '1px solid white';
+            if (!color && !random) {
+                overlayDiv.style.background = 'purple';
+            } else if (random && !color) {
+                overlayDiv.style.background = random;
+            } else {
+                if (color === true) {
+                    color = 'red';
+                }
+                overlayDiv.style.border = '1px dashed ' + color;
+                overlayDiv.style.background = 'yellow';
+            }
+
+            overlayDiv.style.margin = overlayDiv.style.padding = '0';
+            overlayDiv.style.top = (rect.top ) + 'px';
+            overlayDiv.style.left = (rect.left ) + 'px';
+            // we want rect.width to be the border width, so content width is 2px less.
+            overlayDiv.style.width = (rect.width - 2) + 'px';
+            overlayDiv.style.height = (rect.height - 2) + 'px';
+            doc.documentElement.appendChild(overlayDiv);
+            $debugOverlays.push($(overlayDiv));
+        }
+    }
+
+    function drawDebugOverlayFromRect(rect) {
+        var leftOffset, topOffset;
+
+        if (isVerticalWritingMode()) {
+            leftOffset = 0;
+            topOffset = -getPaginationLeftOffset();
+        } else {
+            leftOffset = -getPaginationLeftOffset();
+            topOffset = 0;
+        }
+
+        addOverlayRect({
+            left: rect.left + leftOffset,
+            top: rect.top + topOffset,
+            width: rect.width,
+            height: rect.height
+        }, true, self.getRootDocument());
+    }
+
+    function drawDebugOverlayFromDomRange(range) {
+        var rect = getNodeRangeClientRect(
+            range.startContainer,
+            range.startOffset,
+            range.endContainer,
+            range.endOffset);
+        drawDebugOverlayFromRect(rect);
+        return rect;
+    }
+
+    function drawDebugOverlayFromNode(node) {
+        drawDebugOverlayFromRect(getNodeClientRect(node));
+    }
+
+    function getPaginationLeftOffset() {
+
+        var $htmlElement = $("html", self.getRootDocument());
+        var offsetLeftPixels = $htmlElement.css(isVerticalWritingMode() ? "top" : (isPageProgressionRightToLeft() ? "right" : "left"));
+        var offsetLeft = parseInt(offsetLeftPixels.replace("px", ""));
+        if (isNaN(offsetLeft)) {
+            //for fixed layouts, $htmlElement.css("left") has no numerical value
+            offsetLeft = 0;
+        }
+        if (isPageProgressionRightToLeft() && !isVerticalWritingMode()) {
+            return -offsetLeft;
+        }
+        return offsetLeft;
+    }
+
+    function clearDebugOverlays() {
+        _.each($debugOverlays, function ($el) {
+            $el.remove();
+        });
+        $debugOverlays.clear();
+    }
+
+    ReadiumSDK._DEBUG_CfiNavigationLogic = {
+        clearDebugOverlays: clearDebugOverlays,
+        drawDebugOverlayFromRect: drawDebugOverlayFromRect,
+        drawDebugOverlayFromDomRange: drawDebugOverlayFromDomRange,
+        drawDebugOverlayFromNode: drawDebugOverlayFromNode,
+        debugVisibleCfis: function () {
+            var cfi1 = ReadiumSDK.reader.getFirstVisibleCfi();
+            if (cfi1.contentCFI) {
+                var range1 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi1);
+                console.log(cfi1, range1, drawDebugOverlayFromDomRange(range1));
+            } else {
+                console.log('firstVisibleCfi detection error');
+            }
+
+            var cfi2 = ReadiumSDK.reader.getLastVisibleCfi();
+            if (cfi2.contentCFI) {
+                var range2 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi2);
+                console.log(cfi2, range2, drawDebugOverlayFromDomRange(range2));
+            } else {
+                console.log('lastVisibleCfi detection error');
+            }
+
+            if (ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleElementCfi) {
+                var cfi3 = {
+                    idref: cfi1.idref,
+                    contentCFI: ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleElementCfi()
+                };
+                if (cfi3.contentCFI) {
+                    var range3 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi3);
+                    console.log(cfi3, range3, drawDebugOverlayFromDomRange(range3));
+                } else {
+                    console.log('secondSpreadFirstVisibleElementCfi detection error');
+                }
+            }
+        }
+    };
+
+    if (tssDebug) {
+        ReadiumSDK.reader.on(ReadiumSDK.Events.PAGINATION_CHANGED, function () {
+            ReadiumSDK._DEBUG_CfiNavigationLogic.debugVisibleCfis();
+        });
+    }
 };
 return CfiNavigationLogic;
 });
