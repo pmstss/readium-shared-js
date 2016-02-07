@@ -44,9 +44,9 @@
     "README.md"
   ],
   "dependencies": {
-    "parallelshell": "latest",
+    "http-server": "danielweck/http-server",
     "opener": "latest",
-    "http-server": "danielweck/http-server"
+    "parallelshell": "latest"
   },
   "devDependencies": {
     "jquerySizes": "bramstein/jsizes",
@@ -58,7 +58,7 @@
     "es6-collections": "latest",
     "FontLoader": "smnh/FontLoader",
     "CSSOM": "danielweck/CSSOM#gh-pages",
-    "js-lru-cache": "latest"
+    "js-cache-lru": "0.0.2"
   },
   "scripts": {
     "cson2json": "node ./readium-cfi-js/node_modules/cson/bin/cson2json package.cson > package.json && node readium-cfi-js/readium-build-tools/optimizePackageJsonScripts.js",

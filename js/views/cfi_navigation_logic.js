@@ -35,17 +35,24 @@
  *      - $iframe                   Iframe reference, and needs to be set.
  * @constructor
  */
-define(["jquery", "underscore", "js-lru-cache", "../helpers", 'readium_cfi_js'], function($, _, Cache, Helpers, epubCfi) {
 
 // jscs:disable disallowMultipleVarDecl
+// jscs:disable validateQuoteMarks
+// jshint quotmark:false
+// jshint latedef: nofunc
 
-var CfiNavigationLogic = function(options) {
+define(["jquery", "underscore", "js-cache-lru", "../helpers", 'readium_cfi_js'], function ($, _, LRUCache, Helpers, EPUBcfi) {
+
+'use strict';
+
+var CfiNavigationLogic = function (options) {
 
     var self = this;
     options = options || {};
 
+    var DEBUG = false; // relates to getVisibleTextRangeOffsetsSelectedByFunc
     var debugMode = ReadiumSDK.DEBUG_MODE;
-    var tssDebug = false;
+    var tssDebug = true;
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
@@ -53,13 +60,11 @@ var CfiNavigationLogic = function(options) {
     var _cacheVisibleLeafNodes = new LRUCache(50, 60 * 60 * 1000);
     var _cacheVisibleLeafCfi = new LRUCache(200, 60 * 60 * 1000);
 
-    this.getRootElement = function() {
-
+    this.getRootElement = function () {
         return options.$iframe[0].contentDocument.documentElement;
     };
 
     this.getBodyElement = function () {
-
         // In SVG documents the root element can be considered the body.
         return this.getRootDocument().body || this.getRootElement();
     };
@@ -82,10 +87,6 @@ var CfiNavigationLogic = function(options) {
         var range = createRange();
         range.selectNodeContents(node);
         return normalizeRectangle(range.getBoundingClientRect(),0,0);
-    }
-
-    function getElementClientRect($element) {
-        return normalizeRectangle($element[0].getBoundingClientRect(),0,0);
     }
 
     function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset) {
@@ -117,6 +118,7 @@ var CfiNavigationLogic = function(options) {
         console.error('CfiNavigationLogic: No frame dimensions specified!');
         return null;
     }
+
     // ### tss: making part of external interface
     this.getFrameDimensions = getFrameDimensions;
 
@@ -160,30 +162,28 @@ var CfiNavigationLogic = function(options) {
      * Checks whether or not a (fully adjusted) rectangle is at least partly visible
      *
      * @param {Object} rect
+     * @param {boolean} ignorePartiallyVisible
      * @param {Object} [frameDimensions]
-     * @param {boolean} [isVwm]           isVerticalWritingMode
      * @returns {boolean}
      */
-    function isRectVisible(rect, ignorePartiallyVisible, frameDimensions, isVwm) {
-
+    function isRectVisible(rect, ignorePartiallyVisible, frameDimensions) {
         frameDimensions = frameDimensions || getFrameDimensions();
-        isVwm = isVwm || isVerticalWritingMode();
 
-        //Text nodes without printable text dont have client rectangles
+        //Text nodes without printable text don't have client rectangles
         if (!rect) {
             return false;
         }
         //Sometimes we get client rects that are "empty" and aren't supposed to be visible
-        if (rect.left == 0 && rect.right == 0 && rect.top == 0 && rect.bottom == 0) {
+        if (rect.left === 0 && rect.right === 0 && rect.top === 0 && rect.bottom === 0) {
             return false;
         }
 
         if (isPaginatedView()) {
-            return (rect.left >= 0 && rect.left < frameDimensions.width) ||
-                (!ignorePartiallyVisible && rect.left < 0 && rect.right >= 0);
+            return rect.left >= 0 && rect.left < frameDimensions.width ||
+                !ignorePartiallyVisible && rect.left < 0 && rect.right >= 0;
         } else {
-            return (rect.top >= 0 && rect.top < frameDimensions.height) ||
-                (!ignorePartiallyVisible && rect.top < 0 && rect.bottom >= 0);
+            return rect.top >= 0 && rect.top < frameDimensions.height ||
+                !ignorePartiallyVisible && rect.top < 0 && rect.bottom >= 0;
         }
 
     }
@@ -195,9 +195,7 @@ var CfiNavigationLogic = function(options) {
      * @returns {number} Full width of a column in pixels
      */
     function getColumnFullWidth() {
-
-        if (!options.paginationInfo || isVerticalWritingMode())
-        {
+        if (!options.paginationInfo || isVerticalWritingMode()) {
             return options.$iframe.width();
         }
 
@@ -219,7 +217,7 @@ var CfiNavigationLogic = function(options) {
 
         if (isVerticalWritingMode()) {
             return {
-                top: (options.paginationInfo ? options.paginationInfo.pageOffset : 0),
+                top: options.paginationInfo ? options.paginationInfo.pageOffset : 0,
                 left: 0
             };
         }
@@ -255,8 +253,8 @@ var CfiNavigationLogic = function(options) {
      * (no need to use those in normalization)
      *
      * @param {Node} element or jquery (### tss)
-     * @param {Object} _props
      * @param {boolean} shouldCalculateVisibilityPercentage
+     * @param {Object} visibleContentOffsets
      * @param {Object} [frameDimensions]
      * @returns {number|null}
      *      0 for non-visible elements,
@@ -265,7 +263,7 @@ var CfiNavigationLogic = function(options) {
      *      null for elements with display:none
      */
     function checkVisibilityByRectangles(element, shouldCalculateVisibilityPercentage, visibleContentOffsets, frameDimensions) {
-        element = element instanceof jQuery ? element[0] : element;
+        element = element instanceof $ ? element[0] : element;
 
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
@@ -350,7 +348,6 @@ var CfiNavigationLogic = function(options) {
      * @returns {number|null}
      */
     function findPageByRectangles($element, spatialVerticalOffset) {
-
         var visibleContentOffsets = getVisibleContentOffsets();
         var elementRectangles = getNormalizedRectangles($element[0], visibleContentOffsets);
 
@@ -396,16 +393,15 @@ var CfiNavigationLogic = function(options) {
         } else {
             var leftOffset = firstRectangle.left;
             if (isRtl) {
-                leftOffset = (columnFullWidth * (options.paginationInfo ? options.paginationInfo.visibleColumnCount : 1)) - leftOffset;
+                leftOffset = columnFullWidth * (options.paginationInfo ? options.paginationInfo.visibleColumnCount : 1) - leftOffset;
             }
             pageIndex = Math.floor(leftOffset / columnFullWidth);
         }
 
         if (pageIndex < 0) {
             pageIndex = 0;
-        }
-        else if (pageIndex >= (options.paginationInfo ? options.paginationInfo.columnCount : 1)) {
-            pageIndex = (options.paginationInfo ? (options.paginationInfo.columnCount - 1) : 0);
+        } else if (pageIndex >= (options.paginationInfo ? options.paginationInfo.columnCount : 1)) {
+            pageIndex = options.paginationInfo ? options.paginationInfo.columnCount - 1 : 0;
         }
 
         return pageIndex;
@@ -438,8 +434,7 @@ var CfiNavigationLogic = function(options) {
      * @param {number} firstVisibleRectIndex
      * @returns {number} - visibility percentage (0 < n <= 100)
      */
-    function measureVisibilityPercentageByRectangles(clientRectangles, firstVisibleRectIndex) {
-
+    /*function measureVisibilityPercentageByRectangles(clientRectangles, firstVisibleRectIndex) {
         var heightTotal = 0;
         var heightVisible = 0;
 
@@ -452,17 +447,16 @@ var CfiNavigationLogic = function(options) {
                     heightVisible += rect.height;
                 }
             });
-        }
-        else {
+        } else {
             // should already be normalized and adjusted
             heightTotal = clientRectangles[0].height;
             heightVisible = clientRectangles[0].height - Math.max(
                 0, -clientRectangles[0].top);
         }
-        return heightVisible === heightTotal
-            ? 100 // trivial case: element is 100% visible
-            : Math.floor(100 * heightVisible / heightTotal);
-    }
+
+        // trivial case check, when element is 100% visible
+        return heightVisible === heightTotal ? 100 : Math.floor(100 * heightVisible / heightTotal);
+    }*/
 
     /**
      * @private
@@ -513,17 +507,16 @@ var CfiNavigationLogic = function(options) {
         }
 
         var res;
-        if (clientRectangles.length === 0) {
+        //### tss: commented, can't reproduce this in webkit
+        /*if (clientRectangles.length === 0) {
             // sometimes an element is either hidden or empty, and that means
             // Webkit-based browsers fail to assign proper clientRects to it
             // in this case we need to go for its sibling (if it exists)
-
-            //### tss: commented, can't reproduce this in webkit
-            /*var nextSibling = $(el).next()[0];
+            var nextSibling = $(el).next()[0];
             if (nextSibling) {
                 res = getNormalizedRectangles(nextSibling, visibleContentOffsets);
-            }*/
-        }
+            }
+        }*/
 
         if (!res) {
             res = {
@@ -544,13 +537,12 @@ var CfiNavigationLogic = function(options) {
      * Converts TextRectangle object into a plain object,
      * taking content offsets (=scrolls, position shifts etc.) into account
      *
-     * @param {TextRectangle} textRect
+     * @param {Object} textRect
      * @param {number} leftOffset
      * @param {number} topOffset
      * @returns {Object}
      */
     function normalizeRectangle(textRect, leftOffset, topOffset) {
-
         var plainRectObject = {
             left: textRect.left,
             right: textRect.right,
@@ -572,7 +564,6 @@ var CfiNavigationLogic = function(options) {
      * @param {number} topOffset
      */
     function offsetRectangle(rect, leftOffset, topOffset) {
-
         rect.left += leftOffset;
         rect.right += leftOffset;
         rect.top += topOffset;
@@ -601,7 +592,6 @@ var CfiNavigationLogic = function(options) {
      * @param {boolean} [isVwm]               isVerticalWritingMode
      */
     function adjustRectangle(rect, shouldLookForFirstVisibleColumn, frameDimensions, columnFullWidth, isRtl, isVwm) {
-
         frameDimensions = frameDimensions || getFrameDimensions();
         columnFullWidth = columnFullWidth || getColumnFullWidth();
         isRtl = isRtl || isPageProgressionRightToLeft();
@@ -646,9 +636,7 @@ var CfiNavigationLogic = function(options) {
      * @param {boolean} isRtl
      * @param {boolean} isVwm               isVerticalWritingMode
      */
-    function trimRectanglesByVertOffset(
-            rects, verticalOffset, frameDimensions, columnFullWidth, isRtl, isVwm) {
-
+    function trimRectanglesByVertOffset(rects, verticalOffset, frameDimensions, columnFullWidth, isRtl, isVwm) {
         frameDimensions = frameDimensions || getFrameDimensions();
         columnFullWidth = columnFullWidth || getColumnFullWidth();
         isRtl = isRtl || isPageProgressionRightToLeft();
@@ -659,7 +647,7 @@ var CfiNavigationLogic = function(options) {
             return;
         }
 
-        var totalHeight = _.reduce(rects, function(prev, cur) {
+        var totalHeight = _.reduce(rects, function (prev, cur) {
             return prev + cur.height;
         }, 0);
 
@@ -673,8 +661,7 @@ var CfiNavigationLogic = function(options) {
                 }
                 rects.shift();
             } while (rects.length > 1);
-        }
-        else {
+        } else {
             // rebase to the last possible column
             // (so that adding to top will be properly processed later)
             if (isRtl) {
@@ -695,7 +682,7 @@ var CfiNavigationLogic = function(options) {
             [],
             ["MathJax_Message", "MathJax_SVG_Hidden"]);
 
-        if (cfi[0] == "!") {
+        if (cfi[0] === "!") {
             cfi = cfi.substring(1);
         }
         return cfi;
@@ -720,7 +707,7 @@ var CfiNavigationLogic = function(options) {
             if (!isRectVisible(testRect, false)) {
                 return null;
             }
-            if ((x < testRect.left || x > testRect.right) || (y < testRect.top || y > testRect.bottom)) {
+            if (x < testRect.left || x > testRect.right || y < testRect.top || y > testRect.bottom) {
                 return null;
             }
         }
@@ -797,7 +784,7 @@ var CfiNavigationLogic = function(options) {
         return cfi;
     };
 
-    this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {
+    this.getRangeCfiFromPoints = function (startX, startY, endX, endY) {
         var document = self.getRootDocument();
         var start = getCaretRangeFromPoint(startX, startY, document),
             end = getCaretRangeFromPoint(endX, endY, document),
@@ -805,8 +792,9 @@ var CfiNavigationLogic = function(options) {
         range.setStart(start.startContainer, start.startOffset);
         range.setEnd(end.startContainer, end.startOffset);
         // if we're looking at a text node create a nice range (n, n+1)
-        if (start.startContainer === start.endContainer && start.startContainer.nodeType === Node.TEXT_NODE && end.startContainer.length > end.startOffset+1) {
-            range.setEnd(end.startContainer, end.startOffset+1);
+        if (start.startContainer === start.endContainer && start.startContainer.nodeType === Node.TEXT_NODE &&
+                end.startContainer.length > end.startOffset + 1) {
+            range.setEnd(end.startContainer, end.startOffset + 1);
         }
         return generateCfiFromDomRange(range);
     };
@@ -821,16 +809,14 @@ var CfiNavigationLogic = function(options) {
         // but for y coord use the mid point between top and bottom
 
         if (isVerticalWritingMode()) {
-            var x = rect.right - (rect.width / 2);
+            var x = rect.right - rect.width / 2;
             return [{x: x, y: rect.top}, {x: x, y: rect.bottom}];
         } else {
-            var y = rect.top + (rect.height / 2);
-            var result = [{x: rect.left, y: y}, {x: rect.right, y: y}]
+            var y = rect.top + rect.height / 2;
+            var result = [{x: rect.left, y: y}, {x: rect.right, y: y}];
             return isPageProgressionRightToLeft() ? result.reverse() : result;
         }
     }
-
-    var DEBUG = false;
 
     //### tss: IE caretRangeFromPoint polyfill returns parent element instead of text node itself,
     // but it seems to be not a problem for later use
@@ -909,7 +895,7 @@ var CfiNavigationLogic = function(options) {
     function findVisibleLeafNodeCfi(leafNodeList, pickerFunc, targetLeafNode, visibleContentOffsets, frameDimensions) {
         var index = 0;
         if (!targetLeafNode) {
-            index = leafNodeList.indexOf(pickerFunc(leafNodeList))
+            index = leafNodeList.indexOf(pickerFunc(leafNodeList));
         } else {
             index = leafNodeList.indexOf(targetLeafNode);
             if (index === -1) {
@@ -998,7 +984,7 @@ var CfiNavigationLogic = function(options) {
             ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"]);
     }
 
-    this.getDomRangeFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
+    this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
         var range = createRange();
 
         if (!rangeCfi2) {
@@ -1037,7 +1023,7 @@ var CfiNavigationLogic = function(options) {
         return range;
     };
 
-    this.getRangeCfiFromDomRange = function(domRange) {
+    this.getRangeCfiFromDomRange = function (domRange) {
         return generateCfiFromDomRange(domRange);
     };
 
@@ -1050,11 +1036,11 @@ var CfiNavigationLogic = function(options) {
     }
 
     this.isRangeCfi = function (partialCfi) {
-        return EPUBcfi.Interpreter.isRangeCfi(getWrappedCfi(partialCfi)) || EPUBcfi.Interpreter.isRangeCfi(getWrappedCfiRelativeToContent(partialCfi));
+        return EPUBcfi.Interpreter.isRangeCfi(getWrappedCfi(partialCfi)) ||
+                EPUBcfi.Interpreter.isRangeCfi(getWrappedCfiRelativeToContent(partialCfi));
     };
 
     this.getPageForElementCfi = function (cfi, classBlacklist, elementBlacklist, idBlacklist) {
-
         var cfiParts = splitCfi(cfi);
         var partialCfi = cfiParts.cfi;
 
@@ -1071,28 +1057,23 @@ var CfiNavigationLogic = function(options) {
             return -1;
         }
 
-        var pageIndex = this.getPageForPointOnElement($element, cfiParts.x, cfiParts.y);
-
-        return pageIndex;
+        return this.getPageForPointOnElement($element, cfiParts.x, cfiParts.y);
 
     };
 
     function getElementByPartialCfi(cfi, classBlacklist, elementBlacklist, idBlacklist) {
-
         var contentDoc = self.getRootDocument();
-
         var wrappedCfi = getWrappedCfi(cfi);
-
+        var $element;
         try {
-            //noinspection JSUnresolvedVariable
-            var $element = EPUBcfi.getTargetElementWithPartialCFI(wrappedCfi, contentDoc, classBlacklist, elementBlacklist, idBlacklist);
+            $element = EPUBcfi.getTargetElementWithPartialCFI(wrappedCfi, contentDoc, classBlacklist, elementBlacklist, idBlacklist);
 
         } catch (ex) {
-            console.error('getTargetElementWithPartialCFI exception, wrappedCfi: %o, e: %o', wrappedCfi, e);
             //EPUBcfi.Interpreter can throw a SyntaxError
+            console.error('getTargetElementWithPartialCFI exception, wrappedCfi: %o, e: %o', wrappedCfi, ex);
         }
 
-        if (!$element || $element.length == 0) {
+        if (!$element || $element.length === 0) {
             console.error("Can't find element for CFI: " + cfi);
             return undefined;
         }
@@ -1101,7 +1082,6 @@ var CfiNavigationLogic = function(options) {
     }
 
     this.getElementFromPoint = function (x, y) {
-
         var document = self.getRootDocument();
         return document.elementFromPoint(x, y);
     };
@@ -1111,9 +1091,9 @@ var CfiNavigationLogic = function(options) {
         if (self.isRangeCfi(cfi)) {
             var wrappedCfi = getWrappedCfiRelativeToContent(cfi);
 
+            var nodeResult;
             try {
-                //noinspection JSUnresolvedVariable
-                var nodeResult = EPUBcfi.Interpreter.getRangeTargetElements(wrappedCfi, contentDoc,
+                nodeResult = EPUBcfi.Interpreter.getRangeTargetElements(wrappedCfi, contentDoc,
                     ["cfi-marker"],
                     [],
                     ["MathJax_Message", "MathJax_SVG_Hidden"]);
@@ -1123,6 +1103,7 @@ var CfiNavigationLogic = function(options) {
                 }
             } catch (ex) {
                 //EPUBcfi.Interpreter can throw a SyntaxError
+                console.error('getNodeRangeInfoFromCfi exception, cfi: %o, e: %o', cfi, ex);
             }
 
             if (!nodeResult) {
@@ -1146,7 +1127,7 @@ var CfiNavigationLogic = function(options) {
                 addOverlayRect(nodeRangeClientRect, 'purple', contentDoc);
             }
 
-            return {startInfo: startRangeInfo, endInfo: endRangeInfo, clientRect: nodeRangeClientRect}
+            return {startInfo: startRangeInfo, endInfo: endRangeInfo, clientRect: nodeRangeClientRect};
         } else {
             var $element = self.getElementByCfi(cfi,
                 ["cfi-marker"],
@@ -1156,7 +1137,7 @@ var CfiNavigationLogic = function(options) {
             var visibleContentOffsets = getVisibleContentOffsets();
             var normRects = getNormalizedRectangles($element[0], visibleContentOffsets);
 
-            return {startInfo: null, endInfo: null, clientRect: normRects.wrapperRectangle }
+            return {startInfo: null, endInfo: null, clientRect: normRects.wrapperRectangle};
         }
     };
 
@@ -1170,18 +1151,15 @@ var CfiNavigationLogic = function(options) {
     };
 
     this.getElementByCfi = function (cfi, classBlacklist, elementBlacklist, idBlacklist) {
-
         var cfiParts = splitCfi(cfi);
         return getElementByPartialCfi(cfiParts.cfi, classBlacklist, elementBlacklist, idBlacklist);
     };
 
     this.getPageForElement = function ($element) {
-
         return this.getPageForPointOnElement($element, 0, 0);
     };
 
     this.getPageForPointOnElement = function ($element, x, y) {
-
         var pageIndex;
         if (options.rectangleBased) {
             pageIndex = findPageByRectangles($element, y);
@@ -1197,24 +1175,18 @@ var CfiNavigationLogic = function(options) {
     };
 
     this.getVerticalOffsetForElement = function ($element) {
-
         return this.getVerticalOffsetForPointOnElement($element, 0, 0);
     };
 
     this.getVerticalOffsetForPointOnElement = function ($element, x, y) {
-
         var elementRect = Helpers.Rect.fromElement($element);
         return Math.ceil(elementRect.top + y * elementRect.height / 100);
     };
 
     this.getElementById = function (id) {
-
         var contentDoc = this.getRootDocument();
-
         var $element = $(contentDoc.getElementById(id));
-        //$("#" + Helpers.escapeJQuerySelector(id), contentDoc);
-
-        if($element.length == 0) {
+        if ($element.length === 0) {
             return undefined;
         }
 
@@ -1222,7 +1194,6 @@ var CfiNavigationLogic = function(options) {
     };
 
     this.getPageForElementId = function (id) {
-
         var $element = this.getElementById(id);
         if (!$element) {
             return -1;
@@ -1232,7 +1203,6 @@ var CfiNavigationLogic = function(options) {
     };
 
     function splitCfi(cfi) {
-
         var ret = {
             cfi: "",
             x: 0,
@@ -1241,22 +1211,19 @@ var CfiNavigationLogic = function(options) {
 
         var ix = cfi.indexOf("@");
 
-        if (ix != -1) {
+        if (ix !== -1) {
             var terminus = cfi.substring(ix + 1);
 
             var colIx = terminus.indexOf(":");
-            if (colIx != -1) {
-                ret.x = parseInt(terminus.substr(0, colIx));
-                ret.y = parseInt(terminus.substr(colIx + 1));
-            }
-            else {
+            if (colIx !== -1) {
+                ret.x = parseInt(terminus.substr(0, colIx), 10);
+                ret.y = parseInt(terminus.substr(colIx + 1), 10);
+            } else {
                 console.error("Unexpected terminating step format");
             }
 
             ret.cfi = cfi.substring(0, ix);
-        }
-        else {
-
+        } else {
             ret.cfi = cfi;
         }
 
@@ -1264,34 +1231,41 @@ var CfiNavigationLogic = function(options) {
     }
 
     // returns raw DOM element (not $ jQuery-wrapped)
-    this.getFirstVisibleMediaOverlayElement = function(visibleContentOffsets) {
+    this.getFirstVisibleMediaOverlayElement = function (visibleContentOffsets) {
         var root = this.getBodyElement();
-        if (!root) return undefined;
+        if (!root) {
+            return undefined;
+        }
 
         var that = this;
-
-        var firstPartial = undefined;
-
+        var firstPartial = false;
         function traverseArray(arr) {
-            if (!arr || !arr.length) return undefined;
+            if (!arr || !arr.length) {
+                return undefined;
+            }
 
             for (var i = 0, count = arr.length; i < count; i++) {
                 var item = arr[i];
-                if (!item) continue;
+                if (!item) {
+                    continue;
+                }
 
                 var $item = $(item);
-
                 if ($item.data("mediaOverlayData")) {
                     var visible = that.getElementVisibility($item, visibleContentOffsets);
                     if (visible) {
-                        if (!firstPartial) firstPartial = item;
-
-                        if (visible == 100) return item;
+                        if (!firstPartial) {
+                            firstPartial = item;
+                        }
+                        if (visible === 100) {
+                            return item;
+                        }
                     }
-                }
-                else {
+                } else {
                     var elem = traverseArray(item.children);
-                    if (elem) return elem;
+                    if (elem) {
+                        return elem;
+                    }
                 }
             }
 
@@ -1299,14 +1273,15 @@ var CfiNavigationLogic = function(options) {
         }
 
         var el = traverseArray([root]);
-        if (!el) el = firstPartial;
+        if (!el) {
+            el = firstPartial;
+        }
         return el;
     };
 
     this.getElementVisibility = function ($element, visibleContentOffsets) {
         return checkVisibilityByRectangles($element, true, visibleContentOffsets);
     };
-
 
     this.isElementVisible = checkVisibilityByRectangles;
 
@@ -1316,8 +1291,7 @@ var CfiNavigationLogic = function(options) {
     };
 
     this.getAllElementsWithFilter = function (filterFunction) {
-        var $elements = this.getElementsWithFilter(this.getBodyElement(), filterFunction);
-        return $elements;
+        return this.getElementsWithFilter(this.getBodyElement(), filterFunction);
     };
 
     this.getAllVisibleElementsWithSelector = function (selector, visibleContentOffset) {
@@ -1326,8 +1300,7 @@ var CfiNavigationLogic = function(options) {
         $.each(elements, function () {
             $newElements.push($(this));
         });
-        var visibleElements = this.getVisibleElements($newElements, visibleContentOffset);
-        return visibleElements;
+        return this.getVisibleElements($newElements, visibleContentOffset);
     };
 
     this.getVisibleElements = function ($elements, visibleContentOffsets, frameDimensions, pickerFunc) {
@@ -1358,6 +1331,7 @@ var CfiNavigationLogic = function(options) {
         }
 
         var $node;
+        /* jshint -W084 */
         while ($node = next()) {
             var isTextNode = $node[0].nodeType === Node.TEXT_NODE;
             var $element = isTextNode ? $node.parent() : $node;
@@ -1372,6 +1346,7 @@ var CfiNavigationLogic = function(options) {
                 });
             }
         }
+        /* jshint +W084 */
 
         if (pickerFunc === _.last) {
             visibleElements.reverse();
@@ -1392,7 +1367,6 @@ var CfiNavigationLogic = function(options) {
     // (originally this.getLeafNodeElements(this.getBodyElement()) was here)
     this._getVisibleCandidates = function (root, visibleContentOffsets, frameDimensions) {
         var $candidates = [];
-        var initialCandidatesSize = $candidates.length;
         var hiddenContCounter = 0;
         var visibleCounter = 0;
         for (var i = 0, len = root.childNodes.length; i < len; ++i) {
@@ -1407,7 +1381,12 @@ var CfiNavigationLogic = function(options) {
                     if (visibilityPercentage === 100) {
                         Array.prototype.push.apply($candidates, this.getLeafNodeElements(childElement));
                     } else {
-                        Array.prototype.push.apply($candidates, this._getVisibleCandidates(childElement));
+                        var res = this._getVisibleCandidates(childElement);
+                        if (res.length) {
+                            Array.prototype.push.apply($candidates, res);
+                        } else {
+                            $candidates.push($(childElement));
+                        }
                     }
                     hiddenContCounter = 0;
                     ++visibleCounter;
@@ -1423,8 +1402,9 @@ var CfiNavigationLogic = function(options) {
     };
 
     this.getVisibleLeafNodes = function (visibleContentOffsets, frameDimensions, pickerFunc) {
+        var cacheKey;
         if (_cacheEnabled) {
-            var cacheKey = _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions, pickerFunc);
+            cacheKey = _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions, pickerFunc);
             var fromCache = _cacheVisibleLeafNodes.get(cacheKey);
             if (fromCache) {
                 return fromCache;
@@ -1450,24 +1430,19 @@ var CfiNavigationLogic = function(options) {
     };
 
     this.getElementsWithFilter = function (root, filterFunction) {
-
         var $elements = [];
 
         function traverseCollection(elements) {
-
-            if (elements == undefined) return;
-
+            if (!elements) {
+                return;
+            }
             for (var i = 0, count = elements.length; i < count; i++) {
-
                 var $element = $(elements[i]);
-
                 if (filterFunction($element)) {
                     $elements.push($element);
-                }
-                else {
+                } else {
                     traverseCollection($element[0].children);
                 }
-
             }
         }
 
@@ -1500,7 +1475,6 @@ var CfiNavigationLogic = function(options) {
             return isBlacklisted;
         });
 
-
         return isBlacklisted;
     }
 
@@ -1510,28 +1484,27 @@ var CfiNavigationLogic = function(options) {
             return root.cacheLeafNodes;
         }
 
-        var nodeIterator = document.createNodeIterator(
-            root,
-            NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
-            function() {
-                return NodeFilter.FILTER_ACCEPT;
-            },
-            false
-        );
+        //jshint bitwise:false
+        var nodeIterator = document.createNodeIterator(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, function () {
+            return NodeFilter.FILTER_ACCEPT;
+        }, false);
+        //jshint bitwise:true
 
         var $leafNodeElements = [];
 
         var node;
-        while ((node = nodeIterator.nextNode())) {
+        /* jshint -W084 */
+        while (node = nodeIterator.nextNode()) {
             var isLeafNode = node.nodeType === Node.ELEMENT_NODE && !node.childElementCount && !isValidTextNodeContent(node.textContent);
-            if (isLeafNode || isValidTextNode(node)){
+            if (isLeafNode || isValidTextNode(node)) {
                 var $node = $(node);
-                var $element = (node.nodeType === Node.TEXT_NODE) ? $node.parent() : $node;
+                var $element = node.nodeType === Node.TEXT_NODE ? $node.parent() : $node;
                 if (!isElementBlacklisted($element)) {
                     $leafNodeElements.push($node);
                 }
             }
         }
+        /* jshint +W084 */
 
         if (_cacheEnabled) {
             root.cacheLeafNodes = $leafNodeElements;
@@ -1541,14 +1514,7 @@ var CfiNavigationLogic = function(options) {
     };
 
     function isValidTextNode(node) {
-
-        if (node.nodeType === Node.TEXT_NODE) {
-
-            return isValidTextNodeContent(node.nodeValue);
-        }
-
-        return false;
-
+        return node.nodeType === Node.TEXT_NODE && isValidTextNodeContent(node.nodeValue);
     }
 
     function isValidTextNodeContent(text) {
@@ -1560,48 +1526,12 @@ var CfiNavigationLogic = function(options) {
     }
 
     this.getElements = function (selector) {
-        if (!selector) {
-            return $(this.getRootElement()).children();
-        }
-        return $(selector, this.getRootElement());
+        return !selector ? $(this.getRootElement()).children() : $(selector, this.getRootElement());
     };
 
     this.getElement = function (selector) {
-
         var $element = this.getElements(selector);
-
-        if($element.length > 0) {
-            return $element;
-        }
-
-        return undefined;
-    };
-
-    var parseContentCfi = function(cont) {
-        return cont.replace(/\[(.*?)\]/, "").split(/[\/,:]/).map(function(n) { return parseInt(n); }).filter(Boolean);
-    };
-
-    var contentCfiComparator = function(cont1, cont2) {
-        cont1 = this.parseContentCfi(cont1);
-        cont2 = this.parseContentCfi(cont2);
-
-        //compare cont arrays looking for differences
-        for (var i=0; i<cont1.length; i++) {
-            if (cont1[i] > cont2[i]) {
-                return 1;
-            }
-            else if (cont1[i] < cont2[i]) {
-                return -1;
-            }
-        }
-
-        //no differences found, so confirm that cont2 did not have values we didn't check
-        if (cont1.length < cont2.length) {
-            return -1;
-        }
-
-        //cont arrays are identical
-        return 0;
+        return $element.length > 0 ? $element : undefined;
     };
 
     //if (debugMode) {
@@ -1624,7 +1554,7 @@ var CfiNavigationLogic = function(options) {
         if (!(rects instanceof Array)) {
             rects = [rects];
         }
-        for (var i = 0; i != rects.length; i++) {
+        for (var i = 0; i !== rects.length; i++) {
             var rect = rects[i];
             var overlayDiv = doc.createElement('div');
             overlayDiv.style.position = 'absolute';
@@ -1640,22 +1570,22 @@ var CfiNavigationLogic = function(options) {
                 if (color === true) {
                     color = 'red';
                 }
-                overlayDiv.style.border = '1px dashed ' + color;
-                overlayDiv.style.background = 'yellow';
+                overlayDiv.style.border = '1px dashed yellow';
+                overlayDiv.style.background = color;
             }
 
             overlayDiv.style.margin = overlayDiv.style.padding = '0';
-            overlayDiv.style.top = (rect.top ) + 'px';
-            overlayDiv.style.left = (rect.left ) + 'px';
+            overlayDiv.style.top = rect.top + 'px';
+            overlayDiv.style.left = rect.left + 'px';
             // we want rect.width to be the border width, so content width is 2px less.
-            overlayDiv.style.width = (rect.width - 2) + 'px';
-            overlayDiv.style.height = (rect.height - 2) + 'px';
+            overlayDiv.style.width = rect.width - 2 + 'px';
+            overlayDiv.style.height = rect.height - 2 + 'px';
             doc.documentElement.appendChild(overlayDiv);
             $debugOverlays.push($(overlayDiv));
         }
     }
 
-    function drawDebugOverlayFromRect(rect) {
+    function drawDebugOverlayFromRect(rect, color) {
         var leftOffset, topOffset;
 
         if (isVerticalWritingMode()) {
@@ -1671,16 +1601,16 @@ var CfiNavigationLogic = function(options) {
             top: rect.top + topOffset,
             width: rect.width,
             height: rect.height
-        }, true, self.getRootDocument());
+        }, color || true, self.getRootDocument());
     }
 
-    function drawDebugOverlayFromDomRange(range) {
+    function drawDebugOverlayFromDomRange(range, color) {
         var rect = getNodeRangeClientRect(
             range.startContainer,
             range.startOffset,
             range.endContainer,
             range.endOffset);
-        drawDebugOverlayFromRect(rect);
+        drawDebugOverlayFromRect(rect, color);
         return rect;
     }
 
@@ -1689,10 +1619,9 @@ var CfiNavigationLogic = function(options) {
     }
 
     function getPaginationLeftOffset() {
-
         var $htmlElement = $("html", self.getRootDocument());
-        var offsetLeftPixels = $htmlElement.css(isVerticalWritingMode() ? "top" : (isPageProgressionRightToLeft() ? "right" : "left"));
-        var offsetLeft = parseInt(offsetLeftPixels.replace("px", ""));
+        var offsetLeftPixels = $htmlElement.css(isVerticalWritingMode() ? "top" : isPageProgressionRightToLeft() ? "right" : "left");
+        var offsetLeft = parseInt(offsetLeftPixels, 10);
         if (isNaN(offsetLeft)) {
             //for fixed layouts, $htmlElement.css("left") has no numerical value
             offsetLeft = 0;
@@ -1704,12 +1633,13 @@ var CfiNavigationLogic = function(options) {
     }
 
     function clearDebugOverlays() {
-        _.each($debugOverlays, function ($el) {
+        $debugOverlays.forEach(function ($el) {
             $el.remove();
         });
-        $debugOverlays.clear();
+        $debugOverlays = [];
     }
 
+    //jscs:disable requireCamelCaseOrUpperCaseIdentifiers
     ReadiumSDK._DEBUG_CfiNavigationLogic = {
         clearDebugOverlays: clearDebugOverlays,
         drawDebugOverlayFromRect: drawDebugOverlayFromRect,
@@ -1719,7 +1649,7 @@ var CfiNavigationLogic = function(options) {
             var cfi1 = ReadiumSDK.reader.getFirstVisibleCfi();
             if (cfi1.contentCFI) {
                 var range1 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi1);
-                console.log(cfi1, range1, drawDebugOverlayFromDomRange(range1));
+                drawDebugOverlayFromDomRange(range1, 'red');
             } else {
                 console.log('firstVisibleCfi detection error');
             }
@@ -1727,23 +1657,27 @@ var CfiNavigationLogic = function(options) {
             var cfi2 = ReadiumSDK.reader.getLastVisibleCfi();
             if (cfi2.contentCFI) {
                 var range2 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi2);
-                console.log(cfi2, range2, drawDebugOverlayFromDomRange(range2));
+                drawDebugOverlayFromDomRange(range2, 'green');
             } else {
                 console.log('lastVisibleCfi detection error');
             }
 
+            var cfi3;
             if (ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleElementCfi) {
-                var cfi3 = {
+                cfi3 = {
                     idref: cfi1.idref,
                     contentCFI: ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleElementCfi()
                 };
                 if (cfi3.contentCFI) {
                     var range3 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi3);
-                    console.log(cfi3, range3, drawDebugOverlayFromDomRange(range3));
+                    drawDebugOverlayFromDomRange(range3, 'yellow');
                 } else {
                     console.log('secondSpreadFirstVisibleElementCfi detection error');
                 }
             }
+
+            console.log('firstVisibleCfi: %o, lastVisibleCfi: %o, secondSpreadFirstVisibleElementCfi: %o',
+                cfi1, cfi2, cfi3);
         }
     };
 
