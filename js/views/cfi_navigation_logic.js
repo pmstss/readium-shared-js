@@ -458,6 +458,15 @@ var CfiNavigationLogic = function (options) {
         return heightVisible === heightTotal ? 100 : Math.floor(100 * heightVisible / heightTotal);
     }*/
 
+    function serializeClientRect(clientRect) {
+        return JSON.stringify({
+            l: clientRect.left,
+            t: clientRect.top,
+            r: clientRect.right,
+            b: clientRect.bottom
+        });
+    }
+
     /**
      * @private
      * Retrieves the position of $element in multi-column layout
@@ -469,28 +478,25 @@ var CfiNavigationLogic = function (options) {
     function getNormalizedRectangles(el, visibleContentOffsets) {
         visibleContentOffsets = visibleContentOffsets || {};
 
-        var visibleContentOffsetsStr = JSON.stringify(visibleContentOffsets);
-
-        //### tss: caching normalizedRectangles as object property
         var boundingClientRect = el.getBoundingClientRect();
-        var boundingClientRectStr = JSON.stringify({
-            l: boundingClientRect.left,
-            t: boundingClientRect.top,
-            r: boundingClientRect.right,
-            b: boundingClientRect.bottom
-        });
-
-        if (el.cacheNormalizedRectangles && el.cacheVisibleContentOffsetsStr === visibleContentOffsetsStr &&
-                el.cacheBoundingClientRectStr === boundingClientRectStr) {
-            return el.cacheNormalizedRectangles;
+        var cacheKey;
+        //### tss: caching normalizedRectangles as object property
+        if (_cacheEnabled) {
+            var boundingClientRectStr = serializeClientRect(boundingClientRect);
+            var visibleContentOffsetsStr = JSON.stringify(visibleContentOffsets);
+            cacheKey = boundingClientRectStr + visibleContentOffsetsStr;
+            if (el.cacheKey === cacheKey) {
+                return el.cacheNormalizedRectangles;
+            }
+            delete el.cacheKey;
+            delete el.cacheNormalizedRectangles;
         }
 
         var leftOffset = visibleContentOffsets.left || 0;
         var topOffset = visibleContentOffsets.top || 0;
 
         // union of all rectangles wrapping the element
-        var wrapperRectangle = normalizeRectangle(
-            boundingClientRect, leftOffset, topOffset);
+        var wrapperRectangle = normalizeRectangle(boundingClientRect, leftOffset, topOffset);
 
         // all the separate rectangles (for detecting position of the element
         // split between several columns)
@@ -501,8 +507,7 @@ var CfiNavigationLogic = function (options) {
                 // Firefox sometimes gets it wrong,
                 // adding literally empty (height = 0) client rectangle preceding the real one,
                 // that empty client rectanle shouldn't be retrieved
-                clientRectangles.push(
-                    normalizeRectangle(clientRectList[i], leftOffset, topOffset));
+                clientRectangles.push(normalizeRectangle(clientRectList[i], leftOffset, topOffset));
             }
         }
 
@@ -526,9 +531,11 @@ var CfiNavigationLogic = function (options) {
         }
 
         //### tss: caching normalizedRectangles as object property
-        el.cacheNormalizedRectangles = res;
-        el.cacheVisibleContentOffsetsStr = visibleContentOffsetsStr;
-        el.cacheBoundingClientRectStr = boundingClientRectStr;
+        if (_cacheEnabled) {
+            el.cacheKey = cacheKey;
+            el.cacheNormalizedRectangles = res;
+        }
+
         return res;
     }
 
@@ -1360,17 +1367,29 @@ var CfiNavigationLogic = function (options) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
 
-        return JSON.stringify($.extend({}, paginationInfo, visibleContentOffsets, frameDimensions)) + pickerFunc.toString();
+        return JSON.stringify($.extend({}, paginationInfo, visibleContentOffsets, frameDimensions)) +
+                (pickerFunc ? pickerFunc.toString() : '');
     }
 
     // ### tss: skip getting leaves if parent node is fully not visible
     // (originally this.getLeafNodeElements(this.getBodyElement()) was here)
     this._getVisibleCandidates = function (root, visibleContentOffsets, frameDimensions) {
+        var cacheKey;
+        if (_cacheEnabled) {
+            cacheKey = _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions);
+            if (root.cacheKey === cacheKey) {
+                return root.cacheVisibleCandidates;
+            }
+            delete root.cacheKey;
+            delete root.cacheVisibleCandidates;
+        }
+
         var $candidates = [];
         var hiddenContCounter = 0;
         var visibleCounter = 0;
         for (var i = 0, len = root.childNodes.length; i < len; ++i) {
-            if (hiddenContCounter > 10 && visibleCounter) {
+            // break if we already found some fully visible elements and now iterating over hidden
+            if (hiddenContCounter > 5 && visibleCounter) {
                 break;
             }
 
@@ -1395,7 +1414,13 @@ var CfiNavigationLogic = function (options) {
                 }
             } else if (childElement.nodeType === 3 && isValidTextNodeContent(childElement.nodeValue)) {
                 $candidates.push($(childElement));
+                hiddenContCounter = 0;
             }
+        }
+
+        if (_cacheEnabled) {
+            root.cacheKey = cacheKey;
+            root.cacheVisibleCandidates = $candidates;
         }
 
         return $candidates;
@@ -1682,6 +1707,7 @@ var CfiNavigationLogic = function (options) {
     };
 
     if (tssDebug) {
+        //TODO remove on cfi_navigation_logic destroy, otherwise new listener is attached on every new spine
         ReadiumSDK.reader.on(ReadiumSDK.Events.PAGINATION_CHANGED, function () {
             ReadiumSDK._DEBUG_CfiNavigationLogic.debugVisibleCfis();
         });
