@@ -52,7 +52,7 @@ var CfiNavigationLogic = function (options) {
 
     var DEBUG = false; // relates to getVisibleTextRangeOffsetsSelectedByFunc
     var debugMode = ReadiumSDK.DEBUG_MODE;
-    var tssDebug = true;
+    var tssDebug = false;
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
