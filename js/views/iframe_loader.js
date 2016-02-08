@@ -3,93 +3,151 @@
 //  Created by Boris Schneiderman.
 // Modified by Daniel Weck
 //  Copyright (c) 2014 Readium Foundation and/or its licensees. All rights reserved.
-//  
-//  Redistribution and use in source and binary forms, with or without modification, 
+//
+//  Redistribution and use in source and binary forms, with or without modification,
 //  are permitted provided that the following conditions are met:
-//  1. Redistributions of source code must retain the above copyright notice, this 
+//  1. Redistributions of source code must retain the above copyright notice, this
 //  list of conditions and the following disclaimer.
-//  2. Redistributions in binary form must reproduce the above copyright notice, 
-//  this list of conditions and the following disclaimer in the documentation and/or 
+//  2. Redistributions in binary form must reproduce the above copyright notice,
+//  this list of conditions and the following disclaimer in the documentation and/or
 //  other materials provided with the distribution.
-//  3. Neither the name of the organization nor the names of its contributors may be 
-//  used to endorse or promote products derived from this software without specific 
+//  3. Neither the name of the organization nor the names of its contributors may be
+//  used to endorse or promote products derived from this software without specific
 //  prior written permission.
-//  
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+//  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+//  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+//  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+//  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+//  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-define(["jquery", "underscore"], function($, _) {
-/**
- *
- * @constructor
- */
-var IFrameLoader = function() {
+// jshint quotmark:false
+// jscs:disable validateQuoteMarks
+
+define(["jquery", "underscore", "URIjs"], function ($, _, URI) {
+'use strict';
+
+return function () {
 
     var self = this;
-    var eventListeners = {};
+    var windowEventListeners = {};
+    var documentEventListeners = {};
+    var debugMode = ReadiumSDK.DEBUG_MODE;
 
+    function _removeListenerFrom(listeners, callback, useCapture) {
+        if (listeners) {
+            var matchIdx = -1;
+            listeners.forEach(function (listener, idx) {
+                if (listener.callback === callback && listener.useCapture === useCapture) {
+                    matchIdx = idx;
+                }
+            });
+            if (matchIdx !== -1) {
+                listeners.splice(matchIdx, 1);
+                return true;
+            }
+        }
+        return false;
+    }
 
-    this.addIFrameEventListener = function (eventName, callback, context) {
-
-        if (eventListeners[eventName] == undefined) {
-            eventListeners[eventName] = [];
+    this.addIFrameWindowEventListener = function (eventName, callback, useCapture) {
+        if (!windowEventListeners[eventName]) {
+            windowEventListeners[eventName] = [];
         }
 
-        eventListeners[eventName].push({callback: callback, context: context});
-    };
-
-    this.updateIframeEvents = function (iframe) {
-
-        _.each(eventListeners, function (value, key) {
-            $(iframe.contentWindow).off(key);
-            for (var i = 0, count = value.length; i < count; i++) {
-                $(iframe.contentWindow).on(key, value[i].callback, value[i].context);
-            }
+        windowEventListeners[eventName].push({
+            callback: callback,
+            useCapture: useCapture
         });
     };
 
-    this.loadIframe = function (iframe, src, callback, context, attachedData) {
+    this.removeIFrameWindowEventListener = function (eventName, callback, useCapture) {
+        _removeListenerFrom(windowEventListeners[eventName], callback, useCapture);
+    };
 
+    this.addIFrameDocumentEventListener = function (eventName, callback, useCapture) {
+        if (!documentEventListeners[eventName]) {
+            documentEventListeners[eventName] = [];
+        }
+
+        documentEventListeners[eventName].push({
+            callback: callback,
+            useCapture: useCapture
+        });
+    };
+
+    this.removeIFrameDocumentEventListener = function (eventName, callback, useCapture) {
+        _removeListenerFrom(documentEventListeners[eventName], callback, useCapture);
+    };
+
+    function _detachIFrameWindowListener(iframe, eventName, listener) {
+        iframe.contentWindow.removeEventListener(eventName, listener.callback, listener.useCapture);
+    }
+
+    function _attachIFrameWindowListener(iframe, eventName, listener) {
+        iframe.contentWindow.addEventListener(eventName, listener.callback, listener.useCapture);
+    }
+
+    function _detachIFrameDocumentListener(iframe, eventName, listener) {
+        iframe.contentDocument.removeEventListener(eventName, listener.callback, listener.useCapture);
+    }
+
+    function _attachIFrameDocumentListener(iframe, eventName, listener) {
+        iframe.contentDocument.addEventListener(eventName, listener.callback, listener.useCapture);
+    }
+
+    this.updateIframeEvents = function (iframe) {
+        var eventName;
+        for (eventName in windowEventListeners) {
+            if (windowEventListeners.hasOwnProperty(eventName)) {
+                windowEventListeners[eventName].forEach(_detachIFrameWindowListener.bind(null, iframe, eventName));
+                windowEventListeners[eventName].forEach(_attachIFrameWindowListener.bind(null, iframe, eventName));
+            }
+        }
+
+        for (eventName in documentEventListeners) {
+            if (documentEventListeners.hasOwnProperty(eventName)) {
+                documentEventListeners[eventName].forEach(_detachIFrameDocumentListener.bind(null, iframe, eventName));
+                documentEventListeners[eventName].forEach(_attachIFrameDocumentListener.bind(null, iframe, eventName));
+            }
+        }
+    };
+
+    this.loadIframe = function (iframe, src, callback, context, attachedData) {
         if (!iframe.baseURI) {
             if (typeof location !== 'undefined') {
                 iframe.baseURI = location.href + "";
             }
             console.error("!iframe.baseURI => " + iframe.baseURI);
         }
-    
-        console.log("EPUB doc iframe src:");
-        console.log(src);
-        console.log("EPUB doc iframe base URI:");
-        console.log(iframe.baseURI);
-        
+
+        if (debugMode) {
+            console.log("EPUB doc iframe src: %o", src);
+            console.log("EPUB doc iframe base URI: %o", iframe.baseURI);
+        }
+
         iframe.setAttribute("data-baseUri", iframe.baseURI);
         iframe.setAttribute("data-src", src);
 
         var loadedDocumentUri = new URI(src).absoluteTo(iframe.baseURI).search('').hash('').toString();
-
         self._loadIframeWithUri(iframe, attachedData, loadedDocumentUri, function () {
-            
             callback.call(context, true, attachedData);
         });
     };
 
     this._loadIframeWithUri = function (iframe, attachedData, contentUri, callback) {
-
         iframe.onload = function () {
 
             var doc = iframe.contentDocument || iframe.contentWindow.document;
-            $('svg', doc).load(function(){
+            $('svg', doc).load(function () {
                 console.log('SVG loaded');
             });
-            
+
             self.updateIframeEvents(iframe);
 
             var mathJax = iframe.contentWindow.MathJax;
@@ -111,8 +169,5 @@ var IFrameLoader = function() {
 
         iframe.setAttribute("src", contentUri);
     };
-
 };
-
-return IFrameLoader;
 });

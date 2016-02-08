@@ -24,19 +24,29 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
+// jshint quotmark:false
+// jshint latedef:nofunc
+// jshint -W069
+// jscs:disable validateQuoteMarks
+// jscs:disable requireDotNotation
+// jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+
 define(["../globals", "jquery", "underscore", "eventEmitter", "./fixed_view", "../helpers", "./iframe_loader", "./internal_links_support",
-        "./media_overlay_data_injector", "./media_overlay_player", "../models/package", "../models/page_open_request",
-        "./reflowable_view", "./scroll_view", "../models/style_collection", "../models/switches", "../models/trigger",
-        "../models/viewer_settings", "../models/bookmark_data", "../models/node_range_info"],
-    function (Globals, $, _, EventEmitter, FixedView, Helpers, IFrameLoader, InternalLinksSupport,
-              MediaOverlayDataInjector, MediaOverlayPlayer, Package, PageOpenRequest,
-              ReflowableView, ScrollView, StyleCollection, Switches, Trigger,
-              ViewerSettings, BookmarkData, NodeRangeInfo) {
+"./media_overlay_data_injector", "./media_overlay_player", "../models/package", "../models/page_open_request",
+"./reflowable_view", "./scroll_view", "../models/style_collection", "../models/switches", "../models/trigger",
+"../models/viewer_settings", "../models/bookmark_data", "../models/node_range_info"],
+function (Globals, $, _, EventEmitter, FixedView, Helpers, IFrameLoader, InternalLinksSupport,
+      MediaOverlayDataInjector, MediaOverlayPlayer, Package, PageOpenRequest,
+      ReflowableView, ScrollView, StyleCollection, Switches, Trigger,
+      ViewerSettings, BookmarkData, NodeRangeInfo) {
+
+'use strict';
 /**
  * Options passed on the reader from the readium loader/initializer
  *
  * @typedef {object} Globals.Views.ReaderView.ReaderOptions
- * @property {jQueryElement|string} el   The element the reader view should create itself in. Can be a jquery wrapped element or a query selector.
+ * @property {jQueryElement|string} el   The element the reader view should create itself in.
+ * Can be a jquery wrapped element or a query selector.
  * @property {Globals.Views.IFrameLoader} iframeLoader   An instance of an iframe loader or one expanding it.
  * @property {boolean} needsFixedLayoutScalerWorkAround
  */
@@ -51,9 +61,9 @@ var ReaderView = function (options) {
     $.extend(this, new EventEmitter());
 
     var self = this;
-    var _currentView = undefined;
-    var _package = undefined;
-    var _spine = undefined;
+    var _currentView;
+    var _package;
+    var _spine;
     var _viewerSettings = new ViewerSettings({});
     //styles applied to the container divs
     var _userStyles = new StyleCollection();
@@ -83,13 +93,11 @@ var ReaderView = function (options) {
 
     if (options.iframeLoader) {
         _iframeLoader = options.iframeLoader;
-    }
-    else {
+    } else {
         _iframeLoader = new IFrameLoader({mathJaxUrl: options.mathJaxUrl});
     }
 
-
-    _needsFixedLayoutScalerWorkAround = options.needsFixedLayoutScalerWorkAround;
+    var _needsFixedLayoutScalerWorkAround = options.needsFixedLayoutScalerWorkAround;
     /**
      * @returns {boolean}
      */
@@ -135,7 +143,6 @@ var ReaderView = function (options) {
      * @returns {ReaderView.ViewType}
      */
     this.getCurrentViewType = function () {
-
         if (!_currentView) {
             return undefined;
         }
@@ -166,13 +173,12 @@ var ReaderView = function (options) {
 
     //based on https://docs.google.com/spreadsheet/ccc?key=0AoPMUkQhc4wcdDI0anFvWm96N0xRT184ZE96MXFRdFE&usp=drive_web#gid=0 document
     function deduceDesiredViewType(spineItem) {
-
         //check settings
-        if (_viewerSettings.scroll == "scroll-doc") {
+        if (_viewerSettings.scroll === "scroll-doc") {
             return ReaderView.VIEW_TYPE_SCROLLED_DOC;
         }
 
-        if (_viewerSettings.scroll == "scroll-continuous") {
+        if (_viewerSettings.scroll === "scroll-continuous") {
             return ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS;
         }
 
@@ -195,12 +201,10 @@ var ReaderView = function (options) {
 
     // returns true is view changed
     function initViewForItem(spineItem, callback) {
-
         var desiredViewType = deduceDesiredViewType(spineItem);
 
         if (_currentView) {
-
-            if (self.getCurrentViewType() == desiredViewType) {
+            if (self.getCurrentViewType() === desiredViewType) {
                 callback(false);
                 return;
             }
@@ -225,7 +229,6 @@ var ReaderView = function (options) {
             iframeLoader: _iframeLoader
         };
 
-
         _currentView = self.createViewForType(desiredViewType, viewCreationParams);
 
         Globals.logEvent("READER_VIEW_CREATED", "EMIT", "reader_view.js");
@@ -235,7 +238,9 @@ var ReaderView = function (options) {
 
             Globals.logEvent("CONTENT_DOCUMENT_LOADED", "ON", "reader_view.js (current view) [ " + spineItem.href + " ]");
 
-            if (!Helpers.isIframeAlive($iframe[0])) return;
+            if (!Helpers.isIframeAlive($iframe[0])) {
+                return;
+            }
 
             // performance degrades with large DOM (e.g. word-level text-audio sync)
             _mediaOverlayDataInjector.attachMediaOverlayData($iframe, spineItem, _viewerSettings);
@@ -256,7 +261,6 @@ var ReaderView = function (options) {
         });
 
         _currentView.on(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, function (pageChangeData) {
-
             Globals.logEvent("InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED", "ON", "reader_view.js");
 
             //we call on onPageChanged explicitly instead of subscribing to the Globals.Events.PAGINATION_CHANGED by
@@ -273,18 +277,15 @@ var ReaderView = function (options) {
         _currentView.on(Globals.Events.FXL_VIEW_RESIZED, function () {
             Globals.logEvent("FXL_VIEW_RESIZED", "EMIT", "reader_view.js");
             self.emit(Globals.Events.FXL_VIEW_RESIZED);
-        })
+        });
 
         _currentView.render();
         _currentView.setViewSettings(_viewerSettings);
 
         // we do this to wait until elements are rendered otherwise book is not able to determine view size.
         setTimeout(function () {
-
             callback(true);
-
         }, 50);
-
     }
 
     /**
@@ -293,7 +294,6 @@ var ReaderView = function (options) {
      * @returns {Models.SpineItem[]}
      */
     this.getLoadedSpineItems = function () {
-
         if (_currentView) {
             return _currentView.getLoadedSpineItems();
         }
@@ -302,14 +302,12 @@ var ReaderView = function (options) {
     };
 
     function resetCurrentView() {
-
         if (!_currentView) {
             return;
         }
 
         Globals.logEvent("READER_VIEW_DESTROYED", "EMIT", "reader_view.js");
         self.emit(Globals.Events.READER_VIEW_DESTROYED);
-
 
         Globals.logEvent("InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED", "OFF", "reader_view.js");
         _currentView.off(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED);
@@ -332,7 +330,7 @@ var ReaderView = function (options) {
      *
      * @returns {Models.Package}
      */
-    this.package = function () {
+    this['package'] = function () {
         return _package;
     };
 
@@ -371,8 +369,7 @@ var ReaderView = function (options) {
      * @param {Views.ReaderView.OpenBookData} openBookData - object with open book data
      */
     this.openBook = function (openBookData) {
-
-        var packageData = openBookData.package ? openBookData.package : openBookData;
+        var packageData = openBookData['package'] || openBookData;
 
         // ### tss: ability to use custom Package model
         if (!options.CustomPackage) {
@@ -389,10 +386,11 @@ var ReaderView = function (options) {
         }
 
         _mediaOverlayPlayer = new MediaOverlayPlayer(self, $.proxy(onMediaPlayerStatusChanged, self));
-        _mediaOverlayPlayer.setAutomaticNextSmil(_viewerSettings.mediaOverlaysAutomaticPageTurn ? true : false); // just to ensure the internal var is set to the default settings (user settings are applied below at self.updateSettings(openBookData.settings);)
+        // just to ensure the internal var is set to the default settings (user settings are applied
+        // below at self.updateSettings(openBookData.settings);)
+        _mediaOverlayPlayer.setAutomaticNextSmil(!!_viewerSettings.mediaOverlaysAutomaticPageTurn);
 
         _mediaOverlayDataInjector = new MediaOverlayDataInjector(_package.media_overlay, _mediaOverlayPlayer);
-
 
         resetCurrentView();
 
@@ -404,21 +402,18 @@ var ReaderView = function (options) {
             self.setStyles(openBookData.styles);
         }
 
-        var pageRequestData = undefined;
-
+        var pageRequestData;
         if (openBookData.openPageRequest) {
-
-            if (openBookData.openPageRequest.idref || (openBookData.openPageRequest.contentRefUrl && openBookData.openPageRequest.sourceFileHref)) {
+            if (openBookData.openPageRequest.idref || openBookData.openPageRequest.contentRefUrl &&
+                    openBookData.openPageRequest.sourceFileHref) {
                 pageRequestData = openBookData.openPageRequest;
-            }
-            else {
+            } else {
                 console.log("Invalid page request data: idref required!");
             }
         }
 
         var fallback = false;
         if (pageRequestData) {
-
             pageRequestData = openBookData.openPageRequest;
 
             try {
@@ -426,43 +421,36 @@ var ReaderView = function (options) {
 
                     if (pageRequestData.spineItemPageIndex) {
                         fallback = !self.openSpineItemPage(pageRequestData.idref, pageRequestData.spineItemPageIndex, self);
-                    }
-                    else if (pageRequestData.elementCfi) {
+                    } else if (pageRequestData.elementCfi) {
                         fallback = !self.openSpineItemElementCfi(pageRequestData.idref, pageRequestData.elementCfi, self);
-                    }
-                    else {
+                    } else {
                         fallback = !self.openSpineItemPage(pageRequestData.idref, 0, self);
                     }
-                }
-                else {
+                } else {
                     fallback = !self.openContentUrl(pageRequestData.contentRefUrl, pageRequestData.sourceFileHref, self);
                 }
             } catch (err) {
-                console.error("openPageRequest fail: fallback to first page!")
+                console.error("openPageRequest fail: fallback to first page!");
                 console.log(err);
                 fallback = true;
             }
-        }
-        else {
+        } else {
             fallback = true;
         }
 
         if (fallback) {// if we where not asked to open specific page we will open the first one
-
             var spineItem = _spine.first();
             if (spineItem) {
                 var pageOpenRequest = new PageOpenRequest(spineItem, self);
                 pageOpenRequest.setFirstPage();
                 openPage(pageOpenRequest, 0);
             }
-
         }
-
     };
 
     function onMediaPlayerStatusChanged(status) {
         Globals.logEvent("MEDIA_OVERLAY_STATUS_CHANGED", "EMIT", "reader_view.js (via MediaOverlayPlayer + AudioPlayer)");
-console.trace(JSON.stringify(status));
+        console.trace(JSON.stringify(status));
         self.emit(Globals.Events.MEDIA_OVERLAY_STATUS_CHANGED, status);
     }
 
@@ -471,11 +459,9 @@ console.trace(JSON.stringify(status));
      * Takes to account the page progression direction to decide to flip to prev or next page.
      */
     this.openPageLeft = function () {
-
         if (_package.spine.isLeftToRight()) {
             self.openPagePrev();
-        }
-        else {
+        } else {
             self.openPageNext();
         }
     };
@@ -485,14 +471,11 @@ console.trace(JSON.stringify(status));
      * Takes to account the page progression direction to decide to flip to prev or next page.
      */
     this.openPageRight = function () {
-
         if (_package.spine.isLeftToRight()) {
             self.openPageNext();
-        }
-        else {
+        } else {
             self.openPagePrev();
         }
-
     };
 
     /**
@@ -532,8 +515,7 @@ console.trace(JSON.stringify(status));
     this.getViewScale = function () {
         if (self.isCurrentViewFixedLayout()) {
             return 100 * _currentView.getViewScale();
-        }
-        else {
+        } else {
             return 100;
         }
     };
@@ -556,13 +538,10 @@ console.trace(JSON.stringify(status));
      * @fires Globals.Events.SETTINGS_APPLIED
      */
     this.updateSettings = function (settingsData) {
-
-//console.debug("UpdateSettings: " + JSON.stringify(settingsData));
-
         _viewerSettings.update(settingsData);
 
         if (_mediaOverlayPlayer) {
-            _mediaOverlayPlayer.setAutomaticNextSmil(_viewerSettings.mediaOverlaysAutomaticPageTurn ? true : false);
+            _mediaOverlayPlayer.setAutomaticNextSmil(!!_viewerSettings.mediaOverlaysAutomaticPageTurn);
         }
 
         if (_currentView && !settingsData.doNotUpdateView) {
@@ -581,7 +560,7 @@ console.trace(JSON.stringify(status));
 
                 var spineItem = _spine.getItemById(bookMark.idref);
 
-                initViewForItem(spineItem, function (isViewChanged) {
+                initViewForItem(spineItem, function (/*isViewChanged*/) {
                     // ### tss: setViewSettings will be indirectly called during openSpineItemElementCfi (via openPage)
                     /*if (!isViewChanged) {
                         _currentView.setViewSettings(_viewerSettings);
@@ -591,9 +570,6 @@ console.trace(JSON.stringify(status));
 
                     if (wasPlaying) {
                         self.playMediaOverlay();
-                        // setTimeout(function()
-                        // {
-                        // }, 60);
                     }
 
                     Globals.logEvent("SETTINGS_APPLIED 1 (view update)", "EMIT", "reader_view.js");
@@ -605,7 +581,7 @@ console.trace(JSON.stringify(status));
         }
 
         Globals.logEvent("SETTINGS_APPLIED 2 (no view update)", "EMIT", "reader_view.js");
-console.trace(JSON.stringify(settingsData));
+        console.trace(JSON.stringify(settingsData));
         self.emit(Globals.Events.SETTINGS_APPLIED);
     };
 
@@ -613,7 +589,6 @@ console.trace(JSON.stringify(settingsData));
      * Opens the next page.
      */
     this.openPageNext = function () {
-
         if (self.getCurrentViewType() === ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS) {
             _currentView.openPageNext(self);
             return;
@@ -621,7 +596,7 @@ console.trace(JSON.stringify(settingsData));
 
         var paginationInfo = _currentView.getPaginationInfo();
 
-        if (paginationInfo.openPages.length == 0) {
+        if (paginationInfo.openPages.length === 0) {
             return;
         }
 
@@ -650,7 +625,6 @@ console.trace(JSON.stringify(settingsData));
      * Opens the previous page.
      */
     this.openPagePrev = function () {
-
         if (self.getCurrentViewType() === ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS) {
             _currentView.openPagePrev(self);
             return;
@@ -658,7 +632,7 @@ console.trace(JSON.stringify(settingsData));
 
         var paginationInfo = _currentView.getPaginationInfo();
 
-        if (paginationInfo.openPages.length == 0) {
+        if (paginationInfo.openPages.length === 0) {
             return;
         }
 
@@ -684,9 +658,7 @@ console.trace(JSON.stringify(settingsData));
     };
 
     function getSpineItem(idref) {
-
         if (!idref) {
-
             console.log("idref parameter value missing!");
             return undefined;
         }
@@ -698,7 +670,6 @@ console.trace(JSON.stringify(settingsData));
         }
 
         return spineItem;
-
     }
 
     /**
@@ -709,7 +680,6 @@ console.trace(JSON.stringify(settingsData));
      * @param {object} initiator optional
      */
     this.openSpineItemElementCfi = function (idref, elementCfi, initiator) {
-
         var spineItem = getSpineItem(idref);
 
         if (!spineItem) {
@@ -733,7 +703,6 @@ console.trace(JSON.stringify(settingsData));
      * @param {object} initiator optional
      */
     this.openPageIndex = function (pageIndex, initiator) {
-
         if (!_currentView) {
             return false;
         }
@@ -748,9 +717,7 @@ console.trace(JSON.stringify(settingsData));
 
             pageRequest = new PageOpenRequest(spineItem, initiator);
             pageRequest.setPageIndex(0);
-        }
-        else {
-
+        } else {
             var spineItems = this.getLoadedSpineItems();
             if (spineItems.length > 0) {
                 pageRequest = new PageOpenRequest(spineItems[0], initiator);
@@ -765,7 +732,6 @@ console.trace(JSON.stringify(settingsData));
 
     // dir: 0 => new or same page, 1 => previous, 2 => next
     function openPage(pageRequest, dir) {
-
         initViewForItem(pageRequest.spineItem, function (isViewChanged) {
             // ### tss fix: avoid double firing of ReadiumSDK.Events.PAGINATION_CHANGED on navigation between spines
             var paginationInfo = _currentView.getPaginationInfo();
@@ -778,7 +744,6 @@ console.trace(JSON.stringify(settingsData));
         });
     }
 
-
     /**
      * Opens page index of the spine item with idref provided
      *
@@ -787,7 +752,6 @@ console.trace(JSON.stringify(settingsData));
      * @param {object} initiator optional
      */
     this.openSpineItemPage = function (idref, pageIndex, initiator) {
-
         var spineItem = getSpineItem(idref);
 
         if (!spineItem) {
@@ -811,20 +775,17 @@ console.trace(JSON.stringify(settingsData));
      * @param {boolean} doNotUpdateView                         Whether to update the view after the styles are applied.
      */
     this.setStyles = function (styles, doNotUpdateView) {
-
         var count = styles.length;
 
         for (var i = 0; i < count; i++) {
             if (styles[i].declarations) {
                 _userStyles.addStyle(styles[i].selector, styles[i].declarations);
-            }
-            else {
+            } else {
                 _userStyles.removeStyle(styles[i].selector);
             }
         }
 
         applyStyles(doNotUpdateView);
-
     };
 
     /**
@@ -833,7 +794,6 @@ console.trace(JSON.stringify(settingsData));
      * @param {Collections.StyleCollection} styles    Style collection containing selector property and declarations object
      */
     this.setBookStyles = function (styles) {
-
         var count = styles.length;
 
         for (var i = 0; i < count; i++) {
@@ -843,23 +803,19 @@ console.trace(JSON.stringify(settingsData));
         if (_currentView) {
             _currentView.applyBookStyles();
         }
-
     };
 
     /**
      * Gets an element from active content documents based on a query selector.
      *
-     * @param {Models.SpineItem} spineItem       The spine item object associated with an active content document
+     * @param {Models.SpineItem} spineItemIdref      The spine item object associated with an active content document
      * @param {string} selector                      The query selector
      * @returns {HTMLElement|undefined}
      */
     this.getElement = function (spineItemIdref, selector) {
-
         if (_currentView) {
             return _currentView.getElement(spineItemIdref, selector);
         }
-
-        return undefined;
     };
 
     /**
@@ -870,12 +826,9 @@ console.trace(JSON.stringify(settingsData));
      * @returns {HTMLElement|undefined}
      */
     this.getElementById = function (spineItemIdref, id) {
-
         if (_currentView) {
             return _currentView.getElementById(spineItemIdref, id);
         }
-
-        return undefined;
     };
 
     /**
@@ -889,23 +842,21 @@ console.trace(JSON.stringify(settingsData));
      * @returns {HTMLElement|undefined}
      */
     this.getElementByCfi = function (spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
-
         if (_currentView) {
             return _currentView.getElementByCfi(spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist);
         }
-
-        return undefined;
-
     };
 
     function applyStyles(doNotUpdateView) {
-
         Helpers.setStyles(_userStyles.getStyles(), _$el);
 
-        if (_mediaOverlayPlayer)
+        if (_mediaOverlayPlayer) {
             _mediaOverlayPlayer.applyStyles();
+        }
 
-        if (doNotUpdateView) return;
+        if (doNotUpdateView) {
+            return;
+        }
 
         if (_currentView) {
             _currentView.applyStyles();
@@ -923,7 +874,6 @@ console.trace(JSON.stringify(settingsData));
         _mediaOverlayPlayer.mediaOverlaysOpenContentUrl(contentRefUrl, sourceFileHref, offset);
     };
 
-
     /**
      * Opens the content document specified by the url
      *
@@ -934,7 +884,6 @@ console.trace(JSON.stringify(settingsData));
      * @param {object} initiator optional
      */
     this.openContentUrl = function (contentRefUrl, sourceFileHref, initiator) {
-
         var combinedPath = Helpers.ResolveContentRef(contentRefUrl, sourceFileHref);
 
         var hashIndex = combinedPath.indexOf("#");
@@ -943,8 +892,7 @@ console.trace(JSON.stringify(settingsData));
         if (hashIndex >= 0) {
             hrefPart = combinedPath.substr(0, hashIndex);
             elementId = combinedPath.substr(hashIndex + 1);
-        }
-        else {
+        } else {
             hrefPart = combinedPath;
             elementId = undefined;
         }
@@ -974,7 +922,6 @@ console.trace(JSON.stringify(settingsData));
      * @param {object} initiator optional
      */
     this.openSpineItemElementId = function (idref, elementId, initiator) {
-
         var spineItem = _spine.getItemById(idref);
         if (!spineItem) {
             return false;
@@ -985,7 +932,6 @@ console.trace(JSON.stringify(settingsData));
         if (elementId) {
             pageData.setElementId(elementId);
         }
-
 
         openPage(pageData, 0);
 
@@ -998,7 +944,7 @@ console.trace(JSON.stringify(settingsData));
      * @returns {string} Serialized ReadiumSDK.Models.BookmarkData object as JSON string.
      *          {null} If a bookmark could not be created successfully.
      */
-    this.bookmarkCurrentPage = function() {
+    this.bookmarkCurrentPage = function () {
         var bookmark = _currentView.bookmarkCurrentPage();
         return bookmark ? bookmark.toString() : null;
     };
@@ -1007,7 +953,6 @@ console.trace(JSON.stringify(settingsData));
      * Resets all the custom styles set by setStyle callers at runtime
      */
     this.clearStyles = function () {
-
         _userStyles.resetStyleValues();
         applyStyles();
         _userStyles.clear();
@@ -1017,9 +962,7 @@ console.trace(JSON.stringify(settingsData));
      * Resets all the custom styles set by setBookStyle callers at runtime
      */
     this.clearBookStyles = function () {
-
         if (_currentView) {
-
             _bookStyles.resetStyleValues();
             _currentView.applyBookStyles();
         }
@@ -1033,8 +976,9 @@ console.trace(JSON.stringify(settingsData));
      * @returns {boolean}
      */
     this.isMediaOverlayAvailable = function () {
-
-        if (!_mediaOverlayPlayer) return false;
+        if (!_mediaOverlayPlayer) {
+            return false;
+        }
 
         return _mediaOverlayPlayer.isMediaOverlayAvailable();
     };
@@ -1055,16 +999,13 @@ console.trace(JSON.stringify(settingsData));
      * Starts/Stop playing media overlay on current page
      */
     this.toggleMediaOverlay = function () {
-
         _mediaOverlayPlayer.toggleMediaOverlay();
     };
-
 
     /**
      * Plays next fragment media overlay
      */
     this.nextMediaOverlay = function () {
-
         _mediaOverlayPlayer.nextMediaOverlay();
 
     };
@@ -1073,7 +1014,6 @@ console.trace(JSON.stringify(settingsData));
      * Plays previous fragment media overlay
      */
     this.previousMediaOverlay = function () {
-
         _mediaOverlayPlayer.previousMediaOverlay();
 
     };
@@ -1082,7 +1022,6 @@ console.trace(JSON.stringify(settingsData));
      * Plays next available fragment media overlay that is outside of the current escapable scope
      */
     this.escapeMediaOverlay = function () {
-
         _mediaOverlayPlayer.escape();
     };
 
@@ -1091,7 +1030,6 @@ console.trace(JSON.stringify(settingsData));
      * @todo Clarify what this does with Daniel.
      */
     this.ttsEndedMediaOverlay = function () {
-
         _mediaOverlayPlayer.onTTSEnd();
     };
 
@@ -1099,7 +1037,6 @@ console.trace(JSON.stringify(settingsData));
      * Pause currently playing media overlays.
      */
     this.pauseMediaOverlay = function () {
-
         _mediaOverlayPlayer.pause();
     };
 
@@ -1107,7 +1044,6 @@ console.trace(JSON.stringify(settingsData));
      * Start/Resume playback of media overlays.
      */
     this.playMediaOverlay = function () {
-
         _mediaOverlayPlayer.play();
     };
 
@@ -1116,27 +1052,14 @@ console.trace(JSON.stringify(settingsData));
      * @returns {boolean}
      */
     this.isPlayingMediaOverlay = function () {
-
         return _mediaOverlayPlayer.isPlaying();
     };
-
-//
-// should use Globals.Events.SETTINGS_APPLIED instead!
-//    this.setRateMediaOverlay = function(rate) {
-//
-//        _mediaOverlayPlayer.setRate(rate);
-//    };
-//    this.setVolumeMediaOverlay = function(volume){
-//
-//        _mediaOverlayPlayer.setVolume(volume);
-//    };
 
     /**
      * Get the first visible media overlay element from the currently active content document(s)
      * @returns {HTMLElement|undefined}
      */
     this.getFirstVisibleMediaOverlayElement = function () {
-
         if (_currentView) {
             return _currentView.getFirstVisibleMediaOverlayElement();
         }
@@ -1151,7 +1074,6 @@ console.trace(JSON.stringify(settingsData));
      * @param [initiator]
      */
     this.insureElementVisibility = function (spineItemId, element, initiator) {
-
         if (_currentView) {
             _currentView.insureElementVisibility(spineItemId, element, initiator);
         }
@@ -1161,7 +1083,6 @@ console.trace(JSON.stringify(settingsData));
     var _resizeMOWasPlaying = false;
 
     function handleViewportResizeStart() {
-
         _resizeBookmark = null;
         _resizeMOWasPlaying = false;
 
@@ -1193,11 +1114,15 @@ console.trace(JSON.stringify(settingsData));
             self.handleViewportResize(_resizeBookmark);
         }
 
-        if (_resizeMOWasPlaying) self.playMediaOverlay();
+        if (_resizeMOWasPlaying) {
+            self.playMediaOverlay();
+        }
     }
 
     this.handleViewportResize = function (bookmarkToRestore) {
-        if (!_currentView) return;
+        if (!_currentView) {
+            return;
+        }
 
         var bookMark = bookmarkToRestore || _currentView.bookmarkCurrentPage(); // not self! (JSON string)
 
@@ -1207,11 +1132,10 @@ console.trace(JSON.stringify(settingsData));
             // ### tss: related to resize remake in reflowable_view
             _currentView.onViewportResize();
 
-            initViewForItem(spineItem, function (isViewChanged) {
+            initViewForItem(spineItem, function () {
                 self.openSpineItemElementCfi(bookMark.idref, bookMark.contentCFI, self);
             });
-        }
-        else {
+        } else {
             _currentView.onViewportResize();
         }
     };
@@ -1221,11 +1145,31 @@ console.trace(JSON.stringify(settingsData));
      *
      * @param {string} eventName              Event name.
      * @param {function} callback             Callback function.
-     * @param {object} context                User specified data passed to the callback function.
+     * @param {object} useCapture             Capturing/bubbling
      * @returns {undefined}
      */
-    this.addIFrameEventListener = function (eventName, callback, context) {
-        _iframeLoader.addIFrameEventListener(eventName, callback, context);
+    this.addIFrameWindowEventListener = function (eventName, callback, useCapture) {
+        _iframeLoader.addIFrameWindowEventListener(eventName, callback, useCapture);
+    };
+
+    this.removeIFrameWindowEventListener = function (eventName, callback, useCapture) {
+        _iframeLoader.removeIFrameWindowEventListener(eventName, callback, useCapture);
+    };
+
+    /**
+     * Lets user to subscribe to iframe's document events
+     *
+     * @param {string} eventName              Event name.
+     * @param {function} callback             Callback function.
+     * @param {boolean} useCapture            Capturing/bubbling
+     * @returns {undefined}
+     */
+    this.addIFrameDocumentEventListener = function (eventName, callback, useCapture) {
+        _iframeLoader.addIFrameDocumentEventListener(eventName, callback, useCapture);
+    };
+
+    this.removeIFrameDocumentEventListener = function (eventName, callback, useCapture) {
+        _iframeLoader.removeIFrameDocumentEventListener(eventName, callback, useCapture);
     };
 
     this.updateIframeEvents = function (iframe) {
@@ -1243,18 +1187,14 @@ console.trace(JSON.stringify(settingsData));
         var _spineItemIframeMap = {};
         var _wasPlaying = false;
 
-        var _callback_playPause = undefined;
+        var _callback_playPause;
         this.setCallback_PlayPause = function (callback) {
             _callback_playPause = callback;
         };
 
-        var _callback_isAvailable = undefined;
+        var _callback_isAvailable;
         this.setCallback_IsAvailable = function (callback) {
             _callback_isAvailable = callback;
-        };
-
-        this.playPause = function (doPlay) {
-            _playPause(doPlay);
         };
 
         var _playPause = function (doPlay) {
@@ -1263,43 +1203,59 @@ console.trace(JSON.stringify(settingsData));
             }
 
             try {
-                var $iframe = undefined;
+                var $iframe;
 
                 for (var prop in _spineItemIframeMap) {
-                    if (!_spineItemIframeMap.hasOwnProperty(prop)) continue;
+                    if (!_spineItemIframeMap.hasOwnProperty(prop)) {
+                        continue;
+                    }
 
                     var data = _spineItemIframeMap[prop];
-                    if (!data || !data.active) continue;
+                    if (!data || !data.active) {
+                        continue;
+                    }
 
-                    if ($iframe) console.error("More than one active iframe?? (pagination)");
+                    if ($iframe) {
+                        console.error("More than one active iframe?? (pagination)");
+                    }
 
                     $iframe = data["$iframe"];
-                    if (!$iframe) continue;
+                    if (!$iframe) {
+                        continue;
+                    }
 
                     var $audios = $("audio", $iframe[0].contentDocument);
 
+                    //jshint -W083
                     $.each($audios, function () {
-
                         var attr = this.getAttribute("epub:type") || this.getAttribute("type");
 
-                        if (!attr) return true; // continue
+                        if (!attr) {
+                            return true; // continue
+                        }
 
-                        if (attr.indexOf("ibooks:soundtrack") < 0 && attr.indexOf("media:soundtrack") < 0 && attr.indexOf("media:background") < 0) return true; // continue
+                        if (attr.indexOf("ibooks:soundtrack") < 0 && attr.indexOf("media:soundtrack") < 0 &&
+                            attr.indexOf("media:background") < 0) {
+                            return true;
+                        }
 
                         if (doPlay && this.play) {
                             this.play();
-                        }
-                        else if (this.pause) {
+                        } else if (this.pause) {
                             this.pause();
                         }
 
                         return true; // continue (more than one track?)
                     });
+                    //jshint +W083
                 }
-            }
-            catch (err) {
+            } catch (err) {
                 console.error(err);
             }
+        };
+
+        this.playPause = function (doPlay) {
+            _playPause(doPlay);
         };
 
         this.setPlayState = function (wasPlaying) {
@@ -1307,18 +1263,14 @@ console.trace(JSON.stringify(settingsData));
         };
 
         readerView.on(Globals.Events.CONTENT_DOCUMENT_LOADED, function ($iframe, spineItem) {
-            Globals.logEvent("CONTENT_DOCUMENT_LOADED", "ON", "reader_view.js (via BackgroundAudioTrackManager) [ " + spineItem.href + " ]");;
+            Globals.logEvent("CONTENT_DOCUMENT_LOADED", "ON", "reader_view.js (via BackgroundAudioTrackManager) [ " +
+                    spineItem.href + " ]");
 
             try {
                 if (spineItem && spineItem.idref && $iframe && $iframe[0]) {
-                    // console.log("CONTENT_DOCUMENT_LOADED");
-                    // console.debug(spineItem.href);
-                    // console.debug(spineItem.idref);
-
                     _spineItemIframeMap[spineItem.idref] = {"$iframe": $iframe, href: spineItem.href};
                 }
-            }
-            catch (err) {
+            } catch (err) {
                 console.error(err);
             }
         });
@@ -1326,32 +1278,13 @@ console.trace(JSON.stringify(settingsData));
         readerView.on(Globals.Events.PAGINATION_CHANGED, function (pageChangeData) {
             Globals.logEvent("PAGINATION_CHANGED", "ON", "reader_view.js (via BackgroundAudioTrackManager)");
 
-            // console.log("PAGINATION_CHANGED");
-            // console.debug(pageChangeData);
-            //
-            // if (pageChangeData.spineItem)
-            // {
-            //     console.debug(pageChangeData.spineItem.href);
-            //     console.debug(pageChangeData.spineItem.idref);
-            // }
-            // else
-            // {
-            //     //console.error(pageChangeData);
-            // }
-            //
-            // if (pageChangeData.paginationInfo && pageChangeData.paginationInfo.openPages && pageChangeData.paginationInfo.openPages.length)
-            // {
-            //     for (var i = 0; i < pageChangeData.paginationInfo.openPages.length; i++)
-            //     {
-            //         console.log(pageChangeData.paginationInfo.openPages[i].idref);
-            //     }
-            // }
-
             var atLeastOne = false;
 
             try {
                 for (var prop in _spineItemIframeMap) {
-                    if (!_spineItemIframeMap.hasOwnProperty(prop)) continue;
+                    if (!_spineItemIframeMap.hasOwnProperty(prop)) {
+                        continue;
+                    }
 
                     var isActive = pageChangeData.spineItem && pageChangeData.spineItem.idref === prop;
 
@@ -1363,64 +1296,61 @@ console.trace(JSON.stringify(settingsData));
                         for (var i = 0; i < pageChangeData.paginationInfo.openPages.length; i++) {
                             if (pageChangeData.paginationInfo.openPages[i].idref === prop) {
                                 isDisplayed = true;
-                            }
-                            else {
+                            } else {
                                 allSame = false;
                             }
                         }
 
-                        if (!isActive && allSame) isActive = true;
+                        if (!isActive && allSame) {
+                            isActive = true;
+                        }
                     }
 
                     if (isActive || isDisplayed) {
                         var data = _spineItemIframeMap[prop];
-                        if (!data) continue;
+                        if (!data) {
+                            continue;
+                        }
 
                         _spineItemIframeMap[prop]["active"] = isActive;
 
                         var $iframe = data["$iframe"];
-                        var href = data.href;
-
                         var $audios = $("audio", $iframe[0].contentDocument);
+                        // jshint -W083
                         $.each($audios, function () {
-
                             var attr = this.getAttribute("epub:type") || this.getAttribute("type");
 
-                            if (!attr) return true; // continue
+                            if (!attr) {
+                                return true;
+                            }
 
-                            if (attr.indexOf("ibooks:soundtrack") < 0 && attr.indexOf("media:soundtrack") < 0 && attr.indexOf("media:background") < 0) return true; // continue
+                            if (attr.indexOf("ibooks:soundtrack") < 0 && attr.indexOf("media:soundtrack") < 0 &&
+                                   attr.indexOf("media:background") < 0) {
+                                return true;
+                            }
 
                             this.setAttribute("loop", "loop");
                             this.removeAttribute("autoplay");
 
-                            // DEBUG!
-                            //this.setAttribute("controls", "controls");
-
-                            if (isActive) {
-                                // DEBUG!
-                                //$(this).css({border:"2px solid green"});
-                            }
-                            else {
-                                if (this.pause) this.pause();
-
-                                // DEBUG!
-                                //$(this).css({border:"2px solid red"});
+                            if (!isActive) {
+                                if (this.pause) {
+                                    this.pause();
+                                }
                             }
 
                             atLeastOne = true;
 
                             return true; // continue (more than one track?)
                         });
-
-                        continue;
-                    }
-                    else {
-                        if (_spineItemIframeMap[prop]) _spineItemIframeMap[prop]["$iframe"] = undefined;
+                        // jshint +W083
+                    } else {
+                        if (_spineItemIframeMap[prop]) {
+                            _spineItemIframeMap[prop]["$iframe"] = undefined;
+                        }
                         _spineItemIframeMap[prop] = undefined;
                     }
                 }
-            }
-            catch (err) {
+            } catch (err) {
                 console.error(err);
             }
 
@@ -1431,12 +1361,10 @@ console.trace(JSON.stringify(settingsData));
             if (atLeastOne) {
                 if (_wasPlaying) {
                     _playPause(true);
-                }
-                else {
+                } else {
                     _playPause(false); // ensure correct paused state
                 }
-            }
-            else {
+            } else {
                 _playPause(false); // ensure correct paused state
             }
         });
@@ -1444,17 +1372,26 @@ console.trace(JSON.stringify(settingsData));
         readerView.on(Globals.Events.MEDIA_OVERLAY_STATUS_CHANGED, function (value) {
             Globals.logEvent("MEDIA_OVERLAY_STATUS_CHANGED", "ON", "reader_view.js (via BackgroundAudioTrackManager)");
 
-            if (!value.smilIndex) return;
-            var package = readerView.package();
-            var smil = package.media_overlay.smilAt(value.smilIndex);
-            if (!smil || !smil.spineItemId) return;
+            if (!value.smilIndex) {
+                return;
+            }
+            var smil = readerView['package']().media_overlay.smilAt(value.smilIndex);
+            if (!smil || !smil.spineItemId) {
+                return;
+            }
 
             var needUpdate = false;
-            for (var prop in _spineItemIframeMap) {
-                if (!_spineItemIframeMap.hasOwnProperty(prop)) continue;
+            var prop;
+            var data;
+            for (prop in _spineItemIframeMap) {
+                if (!_spineItemIframeMap.hasOwnProperty(prop)) {
+                    continue;
+                }
 
-                var data = _spineItemIframeMap[prop];
-                if (!data) continue;
+                data = _spineItemIframeMap[prop];
+                if (!data) {
+                    continue;
+                }
 
                 if (data.active) {
                     if (prop !== smil.spineItemId) {
@@ -1466,11 +1403,15 @@ console.trace(JSON.stringify(settingsData));
             }
 
             if (needUpdate) {
-                for (var prop in _spineItemIframeMap) {
-                    if (!_spineItemIframeMap.hasOwnProperty(prop)) continue;
+                for (prop in _spineItemIframeMap) {
+                    if (!_spineItemIframeMap.hasOwnProperty(prop)) {
+                        continue;
+                    }
 
-                    var data = _spineItemIframeMap[prop];
-                    if (!data) continue;
+                    data = _spineItemIframeMap[prop];
+                    if (!data) {
+                        continue;
+                    }
 
                     if (!data.active) {
                         if (prop === smil.spineItemId) {
@@ -1487,12 +1428,7 @@ console.trace(JSON.stringify(settingsData));
     };
     this.backgroundAudioTrackManager = new BackgroundAudioTrackManager(self);
 
-    function getCfisForVisibleRegion() {
-        return {firstVisibleCfi: self.getFirstVisibleCfi(), lastVisibleCfi: self.getLastVisibleCfi()};
-    }
-
-
-    this.isVisibleSpineItemElementCfi = function(spineIdRef, partialCfi){
+    this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
         var spineItem = getSpineItem(spineIdRef);
 
         if (!spineItem) {
@@ -1500,11 +1436,10 @@ console.trace(JSON.stringify(settingsData));
         }
 
         if (_currentView) {
-
-            if(!partialCfi || (partialCfi && partialCfi === '')){
+            if (!partialCfi || partialCfi === '') {
                 var spines = _currentView.getLoadedSpineItems();
-                for(var i = 0, count = spines.length; i < count; i++) {
-                    if(spines[i].idref == spineIdRef){
+                for (var i = 0, count = spines.length; i < count; i++) {
+                    if (spines[i].idref === spineIdRef) {
                         return true;
                     }
                 }
@@ -1522,13 +1457,10 @@ console.trace(JSON.stringify(settingsData));
      * @param {string} selector          The query selector
      * @returns {HTMLElement[]}
      */
-    this.getElements = function(spineItemIdref, selector) {
-
-        if(_currentView) {
+    this.getElements = function (spineItemIdref, selector) {
+        if (_currentView) {
             return _currentView.getElements(spineItemIdref, selector);
         }
-
-        return undefined;
     };
 
     /**
@@ -1539,7 +1471,6 @@ console.trace(JSON.stringify(settingsData));
      */
     this.isElementVisible = function (element) {
         return _currentView.isElementVisible($(element));
-
     };
 
     /**
@@ -1557,7 +1488,6 @@ console.trace(JSON.stringify(settingsData));
                     .setEndInfo(nodeRangeInfo.endInfo);
             }
         }
-        return undefined;
     };
 
     /**
@@ -1565,30 +1495,30 @@ console.trace(JSON.stringify(settingsData));
      *
      * @returns {ReadiumSDK.Models.CurrentPagesInfo}
      */
-    this.getPaginationInfo = function(){
+    this.getPaginationInfo = function () {
         return _currentView.getPaginationInfo();
     };
+
     /**
      * Get CFI of the first element visible in the viewport
      * @returns {ReadiumSDK.Models.BookmarkData}
      */
-    this.getFirstVisibleCfi = function() {
+    this.getFirstVisibleCfi = function () {
         if (_currentView) {
             return _currentView.getFirstVisibleCfi();
         }
-        return undefined;
     };
 
     /**
      * Get CFI of the last element visible in the viewport
      * @returns {ReadiumSDK.Models.BookmarkData}
      */
-    this.getLastVisibleCfi = function() {
+    this.getLastVisibleCfi = function () {
         if (_currentView) {
             return _currentView.getLastVisibleCfi();
         }
-        return undefined;
     };
+
     /**
      *
      * @param {string} rangeCfi
@@ -1596,7 +1526,7 @@ console.trace(JSON.stringify(settingsData));
      * @param {boolean} [inclusive]
      * @returns {array}
      */
-    this.getDomRangesFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
+    this.getDomRangesFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
         if (_currentView) {
             if (_currentView.getDomRangesFromRangeCfi) {
                 return _currentView.getDomRangesFromRangeCfi(rangeCfi, rangeCfi2, inclusive);
@@ -1604,18 +1534,16 @@ console.trace(JSON.stringify(settingsData));
                 return [_currentView.getDomRangeFromRangeCfi(rangeCfi, rangeCfi2, inclusive)];
             }
         }
-        return undefined;
     };
 
     /**
-     *
-     * @param {ReadiumSDK.Models.BookmarkData} startCfi starting CFI
-     * @param {ReadiumSDK.Models.BookmarkData} [endCfi] ending CFI
+     * @param {ReadiumSDK.Models.BookmarkData} rangeCfi starting CFI
+     * @param {ReadiumSDK.Models.BookmarkData} rangeCfi2 ending CFI
      * optional - may be omited if startCfi is a range CFI
      * @param {boolean} [inclusive] optional indicating if the range should be inclusive
      * @returns {array}
      */
-    this.getDomRangesFromRangeCfi = function(rangeCfi, rangeCfi2, inclusive) {
+    this.getDomRangesFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
         if (_currentView) {
             if (_currentView.getDomRangesFromRangeCfi) {
                 return _currentView.getDomRangesFromRangeCfi(rangeCfi, rangeCfi2, inclusive);
@@ -1623,7 +1551,6 @@ console.trace(JSON.stringify(settingsData));
                 return [_currentView.getDomRangeFromRangeCfi(rangeCfi, rangeCfi2, inclusive)];
             }
         }
-        return undefined;
     };
 
     /**
@@ -1632,25 +1559,23 @@ console.trace(JSON.stringify(settingsData));
      * @param {ReadiumSDK.Models.BookmarkData} [endCfi] ending CFI
      * optional - may be omited if startCfi is a range CFI
      * @param {boolean} [inclusive] optional indicating if the range should be inclusive
-     * @returns {DOM Range} https://developer.mozilla.org/en-US/docs/Web/API/Range
+     * @returns {Range} https://developer.mozilla.org/en-US/docs/Web/API/Range
      */
-    this.getDomRangeFromRangeCfi = function(startCfi, endCfi, inclusive) {
+    this.getDomRangeFromRangeCfi = function (startCfi, endCfi, inclusive) {
         if (_currentView) {
             return _currentView.getDomRangeFromRangeCfi(startCfi, endCfi, inclusive);
         }
-        return undefined;
     };
 
     /**
      * Generate range CFI from DOM range
-     * @param {DOM Range} https://developer.mozilla.org/en-US/docs/Web/API/Range
+     * @param {Range} https://developer.mozilla.org/en-US/docs/Web/API/Range
      * @returns {string} - represents Range CFI for the DOM range
      */
-    this.getRangeCfiFromDomRange = function(domRange) {
+    this.getRangeCfiFromDomRange = function (domRange) {
         if (_currentView) {
             return _currentView.getRangeCfiFromDomRange(domRange);
         }
-        return undefined;
     };
 
     /**
@@ -1664,7 +1589,6 @@ console.trace(JSON.stringify(settingsData));
         if (_currentView) {
             return _currentView.getVisibleCfiFromPoint(x, y, precisePoint, spineItemIdref);
         }
-        return undefined;
     };
 
     /**
@@ -1676,11 +1600,10 @@ console.trace(JSON.stringify(settingsData));
      * @param [spineItemIdref] Required for fixed layout views
      * @returns {*}
      */
-    this.getRangeCfiFromPoints = function(startX, startY, endX, endY, spineItemIdref) {
+    this.getRangeCfiFromPoints = function (startX, startY, endX, endY, spineItemIdref) {
         if (_currentView) {
             return _currentView.getRangeCfiFromPoints(startX, startY, endX, endY, spineItemIdref);
         }
-        return undefined;
     };
 
     /**
@@ -1688,11 +1611,10 @@ console.trace(JSON.stringify(settingsData));
      * @param {HTMLElement} element
      * @returns {*}
      */
-    this.getCfiForElement = function(element) {
+    this.getCfiForElement = function (element) {
         if (_currentView) {
             return _currentView.getCfiForElement(element);
         }
-        return undefined;
     };
 };
 
