@@ -51,8 +51,8 @@ var CfiNavigationLogic = function (options) {
     options = options || {};
 
     var DEBUG = false; // relates to getVisibleTextRangeOffsetsSelectedByFunc
-    var debugMode = ReadiumSDK.DEBUG_MODE;
-    var tssDebug = false;
+    var debugMode = ReadiumSDK.DEBUG_MODE;  // generic console logging
+    var tssDebug = false;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
@@ -1385,36 +1385,43 @@ var CfiNavigationLogic = function (options) {
         }
 
         var $candidates = [];
-        var hiddenContCounter = 0;
-        var visibleCounter = 0;
-        for (var i = 0, len = root.childNodes.length; i < len; ++i) {
-            // break if we already found some fully visible elements and now iterating over hidden
-            if (hiddenContCounter > 5 && visibleCounter) {
-                break;
-            }
 
-            var childElement = root.childNodes[i];
-            if (childElement.nodeType === 1) {
-                var visibilityPercentage = checkVisibilityByRectangles(childElement, true, visibleContentOffsets, frameDimensions);
-                if (visibilityPercentage > 0) {
-                    if (visibilityPercentage === 100) {
-                        Array.prototype.push.apply($candidates, this.getLeafNodeElements(childElement));
-                    } else {
-                        var res = this._getVisibleCandidates(childElement);
-                        if (res.length) {
-                            Array.prototype.push.apply($candidates, res);
-                        } else {
-                            $candidates.push($(childElement));
-                        }
-                    }
-                    hiddenContCounter = 0;
-                    ++visibleCounter;
-                } else {
-                    ++hiddenContCounter;
+        if (!isElementBlacklisted($(root))) {
+            var hiddenContCounter = 0;
+            var visibleCounter = 0;
+            for (var i = 0, len = root.childNodes.length; i < len; ++i) {
+                // break if we already found some fully visible elements and now iterating over hidden
+                if (hiddenContCounter > 5 && visibleCounter) {
+                    break;
                 }
-            } else if (childElement.nodeType === 3 && isValidTextNodeContent(childElement.nodeValue)) {
-                $candidates.push($(childElement));
-                hiddenContCounter = 0;
+
+                var childElement = root.childNodes[i];
+                if (isElementBlacklisted($(childElement))) {
+                    continue;
+                }
+
+                if (childElement.nodeType === 1) {
+                    var visibilityPercentage = checkVisibilityByRectangles(childElement, true, visibleContentOffsets, frameDimensions);
+                    if (visibilityPercentage > 0) {
+                        if (visibilityPercentage === 100) {
+                            Array.prototype.push.apply($candidates, this.getLeafNodeElements(childElement));
+                        } else {
+                            var res = this._getVisibleCandidates(childElement);
+                            if (res.length) {
+                                Array.prototype.push.apply($candidates, res);
+                            } else {
+                                $candidates.push($(childElement));
+                            }
+                        }
+                        hiddenContCounter = 0;
+                        ++visibleCounter;
+                    } else {
+                        ++hiddenContCounter;
+                    }
+                } else if (childElement.nodeType === 3 && isValidTextNodeContent(childElement.nodeValue)) {
+                    $candidates.push($(childElement));
+                    hiddenContCounter = 0;
+                }
             }
         }
 
@@ -1477,30 +1484,8 @@ var CfiNavigationLogic = function (options) {
     };
 
     function isElementBlacklisted($element) {
-        //TODO: Ok we really need to have a single point of reference for this blacklist
-        var blacklist = {
-            classes: ["cfi-marker", "mo-cfi-highlight"],
-            elements: [], //not looked at
-            ids: ["MathJax_Message", "MathJax_SVG_Hidden"]
-        };
-
-        var isBlacklisted = false;
-
-        _.some(blacklist.classes, function (value) {
-            if ($element.hasClass(value)) {
-                isBlacklisted = true;
-            }
-            return isBlacklisted;
-        });
-
-        _.some(blacklist.ids, function (value) {
-            if ($element.attr("id") === value) {
-                isBlacklisted = true;
-            }
-            return isBlacklisted;
-        });
-
-        return isBlacklisted;
+        return EPUBcfi.applyBlacklist($element, ["cfi-marker", "mo-cfi-highlight"], [],
+                ["MathJax_Message", "MathJax_SVG_Hidden"]).length === 0;
     }
 
     this.getLeafNodeElements = function (root) {
