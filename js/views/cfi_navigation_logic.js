@@ -80,13 +80,13 @@ var CfiNavigationLogic = function (options) {
     function getNodeClientRect(node) {
         var range = createRange();
         range.selectNode(node);
-        return normalizeRectangle(range.getBoundingClientRect(),0,0);
+        return normalizeRectangle(range.getBoundingClientRect(), 0, 0);
     }
 
     function getNodeContentsClientRect(node) {
         var range = createRange();
         range.selectNodeContents(node);
-        return normalizeRectangle(range.getBoundingClientRect(),0,0);
+        return normalizeRectangle(range.getBoundingClientRect(), 0, 0);
     }
 
     function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset) {
@@ -97,7 +97,7 @@ var CfiNavigationLogic = function (options) {
         } else if (endNode.nodeType === Node.TEXT_NODE) {
             range.setEnd(endNode, endOffset ? endOffset : 0);
         }
-        return normalizeRectangle(range.getBoundingClientRect(),0,0);
+        return normalizeRectangle(range.getBoundingClientRect(), 0, 0);
     }
 
     function getNodeClientRectList(node, visibleContentOffsets) {
