@@ -1168,11 +1168,11 @@ var CfiNavigationLogic = function (options) {
 
     this.getPageForPointOnElement = function ($element, x, y) {
         var pageIndex = findPageByRectangles($element, y);
-            if (pageIndex === null) {
-                console.warn('Impossible to locate a hidden element: ', $element);
-                return 0;
-            }
-            return pageIndex;
+        if (pageIndex === null) {
+            console.warn('Impossible to locate a hidden element: ', $element);
+            return 0;
+        }
+        return pageIndex;
     };
 
     this.getElementById = function (id) {
