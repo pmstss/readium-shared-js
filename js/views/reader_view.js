@@ -418,7 +418,6 @@ var ReaderView = function (options) {
 
             try {
                 if (pageRequestData.idref) {
-
                     if (pageRequestData.spineItemPageIndex) {
                         fallback = !self.openSpineItemPage(pageRequestData.idref, pageRequestData.spineItemPageIndex, self);
                     } else if (pageRequestData.elementCfi) {
@@ -761,6 +760,30 @@ var ReaderView = function (options) {
         var pageData = new PageOpenRequest(spineItem, initiator);
         if (pageIndex) {
             pageData.setPageIndex(pageIndex);
+        }
+
+        openPage(pageData, 0);
+
+        return true;
+    };
+
+    /**
+     * Opens spine item with idref provided at given percent position
+     *
+     * @param {string} idref        id of the spine item
+     * @param {number} percent      value ([0,1]) relative to spine
+     * @param {object} initiator    optional
+     */
+    this.openSpineItemPercent = function (idref, percent, initiator) {
+        var spineItem = getSpineItem(idref);
+
+        if (!spineItem) {
+            return false;
+        }
+
+        var pageData = new PageOpenRequest(spineItem, initiator);
+        if (typeof percent !== 'undefined') {
+            pageData.setPercent(percent);
         }
 
         openPage(pageData, 0);
