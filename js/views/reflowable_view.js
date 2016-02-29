@@ -398,12 +398,19 @@ var ReflowableView = function (options, reader) {
             pageIndex = pageRequest.spineItemPageIndex;
         } else if (pageRequest.elementId) {
             pageIndex = _navigationLogic.getPageForElementId(pageRequest.elementId);
+            if (pageIndex < 0) {
+                pageIndex = 0;
+            }
         } else if (pageRequest.elementCfi) {
             try {
                 pageIndex = _navigationLogic.getPageForElementCfi(pageRequest.elementCfi,
                     ["cfi-marker", "mo-cfi-highlight"],
                     [],
                     ["MathJax_Message"]);
+
+                if (pageIndex < 0) {
+                    pageIndex = 0;
+                }
             } catch (e) {
                 pageIndex = 0;
                 console.error(e);
