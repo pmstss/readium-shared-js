@@ -25,124 +25,132 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
-define(['jquery','eventEmitter'], function($, EventEmitter) {
+// jscs:disable validateQuoteMarks
+// jshint quotmark:false
+
+define(['jquery', 'eventEmitter'], function ($, EventEmitter) {
+
+    'use strict';
 
     var DEBUG = false;
 
-/**
- * Top level ReadiumSDK namespace
- * @namespace
- */
-var Globals = {
+    /**
+     * Top level ReadiumSDK namespace
+     * @namespace
+     */
+    var Globals = {
 
-    /**
-     * Current version of the JS SDK
-     * @static
-     * @return {string} version
-     */
-    version: function () {
-        return "0.8.0";
-    },
-    /**
-     * @namespace
-     */
-    Views: {
-        /**
-         * Landscape Orientation
-         */
-        ORIENTATION_LANDSCAPE: "orientation_landscape",
-        /**
-         * Portrait Orientation
-         */
-        ORIENTATION_PORTRAIT: "orientation_portrait"
-    },
-    /**
-     * @namespace
-     */
-    Events: {
-        /**
-         * @event
-         */
-        READER_INITIALIZED: "ReaderInitialized",
-        /**
-         * This gets triggered on every page turnover. It includes spine information and such.
-         * @event
-         */
-        PAGINATION_CHANGED: "PaginationChanged",
-        /**
-         * @event
-         */
-        SETTINGS_APPLIED: "SettingsApplied",
-        /**
-         * @event
-         */
-        FXL_VIEW_RESIZED: "FXLViewResized",
-        /**
-         * @event
-         */
-        READER_VIEW_CREATED: "ReaderViewCreated",
-        /**
-         * @event
-         */
-        READER_VIEW_DESTROYED: "ReaderViewDestroyed",
-        /**
-         * @event
-         */
-        CONTENT_DOCUMENT_LOAD_START: "ContentDocumentLoadStart",
-        /**
-         * @event
-         */
-        CONTENT_DOCUMENT_LOADED: "ContentDocumentLoaded",
-        /**
-         * @event
-         */
-        MEDIA_OVERLAY_STATUS_CHANGED: "MediaOverlayStatusChanged",
-        /**
-         * @event
-         */
-        MEDIA_OVERLAY_TTS_SPEAK: "MediaOverlayTTSSpeak",
-        /**
-         * @event
-         */
-        MEDIA_OVERLAY_TTS_STOP: "MediaOverlayTTSStop",
-        /**
-         * @event
-         */
-        PLUGINS_LOADED: "PluginsLoaded"
-    },
-    /**
-     * Internal Events
-     *
-     * @desc Should not be triggered outside of {@link Views.ReaderView}.
-     * @namespace
-     */
-    InternalEvents: {
-        /**
-         * @event
-         */
-        CURRENT_VIEW_PAGINATION_CHANGED: "CurrentViewPaginationChanged",
-    },
+        DEBUG_MODE: DEBUG,
 
-    logEvent: function(eventName, eventType, eventSource) {
-        if (DEBUG) {
-            console.debug("#### ReadiumSDK.Events." + eventName + " - "+eventType+" - " + eventSource);
+        /**
+         * Current version of the JS SDK
+         * @static
+         * @return {string} version
+         */
+        version: function () {
+            return "0.8.0";
+        },
+        /**
+         * @namespace
+         */
+        Views: {
+            /**
+             * Landscape Orientation
+             */
+            ORIENTATION_LANDSCAPE: "orientation_landscape",
+            /**
+             * Portrait Orientation
+             */
+            ORIENTATION_PORTRAIT: "orientation_portrait"
+        },
+        /**
+         * @namespace
+         */
+        Events: {
+            /**
+             * @event
+             */
+            READER_INITIALIZED: "ReaderInitialized",
+            /**
+             * This gets triggered on every page turnover. It includes spine information and such.
+             * @event
+             */
+            PAGINATION_CHANGED: "PaginationChanged",
+            /**
+             * @event
+             */
+            SETTINGS_APPLIED: "SettingsApplied",
+            /**
+             * @event
+             */
+            FXL_VIEW_RESIZED: "FXLViewResized",
+            /**
+             * @event
+             */
+            READER_VIEW_CREATED: "ReaderViewCreated",
+            /**
+             * @event
+             */
+            READER_VIEW_DESTROYED: "ReaderViewDestroyed",
+            /**
+             * @event
+             */
+            CONTENT_DOCUMENT_LOAD_START: "ContentDocumentLoadStart",
+            /**
+             * @event
+             */
+            CONTENT_DOCUMENT_LOADED: "ContentDocumentLoaded",
+            /**
+             * @event
+             */
+            MEDIA_OVERLAY_STATUS_CHANGED: "MediaOverlayStatusChanged",
+            /**
+             * @event
+             */
+            MEDIA_OVERLAY_TTS_SPEAK: "MediaOverlayTTSSpeak",
+            /**
+             * @event
+             */
+            MEDIA_OVERLAY_TTS_STOP: "MediaOverlayTTSStop",
+            /**
+             * @event
+             */
+            PLUGINS_LOADED: "PluginsLoaded"
+        },
+        /**
+         * Internal Events
+         *
+         * @desc Should not be triggered outside of {@link Views.ReaderView}.
+         * @namespace
+         */
+        InternalEvents: {
+            /**
+             * @event
+             */
+            CURRENT_VIEW_PAGINATION_CHANGED: "CurrentViewPaginationChanged"
+        },
+
+        logEvent: function (eventName, eventType, eventSource) {
+            if (DEBUG) {
+                console.debug("#### ReadiumSDK.Events." + eventName + " - " + eventType + " - " + eventSource);
+            }
         }
-    }
-};
-$.extend(Globals, new EventEmitter());
+    };
 
-return Globals;
-
+    $.extend(Globals, new EventEmitter());
+    return Globals;
 });
 
 //This is default implementation of reading system object that will be available for the publication's javascript to analyze at runtime
-//To extend/modify/replace this object reading system should subscribe Globals.Events.READER_INITIALIZED and apply changes in reaction to this event
+//To extend/modify/replace this object reading system should subscribe Globals.Events.READER_INITIALIZED
+// and apply changes in reaction to this event
 navigator.epubReadingSystem = {
     name: "",
     version: "0.0.0",
     layoutStyle: "paginated",
 
     hasFeature: function (feature, version) {
+        'use strict';
 
         // for now all features must be version 1.0 so fail fast if the user has asked for something else
         if (version && version !== "1.0") {
