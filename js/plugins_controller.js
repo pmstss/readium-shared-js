@@ -27,7 +27,12 @@
 //  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 //  OF THE POSSIBILITY OF SUCH DAMAGE.
 
+// jshint quotmark:false
+// jshint latedef:nofunc
+// jscs:disable validateQuoteMarks
+
 define(["jquery", "underscore", "eventEmitter"], function ($, _, EventEmitter) {
+    'use strict';
 
     var _registeredPlugins = {};
 
@@ -38,9 +43,6 @@ define(["jquery", "underscore", "eventEmitter"], function ($, _, EventEmitter) {
      * @constructor
      */
     var PluginsController = function () {
-        var self = this;
-
-
         this.initialize = function (reader) {
             var apiFactory = new PluginApiFactory(reader);
 
@@ -56,7 +58,7 @@ define(["jquery", "underscore", "eventEmitter"], function ($, _, EventEmitter) {
             });
         };
 
-        this.getLoadedPlugins = function() {
+        this.getLoadedPlugins = function () {
             return _registeredPlugins;
         };
 
@@ -74,7 +76,7 @@ define(["jquery", "underscore", "eventEmitter"], function ($, _, EventEmitter) {
                 dependencies = optDependencies;
             }
 
-            _registeredPlugins[name] = new Plugin(name, dependencies, function(plugin, api) {
+            _registeredPlugins[name] = new Plugin(name, dependencies, function (plugin, api) {
                 if (!plugin.initialized || !api.host.plugins[plugin.name]) {
                     plugin.initialized = true;
                     try {
@@ -107,29 +109,29 @@ define(["jquery", "underscore", "eventEmitter"], function ($, _, EventEmitter) {
         };
     }
 
-//
-//  The following is adapted from Rangy's Module class:
-//
-//  Copyright (c) 2014 Tim Down
-//
-//  The MIT License (MIT)
-//  Permission is hereby granted, free of charge, to any person obtaining a copy
-//  of this software and associated documentation files (the "Software"), to deal
-//  in the Software without restriction, including without limitation the rights
-//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-//  copies of the Software, and to permit persons to whom the Software is
-//  furnished to do so, subject to the following conditions:
-//
-//  The above copyright notice and this permission notice shall be included in all
-//  copies or substantial portions of the Software.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-//  SOFTWARE.
+    //
+    //  The following is adapted from Rangy's Module class:
+    //
+    //  Copyright (c) 2014 Tim Down
+    //
+    //  The MIT License (MIT)
+    //  Permission is hereby granted, free of charge, to any person obtaining a copy
+    //  of this software and associated documentation files (the "Software"), to deal
+    //  in the Software without restriction, including without limitation the rights
+    //  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    //  copies of the Software, and to permit persons to whom the Software is
+    //  furnished to do so, subject to the following conditions:
+    //
+    //  The above copyright notice and this permission notice shall be included in all
+    //  copies or substantial portions of the Software.
+    //
+    //  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    //  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    //  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    //  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    //  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    //  SOFTWARE.
 
     function Plugin(name, dependencies, initializer) {
         this.name = name;
@@ -172,8 +174,8 @@ define(["jquery", "underscore", "eventEmitter"], function ($, _, EventEmitter) {
         },
 
         deprecationNotice: function (deprecated, replacement) {
-            console.warn("DEPRECATED: " + deprecated + " in Plugin " + this.name + "is deprecated. Please use "
-            + replacement + " instead");
+            console.warn("DEPRECATED: " + deprecated + " in Plugin " + this.name + "is deprecated. Please use " +
+                    replacement + " instead");
         },
 
         createError: function (msg) {
@@ -181,6 +183,5 @@ define(["jquery", "underscore", "eventEmitter"], function ($, _, EventEmitter) {
         }
     };
 
-    var instance = new PluginsController();
-    return instance;
+    return new PluginsController();
 });

@@ -41,6 +41,9 @@ function (Globals, $, _, EventEmitter, FixedView, Helpers, IFrameLoader, Interna
       ViewerSettings, BookmarkData, NodeRangeInfo) {
 
 'use strict';
+
+var debug = Globals.DEBUG_MODE;
+
 /**
  * Options passed on the reader from the readium loader/initializer
  *
@@ -85,10 +88,14 @@ var ReaderView = function (options) {
 
     if (options.el instanceof $) {
         _$el = options.el;
-        console.log("** EL is a jQuery selector:" + options.el.attr('id'));
+        if (debug) {
+            console.log("** EL is a jQuery selector:" + options.el.attr('id'));
+        }
     } else {
         _$el = $(options.el);
-        console.log("** EL is a string:" + _$el.attr('id'));
+        if (debug) {
+            console.log("** EL is a string:" + _$el.attr('id'));
+        }
     }
 
     if (options.iframeLoader) {
@@ -408,7 +415,7 @@ var ReaderView = function (options) {
                     openBookData.openPageRequest.sourceFileHref) {
                 pageRequestData = openBookData.openPageRequest;
             } else {
-                console.log("Invalid page request data: idref required!");
+                console.error("Invalid page request data: idref required!");
             }
         }
 
@@ -449,7 +456,9 @@ var ReaderView = function (options) {
 
     function onMediaPlayerStatusChanged(status) {
         Globals.logEvent("MEDIA_OVERLAY_STATUS_CHANGED", "EMIT", "reader_view.js (via MediaOverlayPlayer + AudioPlayer)");
-        console.trace(JSON.stringify(status));
+        if (debug) {
+            console.trace(JSON.stringify(status));
+        }
         self.emit(Globals.Events.MEDIA_OVERLAY_STATUS_CHANGED, status);
     }
 
@@ -580,7 +589,9 @@ var ReaderView = function (options) {
         }
 
         Globals.logEvent("SETTINGS_APPLIED 2 (no view update)", "EMIT", "reader_view.js");
-        console.trace(JSON.stringify(settingsData));
+        if (debug) {
+            console.trace(JSON.stringify(settingsData));
+        }
         self.emit(Globals.Events.SETTINGS_APPLIED);
     };
 
@@ -658,13 +669,13 @@ var ReaderView = function (options) {
 
     function getSpineItem(idref) {
         if (!idref) {
-            console.log("idref parameter value missing!");
+            console.error("idref parameter value missing!");
             return undefined;
         }
 
         var spineItem = typeof idref.spineIdx !== 'undefined' ? _spine.items[idref.spineIdx] : _spine.getItemById(idref);
         if (!spineItem) {
-            console.log("Spine item with id " + idref + " not found!");
+            console.error("Spine item with id " + idref + " not found!");
             return undefined;
         }
 

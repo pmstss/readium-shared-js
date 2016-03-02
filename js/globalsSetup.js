@@ -11,16 +11,30 @@
 //  used to endorse or promote products derived from this software without specific
 //  prior written permission.
 
-//'text!empty:'
-define(['./globals', 'jquery', 'console_shim', 'es6-collections', 'eventEmitter', 'URIjs', 'readium_cfi_js', 'readium_js_plugins'], function (Globals, $, console_shim, es6collections, EventEmitter, URI, epubCfi, PluginsController) {
+// jshint quotmark:false
+// jscs:disable validateQuoteMarks
+// jscs:disable requireCamelCaseOrUpperCaseIdentifiers
 
-    console.log("Globals...");
+define(['./globals', 'jquery', 'underscore', 'console_shim', 'es6-collections', 'eventEmitter', 'URIjs', 'readium_cfi_js',
+'readium_js_plugins'],
+function (Globals, $, _, consoleShim, es6collections, EventEmitter, URI, epubCfi, PluginsController) {
+    'use strict';
 
-    if (window["ReadiumSDK"]) {
-        console.log("ReadiumSDK extend.");
+    var debug = Globals.DEBUG_MODE;
+
+    if (debug) {
+        console.log("Globals...");
+    }
+
+    if (window.ReadiumSDK) {
+        if (debug) {
+            console.log("ReadiumSDK extend.");
+        }
         $.extend(Globals, window.ReadiumSDK);
     } else {
-        console.log("ReadiumSDK set.");
+        if (debug) {
+            console.log("ReadiumSDK set.");
+        }
     }
 
     window.ReadiumSDK = Globals;
@@ -44,17 +58,17 @@ define(['./globals', 'jquery', 'console_shim', 'es6-collections', 'eventEmitter'
     }
     // Plugins bootstrapping begins
     Globals.Plugins = PluginsController;
-    Globals.on(Globals.Events.READER_INITIALIZED, function(reader) {
-        
+    Globals.on(Globals.Events.READER_INITIALIZED, function (reader) {
+
         Globals.logEvent("READER_INITIALIZED", "ON", "globalsSetup.js");
-        
+
         try {
             PluginsController.initialize(reader);
         } catch (ex) {
             console.error("Plugins failed to initialize:", ex);
         }
 
-        _.defer(function() {
+        _.defer(function () {
             Globals.logEvent("PLUGINS_LOADED", "EMIT", "globalsSetup.js");
             Globals.emit(Globals.Events.PLUGINS_LOADED, reader);
         });
@@ -63,18 +77,22 @@ define(['./globals', 'jquery', 'console_shim', 'es6-collections', 'eventEmitter'
     if (window._RJS_isBrowser) {
         // If under a browser env and using RequireJS, dynamically require all plugins
         var pluginsList = window._RJS_pluginsList;
-        console.log("Plugins included: ", pluginsList.map(function(v) {
-            // To stay consistent with bundled output
-            return v.replace('readium_plugin_', '');
-        }));
+        if (debug) {
+            console.log("Plugins included: ", pluginsList.map(function (v) {
+                // To stay consistent with bundled output
+                return v.replace('readium_plugin_', '');
+            }));
+        }
 
         require(pluginsList);
     } else {
         // Else list which plugins were included when using almond and bundle(s)
-        setTimeout(function() {
+        setTimeout(function () {
             // Assume that in the next callback all the plugins have been registered
             var pluginsList = Object.keys(PluginsController.getLoadedPlugins());
-            console.log("Plugins included: ", pluginsList);
+            if (debug) {
+                console.log("Plugins included: ", pluginsList);
+            }
         }, 0);
     }
     // Plugins bootstrapping ends
