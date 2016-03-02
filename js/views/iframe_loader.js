@@ -141,59 +141,60 @@ return function () {
     };
 
     this._loadIframeWithUri = function (iframe, attachedData, contentUri, callback) {
-        iframe.onload = function () {
+        iframe.onload = this._onIframeLoad.bind(this, iframe, callback);
+        iframe.setAttribute("src", contentUri);
+    };
 
-            var doc = iframe.contentDocument || iframe.contentWindow.document;
-            $('svg', doc).load(function () {
-                console.log('SVG loaded');
+    this._onIframeLoad = function (iframe, callback) {
+        var doc = iframe.contentDocument || iframe.contentWindow.document;
+
+        $('svg', doc).load(function () {
+            console.log('SVG loaded');
+        });
+
+        self.updateIframeEvents(iframe);
+
+        var mathJax = iframe.contentWindow.MathJax;
+        if (mathJax) {
+            if (debugMode) {
+                console.log("MathJax VERSION: " + mathJax.cdnVersion + " // " + mathJax.fileversion + " // " + mathJax.version);
+            }
+
+            var useFontCache = true; // default in MathJax
+
+            // Firefox fails to render SVG otherwise
+            if (mathJax.Hub.Browser.isFirefox) {
+                useFontCache = false;
+            }
+
+            // Edge fails to render SVG otherwise
+            // https://github.com/readium/readium-js-viewer/issues/394#issuecomment-185382196
+            if (window.navigator.userAgent.indexOf("Edge") > 0) {
+                useFontCache = false;
+            }
+
+            mathJax.Hub.Config({
+                showMathMenu: false,
+                messageStyle: "none",
+                showProcessingMessages: true,
+                SVG: {
+                    useFontCache: useFontCache
+                }
             });
 
-            self.updateIframeEvents(iframe);
-
-            var mathJax = iframe.contentWindow.MathJax;
-            if (mathJax) {
-                if (debugMode) {
-                    console.log("MathJax VERSION: " + mathJax.cdnVersion + " // " + mathJax.fileversion + " // " + mathJax.version);
-                }
-
-                var useFontCache = true; // default in MathJax
-
-                // Firefox fails to render SVG otherwise
-                if (mathJax.Hub.Browser.isFirefox) {
-                    useFontCache = false;
-                }
-
-                // Edge fails to render SVG otherwise
-                // https://github.com/readium/readium-js-viewer/issues/394#issuecomment-185382196
-                if (window.navigator.userAgent.indexOf("Edge") > 0) {
-                    useFontCache = false;
-                }
-
-                mathJax.Hub.Config({
-                    showMathMenu: false,
-                    messageStyle: "none",
-                    showProcessingMessages: true,
-                    SVG: {
-                        useFontCache: useFontCache
-                    }
-                });
-
-                // If MathJax is being used, delay the callback until it has completed rendering
-                var mathJaxCallback = _.once(callback);
-                try {
-                    mathJax.Hub.Queue(mathJaxCallback);
-                } catch (err) {
-                    console.error("MathJax fail!");
-                    callback();
-                }
-                // Or at an 8 second timeout, which ever comes first
-                //window.setTimeout(mathJaxCallback, 8000);
-            } else {
+            // If MathJax is being used, delay the callback until it has completed rendering
+            var mathJaxCallback = _.once(callback);
+            try {
+                mathJax.Hub.Queue(mathJaxCallback);
+            } catch (err) {
+                console.error("MathJax fail!");
                 callback();
             }
-        };
-
-        iframe.setAttribute("src", contentUri);
+            // Or at an 8 second timeout, which ever comes first
+            //window.setTimeout(mathJaxCallback, 8000);
+        } else {
+            callback();
+        }
     };
 };
 });
