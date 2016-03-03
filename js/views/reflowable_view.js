@@ -106,7 +106,8 @@ var ReflowableView = function (options, reader) {
             settings = new ViewerSettings({});
         }
         if (settings.enableGPUHardwareAccelerationCSS3D) {
-            // This fixes rendering issues with WebView (native apps), which clips content embedded in iframes unless GPU hardware acceleration is enabled for CSS rendering.
+            // This fixes rendering issues with WebView (native apps), which clips content embedded in iframes
+            // unless GPU hardware acceleration is enabled for CSS rendering.
             _$el.css("transform", "translateZ(0)");
         }
 
@@ -208,7 +209,7 @@ var ReflowableView = function (options, reader) {
 
             _isWaitingFrameRender = true;
 
-            var src = _spine.package.resolveRelativeUrl(spineItem.href);
+            var src = _spine['package'].resolveRelativeUrl(spineItem.href);
 
             Globals.logEvent("CONTENT_DOCUMENT_LOAD_START", "EMIT", "reflowable_view.js [ " + spineItem.href + " -- " + src + " ]");
             self.emit(Globals.Events.CONTENT_DOCUMENT_LOAD_START, _$iframe, spineItem);
@@ -236,11 +237,11 @@ var ReflowableView = function (options, reader) {
             applyIFrameLoad(success);
             return;
         }
-        // ### tss: skip fontLoader for now to avoid console errors
-        /*var fontLoader = new FontLoader(_$iframe);
-        fontLoader.waitForFonts(function () {*/
-        applyIFrameLoad(success);
-        /*});*/
+
+        var fontLoader = new FontLoader(_$iframe);
+        fontLoader.waitForFonts(function () {
+            applyIFrameLoad(success);
+        });
     }
 
     function applyIFrameLoad(success) {
@@ -272,10 +273,10 @@ var ReflowableView = function (options, reader) {
         // ...Meanwhile, reverting https://github.com/readium/readium-js-viewer/issues/239
         // by commenting the code below (which unfortunately only works with some GPU / codec configurations,
         // but actually fails on several other machines!!)
+        // TODO: Opera (WebKit) sometimes suffers from this rendering bug too (depends on the video codec),
+        //      but unfortunately GPU-accelerated rendering makes the video controls unresponsive!!
         /*
-        if(window.chrome
-            && window.navigator.vendor === "Google Inc.") // TODO: Opera (WebKit) sometimes suffers from this rendering bug too (depends on the video codec), but unfortunately GPU-accelerated rendering makes the video controls unresponsive!!
-        {
+        if(window.chrome && window.navigator.vendor === "Google Inc.") {
             $("video", _$htmlBody).css("transform", "translateZ(0)");
         }
         */
@@ -297,7 +298,8 @@ var ReflowableView = function (options, reader) {
                 bodyCS.msWritingMode || bodyCS.oWritingMode || bodyCS.epubWritingMode || bodyCS.writingMode;
 
             if (writingMode) {
-                _htmlBodyIsLTRWritingMode = writingMode.indexOf("-lr") >= 0; // || writingMode.indexOf("horizontal-") >= 0; we need explicit!
+                _htmlBodyIsLTRWritingMode = writingMode.indexOf("-lr") >= 0;
+                // || writingMode.indexOf("horizontal-") >= 0; we need explicit!
 
                 if (writingMode.indexOf("vertical") >= 0 || writingMode.indexOf("tb-") >= 0 || writingMode.indexOf("bt-") >= 0) {
                     _htmlBodyIsVerticalWritingMode = true;
@@ -311,7 +313,10 @@ var ReflowableView = function (options, reader) {
             }
         }
 
-        // Some EPUBs may not have explicit RTL content direction (via CSS "direction" property or @dir attribute) despite having a RTL page progression direction. Readium consequently tweaks the HTML in order to restore the correct block flow in the browser renderer, resulting in the appropriate CSS columnisation (which is used to emulate pagination).
+        // Some EPUBs may not have explicit RTL content direction (via CSS "direction" property or @dir attribute)
+        // despite having a RTL page progression direction. Readium consequently tweaks the HTML in order to restore
+        // the correct block flow in the browser renderer, resulting in the appropriate CSS columnisation
+        // (which is used to emulate pagination).
         if (!_spine.isLeftToRight() && _htmlBodyIsLTRDirection && !_htmlBodyIsVerticalWritingMode) {
             _$htmlBody[0].setAttribute("dir", "rtl");
             _htmlBodyIsLTRDirection = false;
@@ -383,6 +388,8 @@ var ReflowableView = function (options, reader) {
         _deferredPageRequest = undefined;
         self.openPage(deferredData);
     }
+
+    var onPaginationChanged;
 
     this.openPage = function (pageRequest) {
         if (_isWaitingFrameRender) {
@@ -493,7 +500,7 @@ var ReflowableView = function (options, reader) {
             });
         });
     }
-    var onPaginationChanged = _.debounce(onPaginationChanged_, 100);
+    onPaginationChanged = _.debounce(onPaginationChanged_, 100);
 
     this.openPagePrev = function (initiator) {
         if (!_currentSpineItem) {
@@ -607,7 +614,9 @@ var ReflowableView = function (options, reader) {
         _paginationInfo.columnWidth = Math.round(((_htmlBodyIsVerticalWritingMode ? _lastViewPortSize.height : _lastViewPortSize.width) -
                 _paginationInfo.columnGap * (_paginationInfo.visibleColumnCount - 1)) / _paginationInfo.visibleColumnCount);
 
-        var useColumnCountNotWidth = _paginationInfo.visibleColumnCount > 1; // column-count == 1 does not work in Chrome, and is not needed anyway (HTML width is full viewport width, no Firefox video flickering)
+        // column-count == 1 does not work in Chrome, and is not needed anyway
+        // (HTML width is full viewport width, no Firefox video flickering)
+        var useColumnCountNotWidth = _paginationInfo.visibleColumnCount > 1;
         if (useColumnCountNotWidth) {
             // ### tss: combined styles set
             _$epubHtml.css({
@@ -902,7 +911,7 @@ var ReflowableView = function (options, reader) {
     };
 
     this.getElementFromPoint = function (x, y) {
-        return _navigationLogic.getElementFromPoint(x,y);
+        return _navigationLogic.getElementFromPoint(x, y);
     };
 };
 return ReflowableView;
