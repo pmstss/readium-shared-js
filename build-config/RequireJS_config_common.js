@@ -68,6 +68,9 @@ require.config({
             
         'js-cache-lru':
             process._RJS_rootDir(1) + '/node_modules/js-cache-lru/src/js-cache-lru',
+            
+        'dl-list':
+            process._RJS_rootDir(1) + '/node_modules/js-cache-lru/src/dl-list',            
 
         // ------ LIBs
 
@@ -142,6 +145,10 @@ require.config({
         {
             deps: ["rangy-core"],
             exports: "rangy.modules.Position"
+        },
+        'js-cache-lru': 
+        {
+            deps: ["dl-list"],
         }
        /*
        'rangy/rangy-serializer': {
