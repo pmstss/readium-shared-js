@@ -67,7 +67,7 @@ require.config({
             process._RJS_rootDir(1) + '/node_modules/cssom/build/CSSOM',
             
         'js-cache-lru':
-            process._RJS_rootDir(1) + '/node_modules/js-cache-lru/lru-cache',
+            process._RJS_rootDir(1) + '/node_modules/js-cache-lru/src/js-cache-lru',
 
         // ------ LIBs
 
