@@ -58,7 +58,7 @@
     "es6-collections": "latest",
     "FontLoader": "smnh/FontLoader",
     "CSSOM": "danielweck/CSSOM#gh-pages",
-    "js-cache-lru": "0.0.2"
+    "js-cache-lru": "latest"
   },
   "scripts": {
     "cson2json": "node ./readium-cfi-js/node_modules/cson/bin/cson2json package.cson > package.json && node readium-cfi-js/readium-build-tools/optimizePackageJsonScripts.js",
