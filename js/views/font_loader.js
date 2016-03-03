@@ -25,7 +25,7 @@
 
 //TODO: This could be made into a plugin in the future.
 // A plugin would be ideal because we can make a light-weight alternative that doesn't need the FontLoader shim and the CSSOM parser.
-define(["jquery", "underscore", "FontLoader", "cssom"], function($, _, FontLoader, CSSOM) {
+define(["jquery", "underscore", "FontLoader", "cssom"], function($, _, FontLoader/*, CSSOM*/) {
 
 var FontLoaderFallback = function(document, options) {
     var debug = options.debug;
