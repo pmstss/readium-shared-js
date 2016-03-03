@@ -90,6 +90,10 @@ var ReflowableView = function (options, reader) {
         columnCount: 0
     };
 
+    this.getNavigationLogic = function () {
+        return _navigationLogic;
+    };
+
     this.render = function () {
         var template = Helpers.loadTemplate("reflowable_book_frame", {});
 
@@ -690,18 +694,8 @@ var ReflowableView = function (options, reader) {
         _currentOpacity = -1;
     }
 
-    //### tss: adding possibility to pass visibleContentOffsets and frameDimensions
-    this.getFirstVisibleElementCfi = function (visibleContentOffsets, frameDimensions) {
-        return _navigationLogic.getFirstVisibleCfi(visibleContentOffsets, frameDimensions);
-    };
-
-    //### tss: new method
-    this.getLastVisibleElementCfi = function (visibleContentOffsets, frameDimensions) {
-        return _navigationLogic.getLastVisibleCfi(visibleContentOffsets, frameDimensions);
-    };
-
     //### tss: new method for getting first visible cfi on second spread in case of double-page view
-    this.getSecondSpreadFirstVisibleElementCfi = function () {
+    this.getSecondSpreadFirstVisibleCfi = function () {
         var visibleContentOffsets = _navigationLogic.getVisibleContentOffsets();
         var frameDimensions = _navigationLogic.getFrameDimensions();
         visibleContentOffsets.left -= frameDimensions.width / 2;
