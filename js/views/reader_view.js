@@ -33,11 +33,11 @@
 
 define(["../globals", "jquery", "underscore", "eventEmitter", "./fixed_view", "../helpers", "./iframe_loader", "./internal_links_support",
 "./media_overlay_data_injector", "./media_overlay_player", "../models/package", "../models/page_open_request",
-"./reflowable_view", "./scroll_view", "../models/style_collection", "../models/switches", "../models/trigger",
+"./reflowable_view", "../models/style_collection", "../models/switches", "../models/trigger",
 "../models/viewer_settings", "../models/bookmark_data", "../models/node_range_info"],
 function (Globals, $, _, EventEmitter, FixedView, Helpers, IFrameLoader, InternalLinksSupport,
       MediaOverlayDataInjector, MediaOverlayPlayer, Package, PageOpenRequest,
-      ReflowableView, ScrollView, StyleCollection, Switches, Trigger,
+      ReflowableView, StyleCollection, Switches, Trigger,
       ViewerSettings, BookmarkData, NodeRangeInfo) {
 
 'use strict';
@@ -126,17 +126,15 @@ var ReaderView = function (options) {
 
         switch (viewType) {
             case ReaderView.VIEW_TYPE_FIXED:
-
                 _$el.css("overflow", "auto"); // for content pan, see self.setZoom()
-
                 createdView = new FixedView(options, self);
                 break;
-            case ReaderView.VIEW_TYPE_SCROLLED_DOC:
+            /*case ReaderView.VIEW_TYPE_SCROLLED_DOC:
                 createdView = new ScrollView(options, false, self);
                 break;
             case ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS:
                 createdView = new ScrollView(options, true, self);
-                break;
+                break;*/
             default:
                 createdView = new ReflowableView(options, self);
                 break;
@@ -162,13 +160,13 @@ var ReaderView = function (options) {
             return ReaderView.VIEW_TYPE_FIXED;
         }
 
-        if (_currentView instanceof ScrollView) {
+        /*if (_currentView instanceof ScrollView) {
             if (_currentView.isContinuousScroll()) {
                 return ReaderView.VIEW_TYPE_SCROLLED_CONTINUOUS;
             }
 
             return ReaderView.VIEW_TYPE_SCROLLED_DOC;
-        }
+        }*/
 
         console.error("Unrecognized view type");
         return undefined;
