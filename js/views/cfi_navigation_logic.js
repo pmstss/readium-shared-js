@@ -1653,20 +1653,20 @@ var CfiNavigationLogic = function (options) {
             }
 
             var cfi3;
-            if (ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleElementCfi) {
+            if (ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi) {
                 cfi3 = {
                     idref: cfi1.idref,
-                    contentCFI: ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleElementCfi()
+                    contentCFI: ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi()
                 };
                 if (cfi3.contentCFI) {
                     var range3 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi3);
                     drawDebugOverlayFromDomRange(range3, 'yellow');
                 } else {
-                    console.log('secondSpreadFirstVisibleElementCfi detection error');
+                    console.log('secondSpreadFirstVisibleCfi detection error');
                 }
             }
 
-            console.log('firstVisibleCfi: %o, lastVisibleCfi: %o, secondSpreadFirstVisibleElementCfi: %o',
+            console.log('firstVisibleCfi: %o, lastVisibleCfi: %o, getSecondSpreadFirstVisibleCfi: %o',
                 cfi1, cfi2, cfi3);
         }
     };

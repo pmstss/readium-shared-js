@@ -752,7 +752,7 @@ var ReflowableView = function (options, reader) {
     }
 
     this.bookmarkCurrentPage = function () {
-        return !_currentSpineItem ? undefined : new BookmarkData(_currentSpineItem.idref, self.getFirstVisibleCfi());
+        return !_currentSpineItem ? undefined : self.getFirstVisibleCfi();
     };
 
     this.getLoadedSpineItems = function () {
