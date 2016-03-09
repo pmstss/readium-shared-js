@@ -78,9 +78,13 @@ var CfiNavigationLogic = function (options) {
     }
 
     function getNodeClientRect(node) {
-        var range = createRange();
-        range.selectNode(node);
-        return normalizeRectangle(range.getBoundingClientRect(), 0, 0);
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            return normalizeRectangle(node.getBoundingClientRect(), 0, 0);
+        } else {
+            var range = createRange();
+            range.selectNode(node);
+            return normalizeRectangle(range.getBoundingClientRect(), 0, 0);
+        }
     }
 
     function getNodeContentsClientRect(node) {
@@ -695,6 +699,7 @@ var CfiNavigationLogic = function (options) {
         return cfi;
     };
 
+    //TODO ### tss: clarify usages
     this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
         var document = self.getRootDocument();
         var firstVisibleCaretRange = getCaretRangeFromPoint(x, y, document);
@@ -847,6 +852,12 @@ var CfiNavigationLogic = function (options) {
         fragmentCorner.x -= visibleContentOffsets.left;
         fragmentCorner.y -= visibleContentOffsets.top;
 
+        //TODO ###tss: hacky adjusting: for some reason IE returns few pixels larger than expected for range.getClientRects(),
+        // and thus further getCaretRangeFromPoint() fails
+        if (pickerFunc === _.last) {
+            fragmentCorner.x -= 6;
+        }
+
         var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
 
         if (DEBUG) {
@@ -937,6 +948,9 @@ var CfiNavigationLogic = function (options) {
     // get an array of visible text elements and then select one based on the func supplied
     // and generate a CFI for the first visible text subrange.
     function getVisibleTextRangeCfiForTextElementSelectedByFunc(pickerFunc, visibleContentOffsets, frameDimensions) {
+        visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
+        frameDimensions = frameDimensions || getFrameDimensions();
+
         var cacheKey;
         if (_cacheEnabled) {
             cacheKey = _getVisibleLeafNodesCacheKey(options.paginationInfo, visibleContentOffsets, frameDimensions, pickerFunc);
@@ -1380,7 +1394,7 @@ var CfiNavigationLogic = function (options) {
                     continue;
                 }
 
-                if (childElement.nodeType === 1) {
+                if (childElement.nodeType === Node.ELEMENT_NODE) {
                     var visibilityPercentage = checkVisibilityByRectangles(childElement, true, visibleContentOffsets, frameDimensions);
                     if (visibilityPercentage > 0) {
                         if (visibilityPercentage === 100) {
@@ -1398,7 +1412,7 @@ var CfiNavigationLogic = function (options) {
                     } else {
                         ++hiddenContCounter;
                     }
-                } else if (childElement.nodeType === 3 && isValidTextNodeContent(childElement.nodeValue)) {
+                } else if (childElement.nodeType === Node.TEXT_NODE && isValidTextNodeContent(childElement.nodeValue)) {
                     $candidates.push($(childElement));
                     hiddenContCounter = 0;
                 }
@@ -1526,8 +1540,6 @@ var CfiNavigationLogic = function (options) {
 
     //if (debugMode) {
 
-    var $debugOverlays = [];
-
     //used for visual debug atm
     function getRandomColor() {
         var letters = '0123456789ABCDEF'.split('');
@@ -1570,8 +1582,8 @@ var CfiNavigationLogic = function (options) {
             // we want rect.width to be the border width, so content width is 2px less.
             overlayDiv.style.width = rect.width - 2 + 'px';
             overlayDiv.style.height = rect.height - 2 + 'px';
+            overlayDiv.className = 'cfiDebug';
             doc.documentElement.appendChild(overlayDiv);
-            $debugOverlays.push($(overlayDiv));
         }
     }
 
@@ -1604,8 +1616,23 @@ var CfiNavigationLogic = function (options) {
         return rect;
     }
 
-    function drawDebugOverlayFromNode(node) {
-        drawDebugOverlayFromRect(getNodeClientRect(node));
+    function drawDebugOverlayFromNode(node, color) {
+        drawDebugOverlayFromRect(getNodeClientRect(node), color);
+    }
+
+    function drawDebugOverlayFromCfi(cfi, color) {
+        if (!cfi) {
+            return;
+        }
+
+        if (cfi.indexOf(',') !== -1) {
+            drawDebugOverlayFromDomRange(self.getDomRangeFromRangeCfi(cfi), color);
+        } else {
+            var $el = EPUBcfi.getTargetElement(getWrappedCfiRelativeToContent(cfi), self.getRootDocument(),
+                    ['cfi-marker', 'MathJax_Preview', 'MathJax_SVG_Display'],
+                    [], ['MathJax_Message', 'MathJax_SVG_Hidden']);
+            drawDebugOverlayFromRect(getNodeClientRect($el[0]), color);
+        }
     }
 
     function getPaginationLeftOffset() {
@@ -1623,10 +1650,13 @@ var CfiNavigationLogic = function (options) {
     }
 
     function clearDebugOverlays() {
-        $debugOverlays.forEach(function ($el) {
-            $el.remove();
+        Array.prototype.slice.apply(self.getRootDocument().querySelectorAll('.cfiDebug')).forEach(function (el) {
+            if (el.remove) {
+                el.remove();
+            } else {
+                el.parentNode.removeChild(el);
+            }
         });
-        $debugOverlays = [];
     }
 
     //jscs:disable requireCamelCaseOrUpperCaseIdentifiers
@@ -1636,35 +1666,12 @@ var CfiNavigationLogic = function (options) {
         drawDebugOverlayFromDomRange: drawDebugOverlayFromDomRange,
         drawDebugOverlayFromNode: drawDebugOverlayFromNode,
         debugVisibleCfis: function () {
-            var cfi1 = ReadiumSDK.reader.getFirstVisibleCfi();
-            if (cfi1.contentCFI) {
-                var range1 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi1);
-                drawDebugOverlayFromDomRange(range1, 'red');
-            } else {
-                console.log('firstVisibleCfi detection error');
-            }
+            clearDebugOverlays();
 
-            var cfi2 = ReadiumSDK.reader.getLastVisibleCfi();
-            if (cfi2.contentCFI) {
-                var range2 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi2);
-                drawDebugOverlayFromDomRange(range2, 'green');
-            } else {
-                console.log('lastVisibleCfi detection error');
-            }
-
-            var cfi3;
-            if (ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi) {
-                cfi3 = {
-                    idref: cfi1.idref,
-                    contentCFI: ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi()
-                };
-                if (cfi3.contentCFI) {
-                    var range3 = ReadiumSDK.reader.getDomRangeFromRangeCfi(cfi3);
-                    drawDebugOverlayFromDomRange(range3, 'yellow');
-                } else {
-                    console.log('secondSpreadFirstVisibleCfi detection error');
-                }
-            }
+            var cfi1 = drawDebugOverlayFromCfi(self.getFirstVisibleCfi(), 'red');
+            var cfi2 = drawDebugOverlayFromCfi(self.getLastVisibleCfi(), 'green');
+            var cfi3 = drawDebugOverlayFromCfi(ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi ?
+                    ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi() : null, 'yellow');
 
             console.log('firstVisibleCfi: %o, lastVisibleCfi: %o, getSecondSpreadFirstVisibleCfi: %o',
                 cfi1, cfi2, cfi3);

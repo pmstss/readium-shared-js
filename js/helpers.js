@@ -71,11 +71,11 @@ Helpers.getURLQueryParams = function() {
 
 /**
  * @param urlpath: string corresponding a URL without query parameters (i.e. the part before the '?' question mark in index.html?param=value). If undefined/null, the default window.location is used.
- * @param overrides: object that maps query parameter names with values (to be included in the resulting URL, while any other query params in the current window.location are preserved as-is) 
+ * @param overrides: object that maps query parameter names with values (to be included in the resulting URL, while any other query params in the current window.location are preserved as-is)
  * @returns a string corresponding to a URL obtained by concatenating the given URL with the given query parameters (and those already in window.location)
  */
 Helpers.buildUrlQueryParameters = function(urlpath, overrides) {
-    
+
     if (!urlpath) {
         urlpath =
         window.location ? (
@@ -88,38 +88,38 @@ Helpers.buildUrlQueryParameters = function(urlpath, overrides) {
     }
 
     var paramsString = "";
-    
+
     for (var key in overrides) {
         if (!overrides.hasOwnProperty(key)) continue;
-        
+
         if (!overrides[key]) continue;
-        
+
         var val = overrides[key].trim();
         if (!val) continue;
-        
+
         console.debug("URL QUERY PARAM OVERRIDE: " + key + " = " + val);
 
         paramsString += (key + "=" + encodeURIComponent(val));
         paramsString += "&";
     }
-    
+
     var urlParams = Helpers.getURLQueryParams();
     for (var key in urlParams) {
         if (!urlParams.hasOwnProperty(key)) continue;
-        
+
         if (!urlParams[key]) continue;
-        
+
         if (overrides[key]) continue;
 
         var val = urlParams[key].trim();
         if (!val) continue;
-        
+
         console.debug("URL QUERY PARAM PRESERVED: " + key + " = " + val);
 
         paramsString += (key + "=" + encodeURIComponent(val));
         paramsString += "&";
     }
-    
+
     return urlpath + "?" + paramsString;
 };
 
@@ -756,7 +756,7 @@ Helpers.polyfillCaretRangeFromPoint = function(document) {
                             cursor.moveToElementText(cursorNode);
                         } while (cursor.compareEndPoints(bStart ? 'StartToStart' : 'StartToEnd', textRangeInner) > 0 && cursorNode.previousSibling);
                         // when we exceed or meet the cursor, we've found the node
-                        if (cursor.compareEndPoints(bStart ? 'StartToStart' : 'StartToEnd', textRangeInner) == -1 && cursorNode.nextSibling) {
+                        if (cursor.compareEndPoints(bStart ? 'StartToStart' : 'StartToEnd', textRangeInner) <=0 && cursorNode.nextSibling) {
                             // data node
                             cursor.setEndPoint(bStart ? 'EndToStart' : 'EndToEnd', textRangeInner);
                             domRange[bStart ? 'setStart' : 'setEnd'](cursorNode.nextSibling, cursor.text.length);
