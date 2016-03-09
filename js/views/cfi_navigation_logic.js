@@ -52,7 +52,7 @@ var CfiNavigationLogic = function (options) {
 
     var DEBUG = false; // relates to getVisibleTextRangeOffsetsSelectedByFunc
     var debugMode = ReadiumSDK.DEBUG_MODE;  // generic console logging
-    var tssDebug = false;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
+    var cfiDebug = false;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
@@ -854,7 +854,7 @@ var CfiNavigationLogic = function (options) {
 
         //TODO ###tss: hacky adjusting: for some reason IE returns few pixels larger than expected for range.getClientRects(),
         // and thus further getCaretRangeFromPoint() fails
-        if (pickerFunc === _.last) {
+        if (Helpers.isIE() && pickerFunc === _.last) {
             fragmentCorner.x -= 6;
         }
 
@@ -862,30 +862,28 @@ var CfiNavigationLogic = function (options) {
 
         // Workaround for inconsistencies with the caretRangeFromPoint IE TextRange based shim.
         if (caretRange && caretRange.startContainer !== textNode && caretRange.startContainer === textNode.parentNode) {
-            if (DEBUG) console.log('ieTextRangeWorkaround needed');
+            if (DEBUG) {
+                console.log('ieTextRangeWorkaround needed');
+            }
             var startOrEnd = pickerFunc([0, 1]);
-
-            // #1
             if (caretRange.startOffset === caretRange.endOffset) {
                 var checkNode = caretRange.startContainer.childNodes[Math.max(caretRange.startOffset - 1, 0)];
                 if (checkNode === textNode) {
                     caretRange = {
                         startContainer: textNode,
                         endContainer: textNode,
-                        startOffset: startOrEnd === 0 ? 0 : textNode.nodeValue.length,
                         startOffset: startOrEnd === 0 ? 0 : textNode.nodeValue.length
                     };
-                    if (DEBUG) console.log('ieTextRangeWorkaround #1:', caretRange);
+                    if (DEBUG) {
+                        console.log('ieTextRangeWorkaround #1:', caretRange);
+                    }
                 }
-            }
-
-            // Failed
-            else if (DEBUG) {
+            } else if (DEBUG) { // Failed
                 console.log('ieTextRangeWorkaround didn\'t work :(');
             }
         }
 
-        if (DEBUG)
+        if (DEBUG) {
             console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a0');
         }
 
@@ -954,7 +952,9 @@ var CfiNavigationLogic = function (options) {
         var textNode = visibleLeafNode.textNode;
 
         if (targetLeafNode && element !== startingParent && !_.contains($(textNode || element).parents(), startingParent)) {
-            if (DEBUG) console.warn("findVisibleLeafNodeCfi: stopped recursion early");
+            if (DEBUG) {
+                console.warn("findVisibleLeafNodeCfi: stopped recursion early");
+            }
             return null;
         }
 
@@ -964,7 +964,8 @@ var CfiNavigationLogic = function (options) {
             if (!visibleRange) {
                 //the text node is valid, but not visible..
                 //let's try again with the next node in the list
-                return findVisibleLeafNodeCfi(leafNodeList, pickerFunc, visibleLeafNode, visibleContentOffsets, frameDimensions, startingParent);
+                return findVisibleLeafNodeCfi(leafNodeList, pickerFunc, visibleLeafNode,
+                        visibleContentOffsets, frameDimensions, startingParent);
             }
             var range = createRange();
             range.setStart(textNode, visibleRange.start);
@@ -1475,7 +1476,7 @@ var CfiNavigationLogic = function (options) {
             console.error('getVisibleLeafNodes: no visible candidates');
         }
         var visibleElements = this.getVisibleElements($candidates, visibleContentOffsets, frameDimensions, pickerFunc);
-        if (tssDebug) {
+        if (cfiDebug) {
             console.log('getVisibleLeafNodes time: ' + (Date.now() - start) + 'ms');
         }
 
@@ -1709,11 +1710,9 @@ var CfiNavigationLogic = function (options) {
         }
     };
 
-    if (tssDebug) {
-        //TODO remove on cfi_navigation_logic destroy, otherwise new listener is attached on every new spine
-        ReadiumSDK.reader.on(ReadiumSDK.Events.PAGINATION_CHANGED, function () {
-            ReadiumSDK._DEBUG_CfiNavigationLogic.debugVisibleCfis();
-        });
+    if (cfiDebug) {
+        ReadiumSDK.reader.off(ReadiumSDK.Events.PAGINATION_CHANGED, ReadiumSDK._DEBUG_CfiNavigationLogic.debugVisibleCfis);
+        ReadiumSDK.reader.on(ReadiumSDK.Events.PAGINATION_CHANGED, ReadiumSDK._DEBUG_CfiNavigationLogic.debugVisibleCfis);
     }
 };
 return CfiNavigationLogic;

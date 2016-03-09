@@ -800,5 +800,9 @@ Helpers.polyfillCaretRangeFromPoint = function(document) {
     }
 };
 
+Helpers.isIE = function () {
+    return window.navigator.userAgent.indexOf('Trident') > 0 || window.navigator.userAgent.indexOf('Edge') > 0;
+}
+
 return Helpers;
 });
