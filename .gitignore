@@ -8,4 +8,5 @@ RequireJS_config_plugins_single-bundle.js
 http.log
 build-output
 api-docs
+.idea
 js/views/scroll_view.js 
