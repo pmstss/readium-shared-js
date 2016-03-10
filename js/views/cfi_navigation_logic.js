@@ -61,12 +61,14 @@ var CfiNavigationLogic = function (options) {
     var _cacheVisibleLeafCfi = new LRUCache(200, 60 * 60 * 1000);
 
     this.getRootElement = function () {
-        return options.$iframe[0].contentDocument.documentElement;
+        var rootDoc = this.getRootDocument();
+        return rootDoc && rootDoc.documentElement;
     };
 
     this.getBodyElement = function () {
         // In SVG documents the root element can be considered the body.
-        return this.getRootDocument().body || this.getRootElement();
+        var rootDoc = this.getRootDocument();
+        return rootDoc && rootDoc.body || this.getRootElement();
     };
 
     this.getRootDocument = function () {
@@ -514,7 +516,7 @@ var CfiNavigationLogic = function (options) {
         }
 
         var res;
-        //### tss: commented, can't reproduce this in webkit
+        //### tss: commented, because: 1) can't reproduce this in webkit; 2) has side-effects in IE
         /*if (clientRectangles.length === 0) {
             // sometimes an element is either hidden or empty, and that means
             // Webkit-based browsers fail to assign proper clientRects to it
@@ -523,14 +525,14 @@ var CfiNavigationLogic = function (options) {
             if (nextSibling) {
                 res = getNormalizedRectangles(nextSibling, visibleContentOffsets);
             }
-        }*/
-
-        if (!res) {
-            res = {
-                wrapperRectangle: boundingClientRect,
-                clientRectangles: clientRectangles
-            };
         }
+
+        if (!res) {*/
+        res = {
+            wrapperRectangle: boundingClientRect,
+            clientRectangles: clientRectangles
+        };
+        /*}*/
 
         if (_cacheEnabled) {
             el.cacheKey = cacheKey;
@@ -547,7 +549,6 @@ var CfiNavigationLogic = function (options) {
      *
      * @param {Object} textRect
      * @param {Object} visibleContentOffsets
-     * @param {number} topOffset
      * @returns {Object}
      */
     function normalizeRectangle(textRect, visibleContentOffsets) {
@@ -828,34 +829,7 @@ var CfiNavigationLogic = function (options) {
             caretRange.startContainer.childNodes.length === 1 && caretRange.startContainer.childNodes[0] === textNode);
     }
 
-    //### tss: caretRange check replaced with isCorrectCaretRange()
-    function getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc, visibleContentOffsets, frameDimensions) {
-        visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
-
-        var textNodeFragments = getNodeClientRectList(textNode, visibleContentOffsets);
-
-        var visibleFragments = _.filter(textNodeFragments, function (rect) {
-            return isRectVisible(rect, false, frameDimensions);
-        });
-
-        var fragment = pickerFunc(visibleFragments);
-        if (!fragment) {
-            //no visible fragment, empty text node?
-            return null;
-        }
-        var fragmentCorner = pickerFunc(getTextNodeRectCornerPairs(fragment));
-        // Reverse taking into account of visible content offsets
-        fragmentCorner.x -= visibleContentOffsets.left;
-        fragmentCorner.y -= visibleContentOffsets.top;
-
-        //TODO ###tss: hacky adjusting: for some reason IE returns few pixels larger than expected for range.getClientRects(),
-        // and thus further getCaretRangeFromPoint() fails
-        if (Helpers.isIE() && pickerFunc === _.last) {
-            fragmentCorner.x -= 6;
-        }
-
-        var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
-
+    function applyCaretRangeIEWorkaround(caretRange, textNode, pickerFunc) {
         // Workaround for inconsistencies with the caretRangeFromPoint IE TextRange based shim.
         if (caretRange && caretRange.startContainer !== textNode && caretRange.startContainer === textNode.parentNode) {
             if (DEBUG) {
@@ -878,6 +852,54 @@ var CfiNavigationLogic = function (options) {
                 console.log('ieTextRangeWorkaround didn\'t work :(');
             }
         }
+        return caretRange;
+    }
+
+    //### tss: caretRange check replaced with isCorrectCaretRange()
+    function getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc, visibleContentOffsets, frameDimensions) {
+        visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
+
+        var textNodeFragments = getNodeClientRectList(textNode, visibleContentOffsets);
+
+        var visibleFragments = _.filter(textNodeFragments, function (rect) {
+            return isRectVisible(rect, false, frameDimensions);
+        });
+
+        var fragment = pickerFunc(visibleFragments);
+        if (!fragment) {
+            //no visible fragment, empty text node?
+            return null;
+        }
+        var fragmentCorner = pickerFunc(getTextNodeRectCornerPairs(fragment));
+        // Reverse taking into account of visible content offsets
+        fragmentCorner.x -= visibleContentOffsets.left;
+        fragmentCorner.y -= visibleContentOffsets.top;
+
+        // ### tss: adjusting
+        if (pickerFunc === _.last) {
+            fragmentCorner.x -= 1;
+        }
+        var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
+        if (Helpers.isIE()) {
+            caretRange = applyCaretRangeIEWorkaround(caretRange, textNode, pickerFunc);
+        }
+
+        //TODO ###tss: hacky adjusting: for some reason IE returns few pixels larger than expected for range.getClientRects(),
+        // and thus further getCaretRangeFromPoint() fails
+        if (pickerFunc === _.last) {
+            var tries = 0;
+            var x = fragmentCorner.x;
+            var origCaretRange = caretRange;
+            while (++tries < 20 && !isCorrectCaretRange(caretRange, textNode)) {
+                x -= 1;
+                caretRange = applyCaretRangeIEWorkaround(getCaretRangeFromPoint(x, fragmentCorner.y), textNode, pickerFunc);
+            }
+
+            // restoring
+            if (tries === 20) {
+                caretRange = origCaretRange;
+            }
+        }
 
         if (DEBUG) {
             console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a0');
@@ -886,7 +908,7 @@ var CfiNavigationLogic = function (options) {
         // Desperately try to find it from all angles! Darn sub pixeling..
         //TODO: remove the need for this brute-force method, since it's making the result non-deterministic
         // ### tss: condition checks beatifications
-        if (!isCorrectCaretRange(caretRange, textNode)) {
+        /*if (!isCorrectCaretRange(caretRange, textNode)) {
             caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y) ||
                 getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1) ||
                 getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
@@ -905,7 +927,7 @@ var CfiNavigationLogic = function (options) {
             if (DEBUG) {
                 console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b');
             }
-        }
+        }*/
 
         // Still nothing? fall through..
         if (!caretRange) {
@@ -989,6 +1011,9 @@ var CfiNavigationLogic = function (options) {
         }
 
         var visibleLeafNodeList = self.getVisibleLeafNodes(visibleContentOffsets, frameDimensions, pickerFunc);
+        if (!visibleLeafNodeList || visibleLeafNodeList.length === 0) {
+            return null;
+        }
         var nodeCfi = findVisibleLeafNodeCfi(visibleLeafNodeList, pickerFunc, null, visibleContentOffsets, frameDimensions);
 
         if (_cacheEnabled) {
@@ -1659,6 +1684,7 @@ var CfiNavigationLogic = function (options) {
                     [], ['MathJax_Message', 'MathJax_SVG_Hidden']);
             drawDebugOverlayFromRect(getNodeClientRect($el[0]), color);
         }
+        return cfi;
     }
 
     function getPaginationLeftOffset() {
@@ -1676,13 +1702,15 @@ var CfiNavigationLogic = function (options) {
     }
 
     function clearDebugOverlays() {
-        Array.prototype.slice.apply(self.getRootDocument().querySelectorAll('.cfiDebug')).forEach(function (el) {
-            if (el.remove) {
-                el.remove();
-            } else {
-                el.parentNode.removeChild(el);
-            }
-        });
+        if (self.getRootDocument()) {
+            Array.prototype.slice.apply(self.getRootDocument().querySelectorAll('.cfiDebug')).forEach(function (el) {
+                if (el.remove) {
+                    el.remove();
+                } else {
+                    el.parentNode.removeChild(el);
+                }
+            });
+        }
     }
 
     //jscs:disable requireCamelCaseOrUpperCaseIdentifiers
