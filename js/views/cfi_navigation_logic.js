@@ -77,20 +77,29 @@ var CfiNavigationLogic = function (options) {
         return self.getRootDocument().createRange();
     }
 
-    function getNodeClientRect(node) {
+    function getNodeClientRect(node, visibleContentOffsets) {
         if (node.nodeType === Node.ELEMENT_NODE) {
-            return normalizeRectangle(node.getBoundingClientRect(), 0, 0);
+            return normalizeRectangle(node.getBoundingClientRect(), visibleContentOffsets);
         } else {
             var range = createRange();
             range.selectNode(node);
-            return normalizeRectangle(range.getBoundingClientRect(), 0, 0);
+            return normalizeRectangle(range.getBoundingClientRect(), visibleContentOffsets);
         }
     }
 
-    function getNodeContentsClientRect(node) {
+    // IE does not return correct client rectangles for single image node, so
+    // if this image node is single child - then returning parent node instead
+    function getNodeForSelectionIEWorkaround(node) {
+        var parent = node.parentNode;
+        return node.nodeType === Node.ELEMENT_NODE && node.tagName.toUpperCase() === 'IMG' && parent.childNodes.length === 1 ?
+                parent : node;
+    }
+
+    function getNodeContentsClientRect(node, visibleContentOffsets) {
+        visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         var range = createRange();
-        range.selectNodeContents(node);
-        return normalizeRectangle(range.getBoundingClientRect(), 0, 0);
+        range.selectNodeContents(getNodeForSelectionIEWorkaround(node));
+        return normalizeRectangle(range.getBoundingClientRect(), visibleContentOffsets);
     }
 
     function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset) {
@@ -101,16 +110,16 @@ var CfiNavigationLogic = function (options) {
         } else if (endNode.nodeType === Node.TEXT_NODE) {
             range.setEnd(endNode, endOffset ? endOffset : 0);
         }
-        return normalizeRectangle(range.getBoundingClientRect(), 0, 0);
+        return normalizeRectangle(range.getBoundingClientRect(), getVisibleContentOffsets());
     }
 
     function getNodeClientRectList(node, visibleContentOffsets) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
 
         var range = createRange();
-        range.selectNode(node);
+        range.selectNode(getNodeForSelectionIEWorkaround(node));
         return _.map(range.getClientRects(), function (rect) {
-            return normalizeRectangle(rect, visibleContentOffsets.left, visibleContentOffsets.top);
+            return normalizeRectangle(rect, visibleContentOffsets);
         });
     }
 
@@ -123,7 +132,6 @@ var CfiNavigationLogic = function (options) {
         return null;
     }
 
-    // ### tss: making part of external interface
     this.getFrameDimensions = getFrameDimensions;
 
     function getCaretRangeFromPoint(x, y, document) {
@@ -238,7 +246,7 @@ var CfiNavigationLogic = function (options) {
             };
         }
     }
-    // ### tss: making part of external interface
+
     this.getVisibleContentOffsets = getVisibleContentOffsets;
 
     // ### tss: new method used for shouldCalculateVisibilityPercentage calculations
@@ -256,7 +264,7 @@ var CfiNavigationLogic = function (options) {
      * Note: the second param (props) is ignored intentionally
      * (no need to use those in normalization)
      *
-     * @param {Node} element or jquery (### tss)
+     * @param {Node} element or jquery
      * @param {boolean} shouldCalculateVisibilityPercentage
      * @param {Object} visibleContentOffsets
      * @param {Object} [frameDimensions]
@@ -424,8 +432,7 @@ var CfiNavigationLogic = function (options) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
 
-        var normalizedRectangle = normalizeRectangle(
-            clientRectangle, visibleContentOffsets.left, visibleContentOffsets.top);
+        var normalizedRectangle = normalizeRectangle(clientRectangle, visibleContentOffsets);
 
         return calculatePageIndexByRectangles([normalizedRectangle], frameDimensions);
     }
@@ -475,16 +482,15 @@ var CfiNavigationLogic = function (options) {
      * @private
      * Retrieves the position of $element in multi-column layout
      *
-     * @param {Node} el (### tss)
+     * @param {Node} el
      * @param {Object} [visibleContentOffsets]
      * @returns {Object}
      */
     function getNormalizedRectangles(el, visibleContentOffsets) {
         visibleContentOffsets = visibleContentOffsets || {};
 
-        var boundingClientRect = el.getBoundingClientRect();
+        var boundingClientRect = getNodeClientRect(el, visibleContentOffsets);
         var cacheKey;
-        //### tss: caching normalizedRectangles as object property
         if (_cacheEnabled) {
             var boundingClientRectStr = serializeClientRect(boundingClientRect);
             var visibleContentOffsetsStr = JSON.stringify(visibleContentOffsets);
@@ -496,22 +502,14 @@ var CfiNavigationLogic = function (options) {
             delete el.cacheNormalizedRectangles;
         }
 
-        var leftOffset = visibleContentOffsets.left || 0;
-        var topOffset = visibleContentOffsets.top || 0;
-
-        // union of all rectangles wrapping the element
-        var wrapperRectangle = normalizeRectangle(boundingClientRect, leftOffset, topOffset);
-
-        // all the separate rectangles (for detecting position of the element
-        // split between several columns)
+        // all the separate rectangles (for detecting position of the element split between several columns)
         var clientRectangles = [];
-        var clientRectList = el.getClientRects();
+        var clientRectList = getNodeClientRectList(el, visibleContentOffsets);
         for (var i = 0, l = clientRectList.length; i < l; ++i) {
+            // Firefox sometimes gets it wrong, adding literally empty (height = 0) client rectangle preceding the real one,
+            // that empty client rectangle shouldn't be retrieved
             if (clientRectList[i].height > 0) {
-                // Firefox sometimes gets it wrong,
-                // adding literally empty (height = 0) client rectangle preceding the real one,
-                // that empty client rectanle shouldn't be retrieved
-                clientRectangles.push(normalizeRectangle(clientRectList[i], leftOffset, topOffset));
+                clientRectangles.push(clientRectList[i]);
             }
         }
 
@@ -529,12 +527,11 @@ var CfiNavigationLogic = function (options) {
 
         if (!res) {
             res = {
-                wrapperRectangle: wrapperRectangle,
+                wrapperRectangle: boundingClientRect,
                 clientRectangles: clientRectangles
             };
         }
 
-        //### tss: caching normalizedRectangles as object property
         if (_cacheEnabled) {
             el.cacheKey = cacheKey;
             el.cacheNormalizedRectangles = res;
@@ -549,11 +546,12 @@ var CfiNavigationLogic = function (options) {
      * taking content offsets (=scrolls, position shifts etc.) into account
      *
      * @param {Object} textRect
-     * @param {number} leftOffset
+     * @param {Object} visibleContentOffsets
      * @param {number} topOffset
      * @returns {Object}
      */
-    function normalizeRectangle(textRect, leftOffset, topOffset) {
+    function normalizeRectangle(textRect, visibleContentOffsets) {
+        visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         var plainRectObject = {
             left: textRect.left,
             right: textRect.right,
@@ -562,7 +560,7 @@ var CfiNavigationLogic = function (options) {
             width: textRect.right - textRect.left,
             height: textRect.bottom - textRect.top
         };
-        offsetRectangle(plainRectObject, leftOffset, topOffset);
+        offsetRectangle(plainRectObject, visibleContentOffsets.left, visibleContentOffsets.top);
         return plainRectObject;
     }
 
@@ -825,8 +823,6 @@ var CfiNavigationLogic = function (options) {
         }
     }
 
-    //### tss: IE caretRangeFromPoint polyfill returns parent element instead of text node itself,
-    // but it seems to be not a problem for later use
     function isCorrectCaretRange(caretRange, textNode) {
         return caretRange && (caretRange.startContainer === textNode  || caretRange.startContainer &&
             caretRange.startContainer.childNodes.length === 1 && caretRange.startContainer.childNodes[0] === textNode);
@@ -1388,7 +1384,6 @@ var CfiNavigationLogic = function (options) {
         return visibleElements;
     };
 
-    //### tss: visible leaf nodes cache key depends on paginationInfo, visibleContentOffsets, frameDimensions and pickerFunc
     function _getVisibleLeafNodesCacheKey(paginationInfo, visibleContentOffsets, frameDimensions, pickerFunc) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
@@ -1515,7 +1510,6 @@ var CfiNavigationLogic = function (options) {
     }
 
     this.getLeafNodeElements = function (root) {
-        //### tss: caching leaf nodes in object property
         if (_cacheEnabled && root.leafNodes) {
             return root.cacheLeafNodes;
         }
