@@ -52,7 +52,7 @@ return function (options) {
 
     var DEBUG = false; // relates to getVisibleTextRangeOffsetsSelectedByFunc
     var debugMode = ReadiumSDK.DEBUG_MODE;  // generic console logging
-    var cfiDebug = false;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
+    var cfiDebug = true;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
@@ -561,6 +561,14 @@ return function (options) {
             width: textRect.right - textRect.left,
             height: textRect.bottom - textRect.top
         };
+
+        // getClientRects()/getBoundaryClientRects() reports real width for elements with non-breakable spaces,
+        // that could overflow column and affect calculations of visible elements
+        if (plainRectObject.width > options.paginationInfo.columnWidth) {
+            plainRectObject.width = options.paginationInfo.columnWidth;
+            plainRectObject.right = plainRectObject.left + plainRectObject.width;
+        }
+
         offsetRectangle(plainRectObject, visibleContentOffsets.left, visibleContentOffsets.top);
         return plainRectObject;
     }
@@ -1660,8 +1668,8 @@ return function (options) {
         addOverlayRect({
             left: rect.left + leftOffset,
             top: rect.top + topOffset,
-            width: rect.width,
-            height: rect.height
+            width: Math.max(rect.width, 5),
+            height: Math.max(rect.height, 5)
         }, color || true, self.getRootDocument());
     }
 
@@ -1733,7 +1741,7 @@ return function (options) {
             var cfi1 = drawDebugOverlayFromCfi(self.getFirstVisibleCfi(), 'red');
             var cfi2 = drawDebugOverlayFromCfi(self.getLastVisibleCfi(), 'green');
             var cfi3 = drawDebugOverlayFromCfi(ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi ?
-                ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi() : null, 'yellow');
+                ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi() : null, 'orange');
 
             console.log('firstVisibleCfi: %o, lastVisibleCfi: %o, getSecondSpreadFirstVisibleCfi: %o',
                 cfi1, cfi2, cfi3);
