@@ -52,7 +52,7 @@ return function (options) {
 
     var DEBUG = false; // relates to getVisibleTextRangeOffsetsSelectedByFunc
     var debugMode = ReadiumSDK.DEBUG_MODE;  // generic console logging
-    var cfiDebug = false;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
+    var cfiDebug = true;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
@@ -878,6 +878,8 @@ return function (options) {
         // ### tss: adjusting
         if (pickerFunc === _.last) {
             fragmentCorner.x -= 1;
+        } else {
+            fragmentCorner.x += 1;
         }
         var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
         if (Helpers.isIE()) {

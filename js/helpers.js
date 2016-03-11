@@ -779,7 +779,7 @@ Helpers.polyfillCaretRangeFromPoint = function(document) {
                 var IYDepth = 40;
                 // try to create a text range at the specified location
                 var tr = document.body.createTextRange();
-                for (var iy = IYDepth; iy; iy = iy - 4) {
+                for (var iy = IYDepth; iy; iy = iy - 1) {
                     try {
                         tr.moveToPoint(x, iy + y - IYDepth);
                         return TextRangeUtils.convertToDOMRange(tr, document);
