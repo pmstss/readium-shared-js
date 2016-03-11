@@ -188,6 +188,9 @@ var ReflowableView = function (options, reader) {
         //_$iframe.css(_spine.isLeftToRight() ? "left" : "right", "0px");
         _$iframe.css("overflow", "hidden");
 
+        if (_navigationLogic) {
+            _navigationLogic.destroy();
+        }
         _navigationLogic = new CfiNavigationLogic({
             $iframe: _$iframe,
             frameDimensions: getFrameDimensions,

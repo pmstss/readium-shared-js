@@ -45,7 +45,7 @@ define(["jquery", "underscore", "js-cache-lru", "../helpers", 'readium_cfi_js'],
 
 'use strict';
 
-var CfiNavigationLogic = function (options) {
+return function (options) {
 
     var self = this;
     options = options || {};
@@ -1589,6 +1589,12 @@ var CfiNavigationLogic = function (options) {
         return $element.length > 0 ? $element : undefined;
     };
 
+    this.destroy = function () {
+        if (cfiDebug) {
+            ReadiumSDK.reader.off(ReadiumSDK.Events.PAGINATION_CHANGED, ReadiumSDK._DEBUG_CfiNavigationLogic.debugVisibleCfis);
+        }
+    };
+
     //if (debugMode) {
 
     //used for visual debug atm
@@ -1725,7 +1731,7 @@ var CfiNavigationLogic = function (options) {
             var cfi1 = drawDebugOverlayFromCfi(self.getFirstVisibleCfi(), 'red');
             var cfi2 = drawDebugOverlayFromCfi(self.getLastVisibleCfi(), 'green');
             var cfi3 = drawDebugOverlayFromCfi(ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi ?
-                    ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi() : null, 'yellow');
+                ReadiumSDK.reader.getCurrentView().getSecondSpreadFirstVisibleCfi() : null, 'yellow');
 
             console.log('firstVisibleCfi: %o, lastVisibleCfi: %o, getSecondSpreadFirstVisibleCfi: %o',
                 cfi1, cfi2, cfi3);
@@ -1733,9 +1739,7 @@ var CfiNavigationLogic = function (options) {
     };
 
     if (cfiDebug) {
-        ReadiumSDK.reader.off(ReadiumSDK.Events.PAGINATION_CHANGED, ReadiumSDK._DEBUG_CfiNavigationLogic.debugVisibleCfis);
         ReadiumSDK.reader.on(ReadiumSDK.Events.PAGINATION_CHANGED, ReadiumSDK._DEBUG_CfiNavigationLogic.debugVisibleCfis);
     }
 };
-return CfiNavigationLogic;
 });
