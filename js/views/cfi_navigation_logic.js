@@ -52,7 +52,7 @@ return function (options) {
 
     var DEBUG = false; // relates to getVisibleTextRangeOffsetsSelectedByFunc
     var debugMode = ReadiumSDK.DEBUG_MODE;  // generic console logging
-    var cfiDebug = true;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
+    var cfiDebug = false;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
