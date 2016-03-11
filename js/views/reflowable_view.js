@@ -710,8 +710,9 @@ var ReflowableView = function (options, reader) {
     this.getSecondSpreadFirstVisibleCfi = function () {
         var visibleContentOffsets = _navigationLogic.getVisibleContentOffsets();
         var frameDimensions = _navigationLogic.getFrameDimensions();
-        visibleContentOffsets.left -= frameDimensions.width / 2;
-        frameDimensions.width /= 2;
+        var singleWidth = (frameDimensions.width - _paginationInfo.columnGap) / 2;
+        visibleContentOffsets.left -= singleWidth + _paginationInfo.columnGap;
+        frameDimensions.width = singleWidth;
         return _navigationLogic.getFirstVisibleCfi(visibleContentOffsets, frameDimensions);
     };
 
