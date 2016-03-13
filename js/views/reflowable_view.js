@@ -81,24 +81,14 @@ var ReflowableView = function (options, reader) {
     };
 
     var _paginationInfo = {
-<<<<<<< HEAD
         visibleColumnCount: 2,
         columnGap: 20,
+        columnMaxWidth: 550,
+        columnMinWidth: 400,
         spreadCount: 0,
         currentSpreadIndex: 0,
         columnWidth: undefined,
         pageOffset: 0,
-=======
-
-        visibleColumnCount : 2,
-        columnGap : 20,
-        columnMaxWidth: 550,
-        columnMinWidth: 400,
-        spreadCount : 0,
-        currentSpreadIndex : 0,
-        columnWidth : undefined,
-        pageOffset : 0,
->>>>>>> upstream/develop
         columnCount: 0
     };
 
@@ -159,25 +149,16 @@ var ReflowableView = function (options, reader) {
         // ### tss: calling updateHtmlFontSize/updateColumnGap only if necessary
         _viewSettings = settings;
 
-<<<<<<< HEAD
         if (_fontSize !== settings.fontSize) {
             _fontSize = settings.fontSize;
             updateHtmlFontSize();
         }
         if (_paginationInfo.columnGap !== settings.columnGap) {
             _paginationInfo.columnGap = settings.columnGap;
+            _paginationInfo.columnMaxWidth = settings.columnMaxWidth;
+            _paginationInfo.columnMinWidth = settings.columnMinWidth;
             updateColumnGap();
         }
-=======
-        _paginationInfo.columnGap = settings.columnGap;
-        _paginationInfo.columnMaxWidth = settings.columnMaxWidth;
-        _paginationInfo.columnMinWidth = settings.columnMinWidth;
-        
-        _fontSize = settings.fontSize;
-
-        updateHtmlFontSize();
-        updateColumnGap();
->>>>>>> upstream/develop
 
         // ### tss: updateViewportSize now is not required here
         //updateViewportSize();
