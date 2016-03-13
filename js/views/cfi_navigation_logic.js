@@ -50,9 +50,8 @@ return function (options) {
     var self = this;
     options = options || {};
 
-    var DEBUG = false; // relates to getVisibleTextRangeOffsetsSelectedByFunc
     var debugMode = ReadiumSDK.DEBUG_MODE;  // generic console logging
-    var cfiDebug = false;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
+    var cfiDebug = true;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
@@ -143,6 +142,16 @@ return function (options) {
         var $highlights = $('.rd-highlight', document);
         $highlights.hide();
         var res = document.caretRangeFromPoint(x, y);
+        $highlights.show();
+        return res;
+    }
+
+    function getCaretRangeFromPointForNode(x, y, node) {
+        var document = node.ownerDocument;
+        //### tss: hiding highlights to prevent their selection by caretRangeFromPoint
+        var $highlights = $('.rd-highlight', document);
+        $highlights.hide();
+        var res = Helpers.getCaretRangeFromPointForNode(x, y, node);
         $highlights.show();
         return res;
     }
@@ -251,7 +260,6 @@ return function (options) {
 
     this.getVisibleContentOffsets = getVisibleContentOffsets;
 
-    // ### tss: new method used for shouldCalculateVisibilityPercentage calculations
     function _getRectanglesIntersection(a, b) {
         var x = Math.max(a.x, b.x);
         var num1 = Math.min(a.x + a.w, b.x + b.w);
@@ -338,7 +346,7 @@ return function (options) {
             var visibleCounter = 0;
             for (var i = 0, l = clientRectangles.length; i < l; ++i) {
                 if (isRectVisible(clientRectangles[i], false, frameDimensions)) {
-                    //TODO ### improve accuracy; for now - raw calculation based on number of visible rectangles
+                    //TODO ### tss: improve accuracy? for now - calculation based on number of visible rectangles
                     /*visibilityPercentage = shouldCalculateVisibilityPercentage
                         ? measureVisibilityPercentageByRectangles(clientRectangles, i)
                         : 100;
@@ -837,33 +845,6 @@ return function (options) {
             caretRange.startContainer.childNodes.length === 1 && caretRange.startContainer.childNodes[0] === textNode);
     }
 
-    function applyCaretRangeIEWorkaround(caretRange, textNode, pickerFunc) {
-        // Workaround for inconsistencies with the caretRangeFromPoint IE TextRange based shim.
-        if (caretRange && caretRange.startContainer !== textNode && caretRange.startContainer === textNode.parentNode) {
-            if (DEBUG) {
-                console.log('ieTextRangeWorkaround needed');
-            }
-            var startOrEnd = pickerFunc([0, 1]);
-            if (caretRange.startOffset === caretRange.endOffset) {
-                var checkNode = caretRange.startContainer.childNodes[Math.max(caretRange.startOffset - 1, 0)];
-                if (checkNode === textNode) {
-                    caretRange = {
-                        startContainer: textNode,
-                        endContainer: textNode,
-                        startOffset: startOrEnd === 0 ? 0 : textNode.nodeValue.length
-                    };
-                    if (DEBUG) {
-                        console.log('ieTextRangeWorkaround #1:', caretRange);
-                    }
-                }
-            } else if (DEBUG) { // Failed
-                console.log('ieTextRangeWorkaround didn\'t work :(');
-            }
-        }
-        return caretRange;
-    }
-
-    //### tss: caretRange check replaced with isCorrectCaretRange()
     function getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc, visibleContentOffsets, frameDimensions) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
 
@@ -889,78 +870,27 @@ return function (options) {
         } else {
             fragmentCorner.x += 1;
         }
-        var caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y);
-        if (Helpers.isIE()) {
-            caretRange = applyCaretRangeIEWorkaround(caretRange, textNode, pickerFunc);
-        }
-
-        //TODO ###tss: hacky adjusting: for some reason IE returns few pixels larger than expected for range.getClientRects(),
-        // and thus further getCaretRangeFromPoint() fails
-        if (pickerFunc === _.last) {
-            var tries = 0;
-            var x = fragmentCorner.x;
-            var origCaretRange = caretRange;
-            while (++tries < 20 && !isCorrectCaretRange(caretRange, textNode)) {
-                x -= 1;
-                caretRange = applyCaretRangeIEWorkaround(getCaretRangeFromPoint(x, fragmentCorner.y), textNode, pickerFunc);
-            }
-
-            // restoring
-            if (tries === 20) {
-                caretRange = origCaretRange;
-            }
-        }
-
-        if (DEBUG) {
-            console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a0');
-        }
-
-        // Desperately try to find it from all angles! Darn sub pixeling..
-        //TODO: remove the need for this brute-force method, since it's making the result non-deterministic
-        // ### tss: condition checks beatifications
-        /*if (!isCorrectCaretRange(caretRange, textNode)) {
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y) ||
-                getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1) ||
-                getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
-            if (DEBUG) {
-                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'a');
-            }
-        }
-
-        if (!isCorrectCaretRange(caretRange, textNode)) {
-            fragmentCorner.x = Math.floor(fragmentCorner.x);
-            fragmentCorner.y = Math.floor(fragmentCorner.y);
-            caretRange = getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y) ||
-                getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y) ||
-                getCaretRangeFromPoint(fragmentCorner.x, fragmentCorner.y - 1) ||
-                getCaretRangeFromPoint(fragmentCorner.x - 1, fragmentCorner.y - 1);
-            if (DEBUG) {
-                console.log('getVisibleTextRangeOffsetsSelectedByFunc: ', 'b');
-            }
-        }*/
+        var caretRange = getCaretRangeFromPointForNode(fragmentCorner.x, fragmentCorner.y, textNode);
 
         // Still nothing? fall through..
         if (!caretRange) {
-            console.warn('getVisibleTextRangeOffsetsSelectedByFunc: no caret range result');
+            console.error('getVisibleTextRangeOffsetsSelectedByFunc: no caret range result');
             return null;
         }
 
         if (!isCorrectCaretRange(caretRange, textNode)) {
             console.error('getVisibleTextRangeOffsetsSelectedByFunc: incorrect caret range result, caretRange.startContainer: %o',
                 caretRange.startContainer);
+            return null;
         }
 
-        return pickerFunc(
-            [{start: caretRange.startOffset, end: caretRange.startOffset + 1},
-            {start: caretRange.startOffset - 1, end: caretRange.startOffset}]
-        );
+        return caretRange;
     }
 
-    function findVisibleLeafNodeCfi(leafNodeList, pickerFunc, targetLeafNode, visibleContentOffsets, frameDimensions, startingParent) {
+    function findVisibleLeafNodeCfi(leafNodeList, pickerFunc, targetLeafNode, visibleContentOffsets, frameDimensions) {
         var index = 0;
         if (!targetLeafNode) {
             index = leafNodeList.indexOf(pickerFunc(leafNodeList));
-            startingParent = leafNodeList[index].element;
         } else {
             index = leafNodeList.indexOf(targetLeafNode);
             if (index === -1) {
@@ -979,26 +909,14 @@ return function (options) {
         var element = visibleLeafNode.element;
         var textNode = visibleLeafNode.textNode;
 
-        if (targetLeafNode && element !== startingParent && !_.contains($(textNode || element).parents(), startingParent)) {
-            if (DEBUG) {
-                console.warn("findVisibleLeafNodeCfi: stopped recursion early");
-            }
-            return null;
-        }
-
         //if a valid text node is found, try to generate a CFI with range offsets
         if (textNode && isValidTextNode(textNode)) {
             var visibleRange = getVisibleTextRangeOffsetsSelectedByFunc(textNode, pickerFunc, visibleContentOffsets, frameDimensions);
             if (!visibleRange) {
-                //the text node is valid, but not visible..
-                //let's try again with the next node in the list
-                return findVisibleLeafNodeCfi(leafNodeList, pickerFunc, visibleLeafNode,
-                        visibleContentOffsets, frameDimensions, startingParent);
+                //the text node is valid, but not visible, let's try again with the next node in the list
+                return findVisibleLeafNodeCfi(leafNodeList, pickerFunc, visibleLeafNode, visibleContentOffsets, frameDimensions);
             }
-            var range = createRange();
-            range.setStart(textNode, visibleRange.start);
-            range.setEnd(textNode, visibleRange.end);
-            return generateCfiFromDomRange(range);
+            return generateCfiFromDomRange(visibleRange);
         } else {
             //if not then generate a CFI for the element
             return self.getCfiForElement(element);
@@ -1024,6 +942,13 @@ return function (options) {
         if (!visibleLeafNodeList || visibleLeafNodeList.length === 0) {
             return null;
         }
+
+        // tss workaround: do not want to take non-first part of image splitted across multiple pages as first cfi
+        if (pickerFunc === _.first && visibleLeafNodeList.length > 1 &&
+                visibleLeafNodeList[0].percentVisible !== 100 && visibleLeafNodeList[0].element.tagName.toUpperCase() === 'IMG') {
+            visibleLeafNodeList.splice(0, 1);
+        }
+
         var nodeCfi = findVisibleLeafNodeCfi(visibleLeafNodeList, pickerFunc, null, visibleContentOffsets, frameDimensions);
 
         if (_cacheEnabled) {
@@ -1372,8 +1297,7 @@ return function (options) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
 
-        // ### tss: algo changes: breaking on first/last fully visible element,
-        // if pickerFunc is either _.first or _.last
+        // ### tss: algo changes: breaking on first/last fully visible element, if pickerFunc is either _.first or _.last
         var visibleElements = [];
         var i = 0;
         var len = $elements.length;
@@ -1457,6 +1381,11 @@ return function (options) {
                 }
 
                 if (childElement.nodeType === Node.ELEMENT_NODE) {
+                    // excluding br tags from cfi - they are treated differently in IE
+                    if (childElement.tagName.toUpperCase() === 'BR') {
+                        continue;
+                    }
+
                     var visibilityPercentage = checkVisibilityByRectangles(childElement, true, visibleContentOffsets, frameDimensions);
                     if (visibilityPercentage > 0) {
                         if (visibilityPercentage === 100) {
@@ -1499,7 +1428,6 @@ return function (options) {
             }
         }
 
-        // ### tss: new _getVisibleCandidates instead of getting all leaf nodes based algo
         var start = Date.now();
         var $candidates = this._getVisibleCandidates(this.getBodyElement());
         if ($candidates.length === 0) {
@@ -1560,7 +1488,8 @@ return function (options) {
         var node;
         /* jshint -W084 */
         while (node = nodeIterator.nextNode()) {
-            var isLeafNode = node.nodeType === Node.ELEMENT_NODE && !node.childElementCount && !isValidTextNodeContent(node.textContent);
+            var isLeafNode = node.nodeType === Node.ELEMENT_NODE && !node.childElementCount && !isValidTextNodeContent(node.textContent) &&
+                    node.tagName.toUpperCase() !== 'BR'; // excluding br tags from cfi - they are treated differently in IE
             if (isLeafNode || isValidTextNode(node)) {
                 var $node = $(node);
                 var $element = node.nodeType === Node.TEXT_NODE ? $node.parent() : $node;

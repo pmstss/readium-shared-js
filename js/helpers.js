@@ -800,9 +800,68 @@ Helpers.polyfillCaretRangeFromPoint = function(document) {
     }
 };
 
+function isPointInRect(x, y, rect) {
+    return rect.left <= x && rect.right >= x && rect.top <=y && rect.bottom >= y;
+}
+
+// returns 1-based number of containing rectangle or false
+function isPointInRects(x, y, rects) {
+    for (var i = 0, len = rects.length; i < len; ++i) {
+        var rect = rects[i];
+        if (rect.left <= x && rect.right >= x && rect.top <=y && rect.bottom >= y) {
+            return i + 1;
+        }
+    }
+    return false;
+}
+
+Helpers.getCaretRangeFromPointForNode = function(x, y, textNode) {
+    var range = textNode.ownerDocument.createRange();
+    var len = textNode.textContent.length;
+
+    var startIdx = 0;
+    var endIdx = len;
+
+    while (startIdx < endIdx - 1) {
+        var idx = Math.floor((startIdx + endIdx) / 2);
+
+        range.setStart(textNode, startIdx);
+        range.setEnd(textNode, idx);
+        var rects = range.getClientRects();
+        if (isPointInRects(x, y, rects)) {
+            endIdx = idx;
+        } else {
+            startIdx = idx;
+        }
+    }
+
+    if (startIdx !== endIdx - 1) {
+        console.error('ERROR IN getCaretRangeFromPointForNode - startIdx ' + startIdx + ', endIdx: ' + endIdx);
+        return null;
+    }
+
+    range.setStart(textNode, startIdx);
+    range.setEnd(textNode, endIdx);
+
+    // avoiding cross-line ranges
+    rects = range.getClientRects();
+    if (rects.length > 1) {
+        var rectIdx = isPointInRects(x, y, rects) - 1;
+        if (rectIdx === 0 && startIdx > 0) {
+            range.setStart(textNode, startIdx - 1);
+            range.setEnd(textNode, endIdx - 1);
+        } else if (rectIdx > 0 && endIdx < len) {
+            range.setStart(textNode, startIdx + 1);
+            range.setEnd(textNode, endIdx + 1);
+        }
+    }
+
+    return range;
+};
+
 Helpers.isIE = function () {
     return window.navigator.userAgent.indexOf('Trident') > 0 || window.navigator.userAgent.indexOf('Edge') > 0;
-}
+};
 
 return Helpers;
 });
