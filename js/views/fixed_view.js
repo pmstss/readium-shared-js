@@ -812,24 +812,6 @@ var FixedView = function(options, reader){
         return undefined;
     };
 
-    this.getVisibleCfiFromPoint = function (x, y, precisePoint, spineItemIdref) {
-        if (!spineItemIdref) {
-            throw new Error("getVisibleCfiFromPoint: Spine item idref must be specified for this fixed layout view.");
-        }
-        return callOnPageView(spineItemIdref, function (view) {
-            return view.getVisibleCfiFromPoint(x,y, precisePoint);
-        });
-    };
-
-    this.getRangeCfiFromPoints = function (startX, startY, endX, endY, spineItemIdref) {
-        if (!spineItemIdref) {
-            throw new Error("getRangeCfiFromPoints: Spine item idref must be specified for this fixed layout view.");
-        }
-        return callOnPageView(spineItemIdref, function (view) {
-            return view.getRangeCfiFromPoints(startX, startY, endX, endY);
-        });
-    };
-
     this.getCfiForElement = function (element) {
 
         var views = getDisplayingViews();

@@ -906,14 +906,6 @@ var ReflowableView = function (options, reader) {
         return createBookmarkFromCfi(_navigationLogic.getRangeCfiFromDomRange(domRange));
     };
 
-    this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
-        return createBookmarkFromCfi(_navigationLogic.getVisibleCfiFromPoint(x, y, precisePoint));
-    };
-
-    this.getRangeCfiFromPoints = function (startX, startY, endX, endY) {
-        return createBookmarkFromCfi(_navigationLogic.getRangeCfiFromPoints(startX, startY, endX, endY));
-    };
-
     this.getCfiForElement = function (x, y) {
         return createBookmarkFromCfi(_navigationLogic.getCfiForElement(x, y));
     };

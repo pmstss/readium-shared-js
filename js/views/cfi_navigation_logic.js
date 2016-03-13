@@ -135,17 +135,6 @@ return function (options) {
 
     this.getFrameDimensions = getFrameDimensions;
 
-    function getCaretRangeFromPoint(x, y, document) {
-        document = document || self.getRootDocument();
-        Helpers.polyfillCaretRangeFromPoint(document); //only polyfills once, no-op afterwards
-        //### tss: hiding highlights to prevent their selection by caretRangeFromPoint
-        var $highlights = $('.rd-highlight', document);
-        $highlights.hide();
-        var res = document.caretRangeFromPoint(x, y);
-        $highlights.show();
-        return res;
-    }
-
     function getCaretRangeFromPointForNode(x, y, node) {
         var document = node.ownerDocument;
         //### tss: hiding highlights to prevent their selection by caretRangeFromPoint
@@ -712,113 +701,6 @@ return function (options) {
             cfi = cfi.substring(1);
         }
         return cfi;
-    };
-
-    //TODO ### tss: clarify usages
-    this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
-        var document = self.getRootDocument();
-        var firstVisibleCaretRange = getCaretRangeFromPoint(x, y, document);
-        var elementFromPoint = document.elementFromPoint(x, y);
-        var invalidElementFromPoint = !elementFromPoint || elementFromPoint === document.documentElement;
-
-        if (precisePoint) {
-            if (!elementFromPoint || invalidElementFromPoint) {
-                return null;
-            }
-            var testRect = getNodeContentsClientRect(elementFromPoint);
-            if (!isRectVisible(testRect, false)) {
-                return null;
-            }
-            if (x < testRect.left || x > testRect.right || y < testRect.top || y > testRect.bottom) {
-                return null;
-            }
-        }
-
-        if (!firstVisibleCaretRange) {
-            if (invalidElementFromPoint) {
-                console.error("Could not generate CFI no visible element on page");
-                return null;
-            }
-            firstVisibleCaretRange = createRange();
-            firstVisibleCaretRange.selectNode(elementFromPoint);
-        }
-
-        var range = firstVisibleCaretRange;
-        var cfi;
-        //if we get a text node we need to get an approximate range for the first visible character offsets.
-        var node = range.startContainer;
-        var startOffset, endOffset;
-        if (node.nodeType === Node.TEXT_NODE) {
-            if (precisePoint && node.parentNode !== elementFromPoint) {
-                return null;
-            }
-            if (node.length === 1 && range.startOffset === 1) {
-                startOffset = 0;
-                endOffset = 1;
-            } else if (range.startOffset === node.length) {
-                startOffset = range.startOffset - 1;
-                endOffset = range.startOffset;
-            } else {
-                startOffset = range.startOffset;
-                endOffset = range.startOffset + 1;
-            }
-            var wrappedRange = {
-                startContainer: node,
-                endContainer: node,
-                startOffset: startOffset,
-                endOffset: endOffset,
-                commonAncestorContainer: range.commonAncestorContainer
-            };
-
-            if (debugMode) {
-                drawDebugOverlayFromDomRange(wrappedRange);
-            }
-
-            cfi = generateCfiFromDomRange(wrappedRange);
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-            node =
-                range.startContainer.childNodes[range.startOffset] ||
-                range.startContainer.childNodes[0] ||
-                range.startContainer;
-            if (precisePoint && node !== elementFromPoint) {
-                return null;
-            }
-
-            if (node.nodeType !== Node.ELEMENT_NODE) {
-                cfi = generateCfiFromDomRange(range);
-            } else {
-                cfi = self.getCfiForElement(node);
-            }
-        } else {
-            if (precisePoint && node !== elementFromPoint) {
-                return null;
-            }
-
-            cfi = self.getCfiForElement(elementFromPoint);
-        }
-
-        //This should not happen but if it does print some output, just in case
-        if (cfi && cfi.indexOf('NaN') !== -1) {
-            console.error('Did not generate a valid CFI:' + cfi);
-            return undefined;
-        }
-
-        return cfi;
-    };
-
-    this.getRangeCfiFromPoints = function (startX, startY, endX, endY) {
-        var document = self.getRootDocument();
-        var start = getCaretRangeFromPoint(startX, startY, document),
-            end = getCaretRangeFromPoint(endX, endY, document),
-            range = createRange();
-        range.setStart(start.startContainer, start.startOffset);
-        range.setEnd(end.startContainer, end.startOffset);
-        // if we're looking at a text node create a nice range (n, n+1)
-        if (start.startContainer === start.endContainer && start.startContainer.nodeType === Node.TEXT_NODE &&
-                end.startContainer.length > end.startOffset + 1) {
-            range.setEnd(end.startContainer, end.startOffset + 1);
-        }
-        return generateCfiFromDomRange(range);
     };
 
     function getTextNodeRectCornerPairs(rect) {

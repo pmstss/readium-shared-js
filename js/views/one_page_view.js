@@ -1005,14 +1005,6 @@ var OnePageView = function (options, classes, enableBookStyleOverrides, reader) 
         return createBookmarkFromCfi(self.getNavigator().getRangeCfiFromDomRange(domRange));
     };
 
-    this.getVisibleCfiFromPoint = function (x, y, precisePoint) {
-        return createBookmarkFromCfi(self.getNavigator().getVisibleCfiFromPoint(x, y, precisePoint));
-    };
-
-    this.getRangeCfiFromPoints = function(startX, startY, endX, endY) {
-        return createBookmarkFromCfi(self.getNavigator().getRangeCfiFromPoints(startX, startY, endX, endY));
-    };
-
     this.getCfiForElement = function(x, y) {
         return createBookmarkFromCfi(self.getNavigator().getCfiForElement(x, y));
     };
