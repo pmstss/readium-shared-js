@@ -373,13 +373,14 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
                 var scale = calculateScale();
                 var mouseIsInside = false;
 
-                var x = e.pageX;
-                var y = e.pageY;
+                //### tss: pageX/pageY do not need offsets addition in IE; replacing with clientX/clientY
+                var x = e.clientX;
+                var y = e.clientY;
 
                 if (e.type === 'touchend') {
                     var lastTouch = _.last(e.originalEvent.changedTouches);
-                    x = lastTouch.pageX;
-                    y = lastTouch.pageY;
+                    x = lastTouch.clientX;
+                    y = lastTouch.clientY;
                 }
 
                 var point = {
