@@ -51,7 +51,7 @@ return function (options) {
     options = options || {};
 
     var debugMode = ReadiumSDK.DEBUG_MODE;  // generic console logging
-    var cfiDebug = false;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
+    var cfiDebug = ReadiumSDK.DEBUG_CFI;   // enables first/last/secondSpreadFirst cfi highlighting, timings for getVisibleLeafNodes
 
     // ### tss: replacing trivial cache with LRU implementation with capacity and maxAge support
     // this caches will be recreated on spine change
@@ -98,13 +98,6 @@ return function (options) {
                 parent : node;
     }
 
-    function getNodeContentsClientRect(node, visibleContentOffsets) {
-        visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
-        var range = createRange();
-        range.selectNodeContents(getNodeForSelectionIEWorkaround(node));
-        return normalizeRectangle(range.getBoundingClientRect(), visibleContentOffsets);
-    }
-
     function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset) {
         var range = createRange();
         range.setStart(startNode, startOffset ? startOffset : 0);
@@ -121,9 +114,14 @@ return function (options) {
 
         var range = createRange();
         range.selectNode(getNodeForSelectionIEWorkaround(node));
-        return _.map(range.getClientRects(), function (rect) {
-            return normalizeRectangle(rect, visibleContentOffsets);
-        });
+        return _.reduce(range.getClientRects(), function (res, rect) {
+            // tss: workaround for strange IE very narrow clientRects with invalid y coordinates,
+            // that affects fragmentCorner calculations
+            if (rect.width > 0.1) {
+                res.push(normalizeRectangle(rect, visibleContentOffsets));
+            }
+            return res;
+        }, []);
     }
 
     function getFrameDimensions() {
@@ -437,38 +435,6 @@ return function (options) {
 
         return calculatePageIndexByRectangles([normalizedRectangle], frameDimensions);
     }
-
-    /**
-     * @private
-     * Calculates the visibility offset percentage based on ClientRect dimensions
-     *
-     * @param {Array} clientRectangles (should already be normalized)
-     * @param {number} firstVisibleRectIndex
-     * @returns {number} - visibility percentage (0 < n <= 100)
-     */
-    /*function measureVisibilityPercentageByRectangles(clientRectangles, firstVisibleRectIndex) {
-        var heightTotal = 0;
-        var heightVisible = 0;
-
-        if (clientRectangles.length > 1) {
-            _.each(clientRectangles, function (rect, index) {
-                heightTotal += rect.height;
-                if (index >= firstVisibleRectIndex) {
-                    // in this case, all the rectangles after the first visible
-                    // should be counted as visible
-                    heightVisible += rect.height;
-                }
-            });
-        } else {
-            // should already be normalized and adjusted
-            heightTotal = clientRectangles[0].height;
-            heightVisible = clientRectangles[0].height - Math.max(
-                0, -clientRectangles[0].top);
-        }
-
-        // trivial case check, when element is 100% visible
-        return heightVisible === heightTotal ? 100 : Math.floor(100 * heightVisible / heightTotal);
-    }*/
 
     function serializeClientRect(clientRect) {
         return JSON.stringify({
