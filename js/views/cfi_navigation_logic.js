@@ -90,9 +90,11 @@ return function (options) {
 
     // IE does not return correct client rectangles for single image node, so
     // if this image node is single child - then returning parent node instead
+    // Should not be applied to Chrome, because clientRects for parent element (at least is true for span)
+    // do not contain info about splitting across pages (contain only one, latest rectangle)
     function getNodeForSelectionIEWorkaround(node) {
         var parent = node.parentNode;
-        return node.nodeType === Node.ELEMENT_NODE && node.tagName.toUpperCase() === 'IMG' && parent.childNodes.length === 1 ?
+        return Helpers.isIE() && node.nodeType === Node.ELEMENT_NODE && node.tagName.toUpperCase() === 'IMG' && parent.childNodes.length === 1 ?
                 parent : node;
     }
 
