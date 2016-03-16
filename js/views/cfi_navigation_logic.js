@@ -38,6 +38,7 @@
 
 // jscs:disable disallowMultipleVarDecl
 // jscs:disable validateQuoteMarks
+// jscs:disable requireCamelCaseOrUpperCaseIdentifiers
 // jshint quotmark:false
 // jshint latedef: nofunc
 
@@ -94,8 +95,8 @@ return function (options) {
     // do not contain info about splitting across pages (contain only one, latest rectangle)
     function getNodeForSelectionIEWorkaround(node) {
         var parent = node.parentNode;
-        return Helpers.isIE() && node.nodeType === Node.ELEMENT_NODE && node.tagName.toUpperCase() === 'IMG' && parent.childNodes.length === 1 ?
-                parent : node;
+        return Helpers.isIE() && node.nodeType === Node.ELEMENT_NODE && node.tagName.toUpperCase() === 'IMG' &&
+                parent.childNodes.length === 1 ? parent : node;
     }
 
     function getNodeRangeClientRect(startNode, startOffset, endNode, endOffset) {
@@ -454,7 +455,7 @@ return function (options) {
      * @returns {Object}
      */
     function getNormalizedRectangles(el, visibleContentOffsets) {
-        visibleContentOffsets = visibleContentOffsets || {};
+        visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
 
         var boundingClientRect = getNodeClientRect(el, visibleContentOffsets);
         var cacheKey;
@@ -481,7 +482,7 @@ return function (options) {
         }
 
         var res;
-        //### tss: commented, because: 1) can't reproduce this in webkit; 2) has side-effects in IE
+        //### tss: returning nextSibling rectangles is not desired in many cases; has side-effects in IE
         /*if (clientRectangles.length === 0) {
             // sometimes an element is either hidden or empty, and that means
             // Webkit-based browsers fail to assign proper clientRects to it
@@ -912,7 +913,6 @@ return function (options) {
         }
 
         return this.getPageForPointOnElement($element, cfiParts.x, cfiParts.y);
-
     };
 
     function getElementByPartialCfi(cfi, classBlacklist, elementBlacklist, idBlacklist) {
@@ -938,6 +938,26 @@ return function (options) {
     this.getElementFromPoint = function (x, y) {
         var document = self.getRootDocument();
         return document.elementFromPoint(x, y);
+    };
+
+    this.getAnyClientRectForElement = function (el) {
+        var visibleContentOffsets = getVisibleContentOffsets();
+        var clientRectangles = getNormalizedRectangles(el, visibleContentOffsets).clientRectangles;
+        if (!clientRectangles.length) {
+            if (el.previousSibling) {
+                return this.getAnyClientRectForElement(el.previousSibling);
+            }
+        }
+        return clientRectangles[clientRectangles.length - 1];
+    };
+
+    this.getAnyClientRectByElementCfi = function (cfi) {
+        var $element = self.getElementByCfi(cfi, ["cfi-marker"], [], ["MathJax_Message", "MathJax_SVG_Hidden"]);
+        if (!$element.length) {
+            return null;
+        }
+
+        return this.getAnyClientRectForElement($element[0]);
     };
 
     this.getNodeRangeInfoFromCfi = function (cfi) {
@@ -1197,8 +1217,9 @@ return function (options) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
 
-        return JSON.stringify($.extend({}, paginationInfo, visibleContentOffsets, frameDimensions)) +
-                (pickerFunc ? pickerFunc.toString() : '');
+        return JSON.stringify($.extend({
+            f: pickerFunc && pickerFunc.toString()
+        }, paginationInfo, visibleContentOffsets, frameDimensions, options.settings));
     }
 
     // ### tss: skip getting leaves if parent node is fully not visible
@@ -1280,8 +1301,9 @@ return function (options) {
 
         var start = Date.now();
         var $candidates = this._getVisibleCandidates(this.getBodyElement());
-        if ($candidates.length === 0) {
-            console.error('getVisibleLeafNodes: no visible candidates');
+        if (!$candidates || !$candidates.length) {
+            console.warn('getVisibleLeafNodes: no visible candidates');
+            return null;
         }
         var visibleElements = this.getVisibleElements($candidates, visibleContentOffsets, frameDimensions, pickerFunc);
         if (cfiDebug) {

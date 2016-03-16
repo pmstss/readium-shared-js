@@ -33,6 +33,7 @@ define(['jquery', 'eventEmitter'], function ($, EventEmitter) {
     'use strict';
 
     var DEBUG = false;
+    var DEBUG_CFI = false;
 
     /**
      * Top level ReadiumSDK namespace
@@ -41,6 +42,8 @@ define(['jquery', 'eventEmitter'], function ($, EventEmitter) {
     var Globals = {
 
         DEBUG_MODE: DEBUG,
+
+        DEBUG_CFI: DEBUG_CFI,
 
         /**
          * Current version of the JS SDK

@@ -198,7 +198,8 @@ var ReflowableView = function (options, reader) {
         _navigationLogic = new CfiNavigationLogic({
             $iframe: _$iframe,
             frameDimensions: getFrameDimensions,
-            paginationInfo: _paginationInfo
+            paginationInfo: _paginationInfo,
+            settings: _viewSettings
         });
     }
 
