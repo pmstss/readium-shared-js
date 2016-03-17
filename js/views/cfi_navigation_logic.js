@@ -940,15 +940,15 @@ return function (options) {
         return document.elementFromPoint(x, y);
     };
 
-    this.getAnyClientRectForElement = function (el) {
+    this.getAnyClientRectForElement = function (el, counter) {
         var visibleContentOffsets = getVisibleContentOffsets();
         var clientRectangles = getNormalizedRectangles(el, visibleContentOffsets).clientRectangles;
         if (!clientRectangles.length) {
             if (el.previousSibling) {
-                return this.getAnyClientRectForElement(el.previousSibling);
+                return this.getAnyClientRectForElement(el.previousSibling, (counter || 0) + 1);
             }
         }
-        return clientRectangles[clientRectangles.length - 1];
+        return clientRectangles[(counter || 0) === 0 ? 0 : clientRectangles.length - 1];
     };
 
     this.getAnyClientRectByElementCfi = function (cfi) {
@@ -957,7 +957,7 @@ return function (options) {
             return null;
         }
 
-        return this.getAnyClientRectForElement($element[0]);
+        return this.getAnyClientRectForElement($element[0], 0 );
     };
 
     this.getNodeRangeInfoFromCfi = function (cfi) {
