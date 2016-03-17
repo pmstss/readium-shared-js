@@ -940,15 +940,27 @@ return function (options) {
         return document.elementFromPoint(x, y);
     };
 
-    this.getAnyClientRectForElement = function (el, counter) {
+    this.getAnyClientRectForElement = function (el, isFirstRect, skipRecursion) {
         var visibleContentOffsets = getVisibleContentOffsets();
         var clientRectangles = getNormalizedRectangles(el, visibleContentOffsets).clientRectangles;
         if (!clientRectangles.length) {
-            if (el.previousSibling) {
-                return this.getAnyClientRectForElement(el.previousSibling, (counter || 0) + 1);
+            if (skipRecursion) {
+                return null;
             }
+
+            if (el.previousSibling) {
+                return this.getAnyClientRectForElement(el.previousSibling, false);
+            } else if (isFirstRect && el.nextSibling) {
+                var res = this.getAnyClientRectForElement(el.nextSibling, true, true);
+                if (res) {
+                    return res;
+                } else {
+                    return this.getAnyClientRectForElement(el.parentNode, false);
+                }
+            }
+        } else {
+            return clientRectangles[isFirstRect ? 0 : clientRectangles.length - 1];
         }
-        return clientRectangles[(counter || 0) === 0 ? 0 : clientRectangles.length - 1];
     };
 
     this.getAnyClientRectByElementCfi = function (cfi) {
@@ -957,7 +969,7 @@ return function (options) {
             return null;
         }
 
-        return this.getAnyClientRectForElement($element[0], 0 );
+        return this.getAnyClientRectForElement($element[0], true);
     };
 
     this.getNodeRangeInfoFromCfi = function (cfi) {
