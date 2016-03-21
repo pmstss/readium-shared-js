@@ -415,6 +415,26 @@ var ReflowableView = function (options, reader) {
         var pageIndex;
         if (pageRequest.spineItemPageIndex !== undefined) {
             pageIndex = pageRequest.spineItemPageIndex;
+            if (pageIndex < 0) {
+                pageIndex = _paginationInfo.columnCount + pageIndex;
+                if (pageIndex < 0) {
+                    pageIndex = 0;
+                }
+            } else if (pageIndex >= _paginationInfo.columnCount) {
+                pageIndex = _paginationInfo.columnCount - 1;
+            }
+        } else if (pageRequest.spineItemSpreadIndex !== undefined) {
+            var spreadIndex = pageRequest.spineItemSpreadIndex;
+            if (spreadIndex < 0) {
+                spreadIndex = _paginationInfo.spreadCount + spreadIndex;
+                if (spreadIndex < 0) {
+                    spreadIndex = 0;
+                }
+            } else if (spreadIndex >= _paginationInfo.spreadCount) {
+                spreadIndex = _paginationInfo.spreadCount - 1;
+            }
+
+            pageIndex = spreadIndex * _paginationInfo.visibleColumnCount;
         } else if (pageRequest.elementId) {
             pageIndex = _navigationLogic.getPageForElementId(pageRequest.elementId);
             if (pageIndex < 0) {
@@ -511,38 +531,95 @@ var ReflowableView = function (options, reader) {
     onPaginationChanged = _.debounce(onPaginationChanged_, 100);
 
     this.openPagePrev = function (initiator) {
+        this.openPageXPrev(1, initiator);
+    };
+
+    this.openPageXPrev = function (x, initiator) {
         if (!_currentSpineItem) {
             return;
         }
 
-        if (_paginationInfo.currentSpreadIndex > 0) {
-            _paginationInfo.currentSpreadIndex--;
+        var pagesCount = _paginationInfo.currentSpreadIndex * _paginationInfo.visibleColumnCount;
+
+        var xSpread = Math.ceil(x / _paginationInfo.visibleColumnCount);
+        if (pagesCount >= x) {
+            _paginationInfo.currentSpreadIndex -= xSpread;
             onPaginationChanged(initiator);
         } else {
-            var prevSpineItem = _spine.prevItem(_currentSpineItem, true);
+            var prevSpineItem = _spine.prevItem(_currentSpineItem);
             if (prevSpineItem) {
                 var pageRequest = new PageOpenRequest(prevSpineItem, initiator);
-                pageRequest.setLastPage();
+                pageRequest.setPageIndex(-(x - pagesCount));
+                self.openPage(pageRequest);
+            }
+        }
+    };
+
+    this.openSpreadXPrev = function (x, initiator) {
+        if (!_currentSpineItem) {
+            return;
+        }
+
+        if (_paginationInfo.currentSpreadIndex - x >= 0) {
+            _paginationInfo.currentSpreadIndex -= x;
+            onPaginationChanged(initiator);
+        } else {
+            var prevSpineItem = _spine.prevItem(_currentSpineItem);
+            if (prevSpineItem) {
+                var pageRequest = new PageOpenRequest(prevSpineItem, initiator);
+                pageRequest.setSpreadIndex(-(x - _paginationInfo.currentSpreadIndex));
                 self.openPage(pageRequest);
             }
         }
     };
 
     this.openPageNext = function (initiator) {
+        return this.openPageXNext(1, initiator);
+    };
+
+    this.openPageXNext = function (x, initiator) {
         if (!_currentSpineItem) {
             return;
         }
 
-        if (_paginationInfo.currentSpreadIndex < _paginationInfo.spreadCount - 1) {
-            _paginationInfo.currentSpreadIndex++;
+        var restPages = (_paginationInfo.spreadCount - _paginationInfo.currentSpreadIndex - 1) * _paginationInfo.visibleColumnCount;
+        if (restPages > 0) {
+            restPages -= _paginationInfo.columnCount %  _paginationInfo.visibleColumnCount;
+        }
+
+        var xSpread = Math.ceil(x / _paginationInfo.visibleColumnCount);
+        if (x <= restPages) {
+            _paginationInfo.currentSpreadIndex += xSpread;
             onPaginationChanged(initiator);
         } else {
-            var nextSpineItem = _spine.nextItem(_currentSpineItem, true);
-            if (nextSpineItem) {
-                var pageRequest = new PageOpenRequest(nextSpineItem, initiator);
-                pageRequest.setFirstPage();
-                self.openPage(pageRequest);
+            var nextSpineItem = _spine.nextItem(_currentSpineItem);
+            if (!nextSpineItem) {
+                return;
             }
+
+            var pageRequest = new PageOpenRequest(nextSpineItem, initiator);
+            pageRequest.setPageIndex(x - restPages - 1);
+            self.openPage(pageRequest);
+        }
+    };
+
+    this.openSpreadXNext = function (x, initiator) {
+        if (!_currentSpineItem) {
+            return;
+        }
+
+        if (x + _paginationInfo.currentSpreadIndex < _paginationInfo.spreadCount) {
+            _paginationInfo.currentSpreadIndex += x;
+            onPaginationChanged(initiator);
+        } else {
+            var nextSpineItem = _spine.nextItem(_currentSpineItem);
+            if (!nextSpineItem) {
+                return;
+            }
+
+            var pageRequest = new PageOpenRequest(nextSpineItem, initiator);
+            pageRequest.setSpreadIndex(x - (_paginationInfo.spreadCount - _paginationInfo.currentSpreadIndex));
+            self.openPage(pageRequest);
         }
     };
 

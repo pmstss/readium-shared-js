@@ -52,6 +52,7 @@ var PageOpenRequest = function (spineItem, initiator) {
 
     this.reset = function () {
         this.spineItemPageIndex = undefined;
+        this.spineItemSpreadIndex = undefined;
         this.elementId = undefined;
         this.elementCfi = undefined;
         this.percent = undefined;
@@ -72,6 +73,11 @@ var PageOpenRequest = function (spineItem, initiator) {
     this.setPageIndex = function (pageIndex) {
         this.reset();
         this.spineItemPageIndex = pageIndex;
+    };
+
+    this.setSpreadIndex = function (spreadIndex) {
+        this.reset();
+        this.spineItemSpreadIndex = spreadIndex;
     };
 
     this.setElementId = function (elementId) {
