@@ -38,6 +38,7 @@ return function () {
     var windowEventListeners = {};
     var documentEventListeners = {};
     var debugMode = ReadiumSDK.DEBUG_MODE;
+    var _iframe;
 
     function _removeListenerFrom(listeners, callback, useCapture) {
         if (listeners) {
@@ -101,7 +102,8 @@ return function () {
         iframe.contentDocument.addEventListener(eventName, listener.callback, listener.useCapture);
     }
 
-    this.updateIframeEvents = function (iframe) {
+    this.updateIframeEvents = function (iframeParam) {
+        var iframe = iframeParam || _iframe;
         var eventName;
         for (eventName in windowEventListeners) {
             if (windowEventListeners.hasOwnProperty(eventName)) {
@@ -146,6 +148,8 @@ return function () {
     };
 
     this._onIframeLoad = function (iframe, callback) {
+        _iframe = iframe;
+
         var doc = iframe.contentDocument || iframe.contentWindow.document;
 
         $('svg', doc).load(function () {
