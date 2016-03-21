@@ -342,6 +342,17 @@ Helpers.Margins = function (margin, border, padding) {
 
     this.height = function () {
         return this.top + this.bottom;
+    };
+};
+
+Helpers.createBlob = function (data, contentType) {
+    if (window.Blob && window.Blob.prototype && window.Blob.prototype.slice) {
+        return new Blob([data], {type: contentType});
+    } else {
+        var BlobBuilder = window.BlobBuilder || window.MozBlobBuilder || window.WebKitBlobBuilder;
+        var bb = new BlobBuilder();
+        bb.append(data);
+        return bb.getBlob(contentType);
     }
 };
 
