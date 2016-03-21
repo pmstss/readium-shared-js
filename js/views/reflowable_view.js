@@ -727,8 +727,10 @@ var ReflowableView = function (options, reader) {
             top: 0
         });
 
-        // ### tss: not required?
-        //Helpers.triggerLayout(_$iframe);
+        // leads to breaking-in-the-middle lines on iOS
+        if (reader.needsTriggerLayoutWorkaround()) {
+            Helpers.triggerLayout(_$iframe);
+        }
 
         _paginationInfo.columnCount = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) +
                 _paginationInfo.columnGap) / (_paginationInfo.columnWidth + _paginationInfo.columnGap);

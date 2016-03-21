@@ -105,11 +105,16 @@ var ReaderView = function (options) {
     }
 
     var _needsFixedLayoutScalerWorkAround = options.needsFixedLayoutScalerWorkAround;
+    var _needsTriggerLayoutWorkaround = options.needsTriggerLayoutWorkaround;
     /**
      * @returns {boolean}
      */
     this.needsFixedLayoutScalerWorkAround = function () {
         return _needsFixedLayoutScalerWorkAround;
+    };
+
+    this.needsTriggerLayoutWorkaround = function () {
+        return _needsTriggerLayoutWorkaround;
     };
 
     /**
