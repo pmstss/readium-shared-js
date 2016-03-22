@@ -347,7 +347,7 @@ Helpers.Margins = function (margin, border, padding) {
 
 Helpers.createBlob = function (dataArray, contentType) {
     if (window.Blob && window.Blob.prototype && window.Blob.prototype.slice) {
-        return new Blob([data], {type: contentType});
+        return new Blob(data, {type: contentType});
     } else {
         var BlobBuilder = window.BlobBuilder || window.MozBlobBuilder || window.WebKitBlobBuilder;
         var bb = new BlobBuilder();
