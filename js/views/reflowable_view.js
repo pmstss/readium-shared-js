@@ -43,11 +43,14 @@ function (Globals, $, _, EventEmitter, BookmarkData, CfiNavigationLogic,
 /**
  * Renders reflowable content using CSS columns
  * @param options
+ * @param reader
  * @constructor
  */
-var ReflowableView = function (options, reader) {
+return function (options, reader) {
 
     $.extend(this, new EventEmitter());
+
+    var debugMode = ReadiumSDK.DEBUG_MODE;  // generic console logging
 
     var self = this;
 
@@ -657,24 +660,30 @@ var ReflowableView = function (options, reader) {
         // "borderLeft" is the blank vertical strip (e.g. 40px wide) where the left-arrow button resides, i.e. previous page command
         var borderLeft = parseInt(_$viewport.css("border-left-width"), 10);
         // The "columnGap" separates two consecutive columns in a 2-page synthetic spread (e.g. 60px wide).
-        // This middle gap (blank vertical strip) actually corresponds to the left page's right-most margin, combined with the right page's left-most margin.
+        // This middle gap (blank vertical strip) actually corresponds to the left page's right-most margin,
+        // combined with the right page's left-most margin.
         // So, "adjustedGapLeft" is half of the center strip...
         var adjustedGapLeft = _paginationInfo.columnGap / 2;
         // ...but we include the "borderLeft" strip to avoid wasting valuable rendering real-estate:
         adjustedGapLeft = Math.max(0, adjustedGapLeft - borderLeft);
-        // Typically, "adjustedGapLeft" is zero because the space available for the 'previous page' button is wider than half of the column gap!
+        // Typically, "adjustedGapLeft" is zero because the space available for the 'previous page' button
+        // is wider than half of the column gap!
 
         // "borderRight" is the blank vertical strip (e.g. 40px wide) where the right-arrow button resides, i.e. next page command
         var borderRight = parseInt(_$viewport.css("border-right-width"), 10);
         // The "columnGap" separates two consecutive columns in a 2-page synthetic spread (e.g. 60px wide).
-        // This middle gap (blank vertical strip) actually corresponds to the left page's right-most margin, combined with the right page's left-most margin.
+        // This middle gap (blank vertical strip) actually corresponds to the left page's right-most margin,
+        // combined with the right page's left-most margin.
         // So, "adjustedGapRight" is half of the center strip...
         var adjustedGapRight = _paginationInfo.columnGap / 2;
         // ...but we include the "borderRight" strip to avoid wasting valuable rendering real-estate:
         adjustedGapRight = Math.max(0, adjustedGapRight - borderRight);
-        // Typically, "adjustedGapRight" is zero because the space available for the 'next page' button is wider than half of the column gap! (in other words, the right-most and left-most page margins are fully included in the strips reserved for the arrow buttons)
+        // Typically, "adjustedGapRight" is zero because the space available for the 'next page' button
+        // is wider than half of the column gap! (in other words, the right-most and left-most page margins are fully
+        // included in the strips reserved for the arrow buttons)
 
-        // Note that "availableWidth" does not contain "borderLeft" and "borderRight" (.width() excludes the padding and border and margin in the CSS box model of div#epub-reader-frame)
+        // Note that "availableWidth" does not contain "borderLeft" and "borderRight" (.width() excludes the padding
+        // and border and margin in the CSS box model of div#epub-reader-frame)
         var availableWidth = _$viewport.width();
 
         // ...So, we substract the page margins and button spacing to obtain the width available for actual text:
@@ -718,8 +727,10 @@ var ReflowableView = function (options, reader) {
             resultingColumnWidth = (resultingColumnWidth - _paginationInfo.columnGap) / 2;
         }
         resultingColumnWidth = Math.floor(resultingColumnWidth);
-        if (resultingColumnWidth - 1 > MAXW) {
-            console.debug("resultingColumnWidth > MAXW ! " + resultingColumnWidth + " > " + MAXW);
+        if (debugMode) {
+            if (resultingColumnWidth - 1 > MAXW) {
+                console.debug("resultingColumnWidth > MAXW ! " + resultingColumnWidth + " > " + MAXW);
+            }
         }
 
         _paginationInfo.rightToLeft = _spine.isRightToLeft();
@@ -770,9 +781,11 @@ var ReflowableView = function (options, reader) {
         colWidthCheck = Math.round(colWidthCheck);
 
         if (colWidthCheck > _paginationInfo.columnWidth) {
-            console.debug("ADJUST COLUMN");
-            console.log(_paginationInfo.columnWidth);
-            console.log(colWidthCheck);
+            if (debugMode) {
+                console.debug("ADJUST COLUMN");
+                console.log(_paginationInfo.columnWidth);
+                console.log(colWidthCheck);
+            }
 
             _paginationInfo.columnWidth = colWidthCheck;
         }
@@ -1022,5 +1035,4 @@ var ReflowableView = function (options, reader) {
         return _navigationLogic.getElementFromPoint(x, y);
     };
 };
-return ReflowableView;
 });
