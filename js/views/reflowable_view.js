@@ -576,6 +576,18 @@ return function (options, reader) {
         }
     };
 
+    this.prevSpreadExists = function () {
+        if (!_currentSpineItem) {
+            return false;
+        }
+
+        if (_paginationInfo.currentSpreadIndex - 1 >= 0) {
+            return true;
+        } else {
+            return !!_spine.prevItem(_currentSpineItem);
+        }
+    };
+
     this.openPageNext = function (initiator) {
         return this.openPageXNext(1, initiator);
     };
@@ -623,6 +635,18 @@ return function (options, reader) {
             var pageRequest = new PageOpenRequest(nextSpineItem, initiator);
             pageRequest.setSpreadIndex(x - (_paginationInfo.spreadCount - _paginationInfo.currentSpreadIndex));
             self.openPage(pageRequest);
+        }
+    };
+
+    this.nextSpreadExists = function () {
+        if (!_currentSpineItem) {
+            return false;
+        }
+
+        if (_paginationInfo.currentSpreadIndex  + 1 < _paginationInfo.spreadCount) {
+            return true;
+        } else {
+            return !!_spine.nextItem(_currentSpineItem);
         }
     };
 
