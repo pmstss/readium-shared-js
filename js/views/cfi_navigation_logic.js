@@ -280,9 +280,7 @@ return function (options) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
         frameDimensions = frameDimensions || getFrameDimensions();
 
-        var elementRectangles = getNormalizedRectangles(element, visibleContentOffsets);
-
-        var clientRectangles = elementRectangles.clientRectangles;
+        var clientRectangles = getNormalizedRectangles(element, visibleContentOffsets);
         if (clientRectangles.length === 0) { // elements with display:none, etc.
             return null;
         }
@@ -361,9 +359,7 @@ return function (options) {
      */
     function findPageByRectangles($element, spatialVerticalOffset) {
         var visibleContentOffsets = getVisibleContentOffsets();
-        var elementRectangles = getNormalizedRectangles($element[0], visibleContentOffsets);
-
-        var clientRectangles  = elementRectangles.clientRectangles;
+        var clientRectangles = getNormalizedRectangles($element[0], visibleContentOffsets);
         if (clientRectangles.length === 0) { // elements with display:none, etc.
             return null;
         }
@@ -461,7 +457,7 @@ return function (options) {
      * @param {Object} [visibleContentOffsets]
      * @returns {Object}
      */
-    function getNormalizedRectangles(el, visibleContentOffsets) {
+    function _getNormalizedRectanglesAux(el, visibleContentOffsets) {
         visibleContentOffsets = visibleContentOffsets || getVisibleContentOffsets();
 
         var boundingClientRect = getNodeClientRect(el, visibleContentOffsets);
@@ -491,16 +487,16 @@ return function (options) {
         var res;
         //### tss: returning nextSibling rectangles is not desired in many cases; has side-effects in IE
         /*if (clientRectangles.length === 0) {
-            // sometimes an element is either hidden or empty, and that means
-            // Webkit-based browsers fail to assign proper clientRects to it
-            // in this case we need to go for its sibling (if it exists)
-            var nextSibling = $(el).next()[0];
-            if (nextSibling) {
-                res = getNormalizedRectangles(nextSibling, visibleContentOffsets);
-            }
-        }
+         // sometimes an element is either hidden or empty, and that means
+         // Webkit-based browsers fail to assign proper clientRects to it
+         // in this case we need to go for its sibling (if it exists)
+         var nextSibling = $(el).next()[0];
+         if (nextSibling) {
+         res = getNormalizedRectangles(nextSibling, visibleContentOffsets);
+         }
+         }
 
-        if (!res) {*/
+         if (!res) {*/
         res = {
             wrapperRectangle: boundingClientRect,
             clientRectangles: clientRectangles
@@ -513,6 +509,14 @@ return function (options) {
         }
 
         return res;
+    }
+
+    function getNormalizedRectangles(el, visibleContentOffsets) {
+        return _getNormalizedRectanglesAux(el, visibleContentOffsets).clientRectangles;
+    }
+
+    function getNormalizedBoundingRect(el, visibleContentOffsets) {
+        return _getNormalizedRectanglesAux(el, visibleContentOffsets).wrapperRectangle;
     }
 
     /**
@@ -1028,9 +1032,7 @@ return function (options) {
                 ["MathJax_Message", "MathJax_SVG_Hidden"]);
 
             var visibleContentOffsets = getVisibleContentOffsets();
-            var normRects = getNormalizedRectangles($element[0], visibleContentOffsets);
-
-            return {startInfo: null, endInfo: null, clientRect: normRects.wrapperRectangle};
+            return {startInfo: null, endInfo: null, clientRect: getNormalizedBoundingRect($element[0], visibleContentOffsets)};
         }
     };
 

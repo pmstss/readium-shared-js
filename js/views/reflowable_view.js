@@ -210,6 +210,9 @@ return function (options, reader) {
         if (_currentSpineItem !== spineItem) {
             //create & append iframe to container frame
             renderIframe();
+            if (_currentSpineItem) {
+                self.emit(Globals.Events.CONTENT_DOCUMENT_UNLOADED, _$iframe, _currentSpineItem);
+            }
 
             _paginationInfo.pageOffset = 0;
             _paginationInfo.currentSpreadIndex = 0;
@@ -492,6 +495,12 @@ return function (options, reader) {
 
     function updateViewportSize() {
         var newWidth = _$contentFrame.width();
+        
+        // Ensure that the new viewport width is always even numbered
+        // this is to prevent a rendering inconsistency between browsers when odd-numbered bounds are used for CSS columns
+        // See https://github.com/readium/readium-shared-js/issues/37
+        newWidth -= newWidth % 2;
+
         var newHeight = _$contentFrame.height();
 
         _$iframe.css({
@@ -1051,8 +1060,8 @@ return function (options, reader) {
         return createBookmarkFromCfi(_navigationLogic.getRangeCfiFromDomRange(domRange));
     };
 
-    this.getCfiForElement = function (x, y) {
-        return createBookmarkFromCfi(_navigationLogic.getCfiForElement(x, y));
+    this.getCfiForElement = function(element) {
+        return createBookmarkFromCfi(_navigationLogic.getCfiForElement(element));
     };
 
     this.getElementFromPoint = function (x, y) {

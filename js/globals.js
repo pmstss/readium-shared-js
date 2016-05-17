@@ -106,6 +106,10 @@ define(['jquery', 'eventEmitter'], function ($, EventEmitter) {
             /**
              * @event
              */
+            CONTENT_DOCUMENT_UNLOADED: "ContentDocumentUnloaded",
+            /**
+             * @event
+            */
             MEDIA_OVERLAY_STATUS_CHANGED: "MediaOverlayStatusChanged",
             /**
              * @event
