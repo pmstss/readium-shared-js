@@ -35,8 +35,8 @@ function($, _, Class, TextLineInferrer, HighlightView, HighlightBorderView, High
             var triggerEvent = _.partial(topView.trigger, _, that.type,
                 that.CFI, that.id, event, documentFrame);
 
-            if (type === "click" || type === "touchend") {
-                debouncedTrigger(triggerEvent, "annotationClicked");
+            if (type === "click" /*|| type === "touchend"*/) {
+                triggerEvent("annotationClicked");
 
             } else if (type === "contextmenu") {
                 triggerEvent("annotationRightClicked");
