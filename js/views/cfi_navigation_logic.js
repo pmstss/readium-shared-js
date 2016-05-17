@@ -406,7 +406,14 @@ return function (options) {
             var leftOffset = firstRectangle.left;
             if (isRtl) {
                 leftOffset = columnFullWidth * (options.paginationInfo ? options.paginationInfo.visibleColumnCount : 1) - leftOffset;
+            } else if (firstRectangle.top < 0) {
+                //TODO rtl calculations
+
+                /* ###tss: Chrome/Safari (#9929) sometimes returns negative (virtual) top coordinate */
+                var skippedPages = Math.ceil(Math.abs(firstRectangle.top) / options.$iframe.height());
+                leftOffset -= skippedPages * columnFullWidth;
             }
+
             pageIndex = Math.floor(leftOffset / columnFullWidth);
         }
 
