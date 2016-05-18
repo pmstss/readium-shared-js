@@ -953,7 +953,7 @@ return function (options) {
 
     this.getAnyClientRectForElement = function (el, isFirstRect, skipRecursion) {
         var visibleContentOffsets = getVisibleContentOffsets();
-        var clientRectangles = getNormalizedRectangles(el, visibleContentOffsets).clientRectangles;
+        var clientRectangles = getNormalizedRectangles(el, visibleContentOffsets);
         if (!clientRectangles.length) {
             if (skipRecursion) {
                 return null;
