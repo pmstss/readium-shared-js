@@ -911,16 +911,16 @@ return function (options) {
         var partialCfi = cfiParts.cfi;
 
         if (this.isRangeCfi(partialCfi)) {
-            // ### tss: node bounding client rect approach is not correct, when range cfi resides on multiple pages
+            // ### tss: node bounding client rect approach is not correct, when range cfi resides on multiple pages:
+            // shortening range to one char
+            partialCfi = partialCfi.replace(/(.*),\/(\d+):(\d+),.*/, function (str, g1, g2, g3) {
+                return g1 + ',/' + g2 + ':' + g3 + ',/' + g2 + ':' + (+g3 + 1);
+            });
 
-            // multiple pages. Instead, using the first range node as anchor seems to be correct.
-            /*//if given a range cfi the exact page index needs to be calculated by getting node info from the range cfi
-             var nodeRangeInfoFromCfi = this.getNodeRangeInfoFromCfi(partialCfi);
-             //the page index is calculated from the node's client rectangle
-             return findPageBySingleRectangle(nodeRangeInfoFromCfi.clientRect);*/
-
-            partialCfi = partialCfi.replace(/(.*),([^,]+),.*/, '$1$2');  // ###tss: will go to the first part
-            cfiParts.cfi = partialCfi;
+            //if given a range cfi the exact page index needs to be calculated by getting node info from the range cfi
+            var nodeRangeInfoFromCfi = this.getNodeRangeInfoFromCfi(partialCfi);
+            //the page index is calculated from the node's client rectangle
+            return findPageBySingleRectangle(nodeRangeInfoFromCfi.clientRect);
         }
 
         var $element = getElementByPartialCfi(cfiParts.cfi, classBlacklist, elementBlacklist, idBlacklist);
