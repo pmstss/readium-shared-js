@@ -153,7 +153,7 @@ return function () {
         var doc = iframe.contentDocument || iframe.contentWindow.document;
         this.removeDocumentComments(doc);
 
-        $('svg', doc).load(function () {
+        $('svg', doc).on('load', function () {
             console.log('SVG loaded');
         });
 

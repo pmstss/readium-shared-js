@@ -71,6 +71,18 @@ return function (options) {
         return rootDoc && rootDoc.body || this.getRootElement();
     };
 
+    this.getClassBlacklist = function () {
+        return options.classBlacklist || [];
+    }
+
+    this.getIdBlacklist = function () {
+        return options.idBlacklist || [];
+    }
+
+    this.getElementBlacklist = function () {
+        return options.elementBlacklist || [];
+    }
+
     this.getRootDocument = function () {
         return options.$iframe[0].contentDocument;
     };
@@ -673,9 +685,9 @@ return function (options) {
 
     this.getCfiForElement = function (element) {
         var cfi = EPUBcfi.Generator.generateElementCFIComponent(element,
-            ["cfi-marker"],
-            [],
-            ["MathJax_Message", "MathJax_SVG_Hidden"]);
+            this.getClassBlacklist(),
+            this.getElementBlacklist(),
+            this.getIdBlacklist());
 
         if (cfi[0] === "!") {
             cfi = cfi.substring(1);
@@ -701,6 +713,8 @@ return function (options) {
             return isPageProgressionRightToLeft() ? result.reverse() : result;
         }
     }
+
+    var DEBUG = false;
 
     function isCorrectCaretRange(caretRange, textNode) {
         return caretRange && (caretRange.startContainer === textNode  || caretRange.startContainer &&
@@ -840,14 +854,14 @@ return function (options) {
         return EPUBcfi.generateRangeComponent(
             range.startContainer, range.startOffset,
             range.endContainer, range.endOffset,
-            ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"]);
+            self.getClassBlacklist(), self.getElementBlacklist(), self.getIdBlacklist());
     }
 
     function getRangeTargetNodes(rangeCfi) {
         return EPUBcfi.getRangeTargetElements(
             getWrappedCfiRelativeToContent(rangeCfi),
             self.getRootDocument(),
-            ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"]);
+            self.getClassBlacklist(), self.getElementBlacklist(), self.getIdBlacklist());
     }
 
     this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
@@ -860,7 +874,7 @@ return function (options) {
                 range.setEnd(rangeInfo.endElement, rangeInfo.endOffset);
             } else {
                 var element = self.getElementByCfi(rangeCfi,
-                    ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"])[0];
+                    this.getClassBlacklist(), this.getElementBlacklist(), this.getIdBlacklist())[0];
                 range.selectNode(element);
             }
         } else {
@@ -869,7 +883,7 @@ return function (options) {
                 range.setStart(rangeInfo1.startElement, rangeInfo1.startOffset);
             } else {
                 var startElement = self.getElementByCfi(rangeCfi,
-                    ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"])[0];
+                    this.getClassBlacklist(), this.getElementBlacklist(), this.getIdBlacklist())[0];
                 range.setStart(startElement, 0);
             }
 
@@ -882,7 +896,7 @@ return function (options) {
                 }
             } else {
                 var endElement = self.getElementByCfi(rangeCfi2,
-                    ['cfi-marker'], [], ["MathJax_Message", "MathJax_SVG_Hidden"])[0];
+                    this.getClassBlacklist(), this.getElementBlacklist(), this.getIdBlacklist())[0];
                 range.setEnd(endElement, endElement.childNodes.length);
             }
         }
@@ -997,9 +1011,9 @@ return function (options) {
             var nodeResult;
             try {
                 nodeResult = EPUBcfi.Interpreter.getRangeTargetElements(wrappedCfi, contentDoc,
-                    ["cfi-marker"],
-                    [],
-                    ["MathJax_Message", "MathJax_SVG_Hidden"]);
+                    this.getClassBlacklist(),
+                    this.getElementBlacklist(),
+                    this.getIdBlacklist());
 
                 if (debugMode) {
                     console.log(nodeResult);
@@ -1033,9 +1047,9 @@ return function (options) {
             return {startInfo: startRangeInfo, endInfo: endRangeInfo, clientRect: nodeRangeClientRect};
         } else {
             var $element = self.getElementByCfi(cfi,
-                ["cfi-marker"],
-                [],
-                ["MathJax_Message", "MathJax_SVG_Hidden"]);
+                this.getClassBlacklist(),
+                this.getElementBlacklist(),
+                this.getIdBlacklist());
 
             var visibleContentOffsets = getVisibleContentOffsets();
             return {startInfo: null, endInfo: null, clientRect: getNormalizedBoundingRect($element[0], visibleContentOffsets)};
@@ -1067,6 +1081,15 @@ return function (options) {
             return 0;
         }
         return pageIndex;
+    };
+
+    this.getVerticalOffsetForElement = function ($element) {
+      return this.getVerticalOffsetForPointOnElement($element, 0, 0);
+    };
+
+    this.getVerticalOffsetForPointOnElement = function ($element, x, y) {
+      var elementRect = Helpers.Rect.fromElement($element);
+      return Math.ceil(elementRect.top + y * elementRect.height / 100);
     };
 
     this.getElementById = function (id) {
@@ -1367,15 +1390,17 @@ return function (options) {
     };
 
     function isElementBlacklisted($element) {
-        return EPUBcfi.applyBlacklist($element, ["cfi-marker", "mo-cfi-highlight"], [],
-                ["MathJax_Message", "MathJax_SVG_Hidden"]).length === 0;
+        return _.some(self.getClassBlacklist(), function (value) {
+            return $element.hasClass(value);
+        }) || _.some(self.getIdBlacklist(), function (value) {
+            return $element.attr("id") === value;
+        });
     }
 
     this.getLeafNodeElements = function (root) {
         if (_cacheEnabled && root.leafNodes) {
             return root.cacheLeafNodes;
         }
-
         //jshint bitwise:false
         var nodeIterator = document.createNodeIterator(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, function () {
             return NodeFilter.FILTER_ACCEPT;

@@ -33,10 +33,10 @@
 
 define(["../globals", "jquery", "underscore", "eventEmitter", "../models/bookmark_data", "./cfi_navigation_logic",
 "../models/current_pages_info", "../helpers", "../models/page_open_request",
-"../models/viewer_settings", "./font_loader"],
+    "../models/viewer_settings", "ResizeSensor"],
 function (Globals, $, _, EventEmitter, BookmarkData, CfiNavigationLogic,
          CurrentPagesInfo, Helpers, PageOpenRequest,
-         ViewerSettings, FontLoader) {
+             ViewerSettings, ResizeSensor) {
 
 'use strict';
 
@@ -69,6 +69,11 @@ return function (options, reader) {
     var _$el;
     var _$iframe;
     var _$epubHtml;
+    var _lastPageRequest = undefined;
+
+    var _cfiClassBlacklist = ["cfi-marker", "mo-cfi-highlight", "resize-sensor", "resize-sensor-expand", "resize-sensor-shrink", "resize-sensor-inner"];
+    var _cfiElementBlacklist = [];
+    var _cfiIdBlacklist = ["MathJax_Message", "MathJax_SVG_Hidden"];
 
     var _$htmlBody;
 
@@ -202,7 +207,9 @@ return function (options, reader) {
             $iframe: _$iframe,
             frameDimensions: getFrameDimensions,
             paginationInfo: _paginationInfo,
-            settings: _viewSettings
+            classBlacklist: _cfiClassBlacklist,
+            elementBlacklist: _cfiElementBlacklist,
+            idBlacklist: _cfiIdBlacklist
         });
     }
 
@@ -211,8 +218,11 @@ return function (options, reader) {
             //create & append iframe to container frame
             renderIframe();
             if (_currentSpineItem) {
+                Globals.logEvent("CONTENT_DOCUMENT_UNLOADED", "EMIT", "reflowable_view.js [ " + _currentSpineItem.href + " ]");
                 self.emit(Globals.Events.CONTENT_DOCUMENT_UNLOADED, _$iframe, _currentSpineItem);
             }
+
+            self.resetCurrentPosition();
 
             _paginationInfo.pageOffset = 0;
             _paginationInfo.currentSpreadIndex = 0;
@@ -247,18 +257,7 @@ return function (options, reader) {
     }
 
     function onIFrameLoad(success) {
-        if (!success) {
-            applyIFrameLoad(success);
-            return;
-        }
 
-        var fontLoader = new FontLoader(_$iframe);
-        fontLoader.waitForFonts(function () {
-            applyIFrameLoad(success);
-        });
-    }
-
-    function applyIFrameLoad(success) {
         _isWaitingFrameRender = false;
 
         //while we where loading frame new request came
@@ -290,10 +289,10 @@ return function (options, reader) {
         // TODO: Opera (WebKit) sometimes suffers from this rendering bug too (depends on the video codec),
         //      but unfortunately GPU-accelerated rendering makes the video controls unresponsive!!
         /*
-        if(window.chrome && window.navigator.vendor === "Google Inc.") {
-            $("video", _$htmlBody).css("transform", "translateZ(0)");
-        }
-        */
+         if(window.chrome && window.navigator.vendor === "Google Inc.") {
+         $("video", _$htmlBody).css("transform", "translateZ(0)");
+         }
+         */
 
         _htmlBodyIsVerticalWritingMode = false;
         _htmlBodyIsLTRDirection = true;
@@ -306,10 +305,10 @@ return function (options, reader) {
             _htmlBodyIsLTRDirection = bodyCS.direction === "ltr";
 
             var writingMode = bodyCS.getPropertyValue ? bodyCS.getPropertyValue("-webkit-writing-mode") ||
-                bodyCS.getPropertyValue("-moz-writing-mode") || bodyCS.getPropertyValue("-ms-writing-mode") ||
-                bodyCS.getPropertyValue("-o-writing-mode") || bodyCS.getPropertyValue("-epub-writing-mode") ||
-                bodyCS.getPropertyValue("writing-mode") : bodyCS.webkitWritingMode || bodyCS.mozWritingMode ||
-                bodyCS.msWritingMode || bodyCS.oWritingMode || bodyCS.epubWritingMode || bodyCS.writingMode;
+            bodyCS.getPropertyValue("-moz-writing-mode") || bodyCS.getPropertyValue("-ms-writing-mode") ||
+            bodyCS.getPropertyValue("-o-writing-mode") || bodyCS.getPropertyValue("-epub-writing-mode") ||
+            bodyCS.getPropertyValue("writing-mode") : bodyCS.webkitWritingMode || bodyCS.mozWritingMode ||
+            bodyCS.msWritingMode || bodyCS.oWritingMode || bodyCS.epubWritingMode || bodyCS.writingMode;
 
             if (writingMode) {
                 _htmlBodyIsLTRWritingMode = writingMode.indexOf("-lr") >= 0;
@@ -370,6 +369,12 @@ return function (options, reader) {
         updateHtmlFontSize();
         updateColumnGap();
 
+        var bodyElement = _$htmlBody[0];
+        bodyElement.resizeSensor = new ResizeSensor(bodyElement, function () {
+            console.debug("ReflowableView content resized", $(bodyElement).width(), $(bodyElement).height());
+            updatePagination();
+        });
+
         self.applyStyles();
     }
 
@@ -405,7 +410,7 @@ return function (options, reader) {
 
     var onPaginationChanged;
 
-    this.openPage = function (pageRequest) {
+    this.openPageInternal = function (pageRequest) {
         if (_isWaitingFrameRender) {
             _deferredPageRequest = pageRequest;
             return;
@@ -446,626 +451,709 @@ return function (options, reader) {
             if (pageIndex < 0) {
                 pageIndex = 0;
             }
-        } else if (pageRequest.elementCfi) {
-            try {
-                pageIndex = _navigationLogic.getPageForElementCfi(pageRequest.elementCfi,
-                    ["cfi-marker", "mo-cfi-highlight"],
-                    [],
-                    ["MathJax_Message"]);
+            else if (pageRequest.firstVisibleCfi && pageRequest.lastVisibleCfi) {
+                var firstPageIndex;
+                var lastPageIndex;
+                try {
+                    firstPageIndex = _navigationLogic.getPageForElementCfi(pageRequest.firstVisibleCfi,
+                        _cfiClassBlacklist,
+                        _cfiElementBlacklist,
+                        _cfiIdBlacklist);
 
-                if (pageIndex < 0) {
-                    pageIndex = 0;
+                    if (firstPageIndex < 0) firstPageIndex = 0;
                 }
-            } catch (e) {
-                pageIndex = 0;
-                console.error(e);
+                catch (e) {
+                    firstPageIndex = 0;
+                    console.error(e);
+                }
+                try {
+                    lastPageIndex = _navigationLogic.getPageForElementCfi(pageRequest.lastVisibleCfi,
+                        _cfiClassBlacklist,
+                        _cfiElementBlacklist,
+                        _cfiIdBlacklist);
+
+                    if (lastPageIndex < 0) lastPageIndex = 0;
+                }
+                catch (e) {
+                    lastPageIndex = 0;
+                    console.error(e);
+                }
+                // Go to the page in the middle of the two elements
+                pageIndex = Math.round((firstPageIndex + lastPageIndex) / 2);
             }
-        } else if (pageRequest.firstPage) {
-            pageIndex = 0;
-        } else if (pageRequest.lastPage) {
-            pageIndex = _paginationInfo.columnCount - 1;
-        } else if (pageRequest.percent) {
-            pageIndex = Math.floor((_paginationInfo.columnCount - 1) * pageRequest.percent);
-        } else {
-            console.debug("No criteria in pageRequest");
-            pageIndex = 0;
+            else if (pageRequest.elementCfi) {
+                try {
+                    pageIndex = _navigationLogic.getPageForElementCfi(pageRequest.elementCfi,
+                        _cfiClassBlacklist,
+                        _cfiElementBlacklist,
+                        _cfiIdBlacklist);
+
+                    if (pageIndex < 0) {
+                        pageIndex = 0;
+                    }
+                } catch (e) {
+                    pageIndex = 0;
+                    console.error(e);
+                }
+            } else if (pageRequest.firstPage) {
+                pageIndex = 0;
+            } else if (pageRequest.lastPage) {
+                pageIndex = _paginationInfo.columnCount - 1;
+            } else if (pageRequest.percent) {
+                pageIndex = Math.floor((_paginationInfo.columnCount - 1) * pageRequest.percent);
+            } else {
+                console.debug("No criteria in pageRequest");
+                pageIndex = 0;
+            }
+
+            if (pageIndex >= 0 && pageIndex < _paginationInfo.columnCount) {
+                _paginationInfo.currentSpreadIndex = Math.floor(pageIndex / _paginationInfo.visibleColumnCount);
+                onPaginationChanged(pageRequest.initiator, pageRequest.spineItem, pageRequest.elementId);
+            } else {
+                console.log('Illegal pageIndex value: ', pageIndex, 'column count is ', _paginationInfo.columnCount);
+            }
+        }
+        ;
+
+        this.openPage = function (pageRequest) {
+            // Go to request page, it will save the new position in onPaginationChanged
+            this.openPageInternal(pageRequest);
+            // Save it for when pagination is updated
+            _lastPageRequest = pageRequest;
+        };
+
+        this.resetCurrentPosition = function () {
+            _lastPageRequest = undefined;
+        };
+
+        this.saveCurrentPosition = function () {
+            // If there's a deferred page request, there's no point in saving the current position
+            // as it's going to change soon
+            if (_deferredPageRequest) {
+                return;
+            }
+
+            var _firstVisibleCfi = self.getFirstVisibleCfi();
+            var _lastVisibleCfi = self.getLastVisibleCfi();
+            _lastPageRequest = new PageOpenRequest(_currentSpineItem, self);
+            _lastPageRequest.setFirstAndLastVisibleCfi(_firstVisibleCfi.contentCFI, _lastVisibleCfi.contentCFI);
+        };
+
+        this.restoreCurrentPosition = function () {
+            if (_lastPageRequest) {
+                this.openPageInternal(_lastPageRequest);
+            }
+        };
+
+        function redraw() {
+            var offsetVal = -_paginationInfo.pageOffset + "px";
+            if (_htmlBodyIsVerticalWritingMode) {
+                _$epubHtml.css("top", offsetVal);
+            } else {
+                var ltr = _htmlBodyIsLTRDirection || _htmlBodyIsLTRWritingMode;
+
+                _$epubHtml.css("left", ltr ? offsetVal : "");
+                _$epubHtml.css("right", !ltr ? offsetVal : "");
+            }
+
+            showBook(); // as it's no longer hidden by shifting the position
         }
 
-        if (pageIndex >= 0 && pageIndex < _paginationInfo.columnCount) {
-            _paginationInfo.currentSpreadIndex = Math.floor(pageIndex / _paginationInfo.visibleColumnCount);
-            onPaginationChanged(pageRequest.initiator, pageRequest.spineItem, pageRequest.elementId);
-        } else {
-            console.log('Illegal pageIndex value: ', pageIndex, 'column count is ', _paginationInfo.columnCount);
-        }
-    };
+        function updateViewportSize() {
+            var newWidth = _$contentFrame.width();
 
-    function redraw() {
-        var offsetVal =  -_paginationInfo.pageOffset + "px";
-        if (_htmlBodyIsVerticalWritingMode) {
-            _$epubHtml.css("top", offsetVal);
-        } else {
-            var ltr = _htmlBodyIsLTRDirection || _htmlBodyIsLTRWritingMode;
+            // Ensure that the new viewport width is always even numbered
+            // this is to prevent a rendering inconsistency between browsers when odd-numbered bounds are used for CSS columns
+            // See https://github.com/readium/readium-shared-js/issues/37
+            newWidth -= newWidth % 2;
 
-            _$epubHtml.css("left", ltr ? offsetVal : "");
-            _$epubHtml.css("right", !ltr ? offsetVal : "");
-        }
+            var newHeight = _$contentFrame.height();
 
-        showBook(); // as it's no longer hidden by shifting the position
-    }
+            _$iframe.css({
+                width: newWidth,
+                height: newHeight
+            });
 
-    function updateViewportSize() {
-        var newWidth = _$contentFrame.width();
-        
-        // Ensure that the new viewport width is always even numbered
-        // this is to prevent a rendering inconsistency between browsers when odd-numbered bounds are used for CSS columns
-        // See https://github.com/readium/readium-shared-js/issues/37
-        newWidth -= newWidth % 2;
+            // below min- max- are required in vertical writing mode (height is not enough, in some cases...weird!)
+            _$epubHtml.css({
+                'height': newHeight,
+                'min-height': newHeight,
+                'max-height': newHeight
+            });
 
-        var newHeight = _$contentFrame.height();
+            if (_lastViewPortSize.width !== newWidth || _lastViewPortSize.height !== newHeight) {
+                _lastViewPortSize.width = newWidth;
+                _lastViewPortSize.height = newHeight;
+                return true;
+            }
 
-        _$iframe.css({
-            width: newWidth,
-            height: newHeight
-        });
-
-        // below min- max- are required in vertical writing mode (height is not enough, in some cases...weird!)
-        _$epubHtml.css({
-            'height': newHeight,
-            'min-height': newHeight,
-            'max-height': newHeight
-        });
-
-        if (_lastViewPortSize.width !== newWidth || _lastViewPortSize.height !== newHeight) {
-            _lastViewPortSize.width = newWidth;
-            _lastViewPortSize.height = newHeight;
-            return true;
+            return false;
         }
 
-        return false;
-    }
-
-    function onPaginationChanged_(initiator, paginationRequestSpineItem, paginationRequestElementId) {
-        _paginationInfo.pageOffset = (_paginationInfo.columnWidth + _paginationInfo.columnGap) *
+        function onPaginationChanged_(initiator, paginationRequestSpineItem, paginationRequestElementId) {
+            _paginationInfo.pageOffset = (_paginationInfo.columnWidth + _paginationInfo.columnGap) *
                 _paginationInfo.visibleColumnCount * _paginationInfo.currentSpreadIndex;
 
-        redraw();
+            redraw();
 
-        _.defer(function () {
-            Globals.logEvent("InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED", "EMIT", "reflowable_view.js");
-            self.emit(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, {
-                paginationInfo: self.getPaginationInfo(),
-                initiator: initiator,
-                spineItem: paginationRequestSpineItem,
-                elementId: paginationRequestElementId
+            _.defer(function () {
+                if (_lastPageRequest == undefined) {
+                    self.saveCurrentPosition();
+                }
+
+                Globals.logEvent("InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED", "EMIT", "reflowable_view.js");
+                self.emit(Globals.InternalEvents.CURRENT_VIEW_PAGINATION_CHANGED, {
+                    paginationInfo: self.getPaginationInfo(),
+                    initiator: initiator,
+                    spineItem: paginationRequestSpineItem,
+                    elementId: paginationRequestElementId
+                });
             });
-        });
-    }
-    onPaginationChanged = _.debounce(onPaginationChanged_, 100);
-
-    this.openPagePrev = function (initiator) {
-        this.openPageXPrev(1, initiator);
-    };
-
-    this.openPageXPrev = function (x, initiator) {
-        if (!_currentSpineItem) {
-            return;
         }
 
-        var pagesCount = _paginationInfo.currentSpreadIndex * _paginationInfo.visibleColumnCount;
+        onPaginationChanged = _.debounce(onPaginationChanged_, 100);
 
-        var xSpread = Math.ceil(x / _paginationInfo.visibleColumnCount);
-        if (pagesCount >= x) {
-            _paginationInfo.currentSpreadIndex -= xSpread;
-            onPaginationChanged(initiator);
-        } else {
-            var prevSpineItem = _spine.prevItem(_currentSpineItem);
-            if (prevSpineItem) {
-                var pageRequest = new PageOpenRequest(prevSpineItem, initiator);
-                pageRequest.setPageIndex(-(x - pagesCount));
-                self.openPage(pageRequest);
-            }
-        }
-    };
+        this.openPagePrev = function (initiator) {
+            this.openPageXPrev(1, initiator);
+        };
 
-    this.openSpreadXPrev = function (x, initiator) {
-        if (!_currentSpineItem) {
-            return;
-        }
-
-        if (_paginationInfo.currentSpreadIndex - x >= 0) {
-            _paginationInfo.currentSpreadIndex -= x;
-            onPaginationChanged(initiator);
-        } else {
-            var prevSpineItem = _spine.prevItem(_currentSpineItem);
-            if (prevSpineItem) {
-                var pageRequest = new PageOpenRequest(prevSpineItem, initiator);
-                pageRequest.setSpreadIndex(-(x - _paginationInfo.currentSpreadIndex));
-                self.openPage(pageRequest);
-            }
-        }
-    };
-
-    this.prevSpreadExists = function () {
-        if (!_currentSpineItem) {
-            return false;
-        }
-
-        if (_paginationInfo.currentSpreadIndex - 1 >= 0) {
-            return true;
-        } else {
-            return !!_spine.prevItem(_currentSpineItem);
-        }
-    };
-
-    this.openPageNext = function (initiator) {
-        return this.openPageXNext(1, initiator);
-    };
-
-    this.openPageXNext = function (x, initiator) {
-        if (!_currentSpineItem) {
-            return;
-        }
-
-        var restPages = (_paginationInfo.spreadCount - _paginationInfo.currentSpreadIndex - 1) * _paginationInfo.visibleColumnCount;
-        if (restPages > 0) {
-            restPages -= _paginationInfo.columnCount %  _paginationInfo.visibleColumnCount;
-        }
-
-        var xSpread = Math.ceil(x / _paginationInfo.visibleColumnCount);
-        if (x <= restPages) {
-            _paginationInfo.currentSpreadIndex += xSpread;
-            onPaginationChanged(initiator);
-        } else {
-            var nextSpineItem = _spine.nextItem(_currentSpineItem);
-            if (!nextSpineItem) {
+        this.openPageXPrev = function (x, initiator) {
+            if (!_currentSpineItem) {
                 return;
             }
 
-            var pageRequest = new PageOpenRequest(nextSpineItem, initiator);
-            pageRequest.setPageIndex(x - restPages - 1);
-            self.openPage(pageRequest);
-        }
-    };
+            var pagesCount = _paginationInfo.currentSpreadIndex * _paginationInfo.visibleColumnCount;
 
-    this.openSpreadXNext = function (x, initiator) {
-        if (!_currentSpineItem) {
-            return;
-        }
+            var xSpread = Math.ceil(x / _paginationInfo.visibleColumnCount);
+            if (pagesCount >= x) {
+                // Page will change, the current position is not valid any more
+                // Reset it so it's saved next time onPaginationChanged is called
+                this.resetCurrentPosition();
+                _paginationInfo.currentSpreadIndex -= xSpread;
+                onPaginationChanged(initiator);
+            } else {
+                var prevSpineItem = _spine.prevItem(_currentSpineItem);
+                if (prevSpineItem) {
+                    var pageRequest = new PageOpenRequest(prevSpineItem, initiator);
+                    pageRequest.setPageIndex(-(x - pagesCount));
+                    self.openPage(pageRequest);
+                }
+            }
+        };
 
-        if (x + _paginationInfo.currentSpreadIndex < _paginationInfo.spreadCount) {
-            _paginationInfo.currentSpreadIndex += x;
-            onPaginationChanged(initiator);
-        } else {
-            var nextSpineItem = _spine.nextItem(_currentSpineItem);
-            if (!nextSpineItem) {
+        this.openSpreadXPrev = function (x, initiator) {
+            if (!_currentSpineItem) {
                 return;
             }
 
-            var pageRequest = new PageOpenRequest(nextSpineItem, initiator);
-            pageRequest.setSpreadIndex(x - (_paginationInfo.spreadCount - _paginationInfo.currentSpreadIndex));
-            self.openPage(pageRequest);
-        }
-    };
+            if (_paginationInfo.currentSpreadIndex - x >= 0) {
+                _paginationInfo.currentSpreadIndex -= x;
+                onPaginationChanged(initiator);
+            } else {
+                var prevSpineItem = _spine.prevItem(_currentSpineItem);
+                if (prevSpineItem) {
+                    var pageRequest = new PageOpenRequest(prevSpineItem, initiator);
+                    pageRequest.setSpreadIndex(-(x - _paginationInfo.currentSpreadIndex));
+                    self.openPage(pageRequest);
+                }
+            }
+        };
 
-    this.nextSpreadExists = function () {
-        if (!_currentSpineItem) {
-            return false;
-        }
+        this.prevSpreadExists = function () {
+            if (!_currentSpineItem) {
+                return false;
+            }
 
-        if (_paginationInfo.currentSpreadIndex  + 1 < _paginationInfo.spreadCount) {
-            return true;
-        } else {
-            return !!_spine.nextItem(_currentSpineItem);
-        }
-    };
+            if (_paginationInfo.currentSpreadIndex - 1 >= 0) {
+                return true;
+            } else {
+                return !!_spine.prevItem(_currentSpineItem);
+            }
+        };
 
-    function updatePagination() {
-        // ### tss: exit if iframe is not ready
-        if (!_$epubHtml) {
-            return;
-        }
+        this.openPageNext = function (initiator) {
+            return this.openPageXNext(1, initiator);
+        };
 
-        // At 100% font-size = 16px (on HTML, not body or descendant markup!)
-        var MAXW = _paginationInfo.columnMaxWidth;
-        var MINW = _paginationInfo.columnMinWidth;
+        this.openPageXNext = function (x, initiator) {
+            if (!_currentSpineItem) {
+                return;
+            }
 
-        var isDoublePageSyntheticSpread = Helpers.deduceSyntheticSpread(_$viewport, _currentSpineItem, _viewSettings);
-        var forced = isDoublePageSyntheticSpread === false || isDoublePageSyntheticSpread === true;
-        // excludes 0 and 1 falsy/truthy values which denote non-forced result
+            var restPages = (_paginationInfo.spreadCount - _paginationInfo.currentSpreadIndex - 1) * _paginationInfo.visibleColumnCount;
+            if (restPages > 0) {
+                restPages -= _paginationInfo.columnCount % _paginationInfo.visibleColumnCount;
+            }
 
-        if (isDoublePageSyntheticSpread === 0) {
-            isDoublePageSyntheticSpread = 1; // try double page, will shrink if doesn't fit
-            // console.debug("TRYING SPREAD INSTEAD OF SINGLE...");
-        }
+            var xSpread = Math.ceil(x / _paginationInfo.visibleColumnCount);
+            if (x <= restPages) {
+                // Page will change, the current position is not valid any more
+                // Reset it so it's saved next time onPaginationChanged is called
+                this.resetCurrentPosition();
+                _paginationInfo.currentSpreadIndex += xSpread;
+                onPaginationChanged(initiator);
+            } else {
+                var nextSpineItem = _spine.nextItem(_currentSpineItem);
+                if (!nextSpineItem) {
+                    return;
+                }
 
-        _paginationInfo.visibleColumnCount = isDoublePageSyntheticSpread ? 2 : 1;
+                var pageRequest = new PageOpenRequest(nextSpineItem, initiator);
+                pageRequest.setPageIndex(x - restPages - 1);
+                self.openPage(pageRequest);
+            }
+        };
 
-        if (_htmlBodyIsVerticalWritingMode) {
-            MAXW *= 2;
-            isDoublePageSyntheticSpread = false;
-            forced = true;
-            _paginationInfo.visibleColumnCount = 1;
-            // console.debug("Vertical Writing Mode => single CSS column, but behaves as if two-page spread");
-        }
+        this.openSpreadXNext = function (x, initiator) {
+            if (!_currentSpineItem) {
+                return;
+            }
 
-        hideBook();
+            if (x + _paginationInfo.currentSpreadIndex < _paginationInfo.spreadCount) {
+                _paginationInfo.currentSpreadIndex += x;
+                onPaginationChanged(initiator);
+            } else {
+                var nextSpineItem = _spine.nextItem(_currentSpineItem);
+                if (!nextSpineItem) {
+                    return;
+                }
 
-        // "borderLeft" is the blank vertical strip (e.g. 40px wide) where the left-arrow button resides, i.e. previous page command
-        var borderLeft = parseInt(_$viewport.css("border-left-width"), 10);
-        // The "columnGap" separates two consecutive columns in a 2-page synthetic spread (e.g. 60px wide).
-        // This middle gap (blank vertical strip) actually corresponds to the left page's right-most margin,
-        // combined with the right page's left-most margin.
-        // So, "adjustedGapLeft" is half of the center strip...
-        var adjustedGapLeft = _paginationInfo.columnGap / 2;
-        // ...but we include the "borderLeft" strip to avoid wasting valuable rendering real-estate:
-        adjustedGapLeft = Math.max(0, adjustedGapLeft - borderLeft);
-        // Typically, "adjustedGapLeft" is zero because the space available for the 'previous page' button
-        // is wider than half of the column gap!
+                var pageRequest = new PageOpenRequest(nextSpineItem, initiator);
+                pageRequest.setSpreadIndex(x - (_paginationInfo.spreadCount - _paginationInfo.currentSpreadIndex));
+                self.openPage(pageRequest);
+            }
+        };
 
-        // "borderRight" is the blank vertical strip (e.g. 40px wide) where the right-arrow button resides, i.e. next page command
-        var borderRight = parseInt(_$viewport.css("border-right-width"), 10);
-        // The "columnGap" separates two consecutive columns in a 2-page synthetic spread (e.g. 60px wide).
-        // This middle gap (blank vertical strip) actually corresponds to the left page's right-most margin,
-        // combined with the right page's left-most margin.
-        // So, "adjustedGapRight" is half of the center strip...
-        var adjustedGapRight = _paginationInfo.columnGap / 2;
-        // ...but we include the "borderRight" strip to avoid wasting valuable rendering real-estate:
-        adjustedGapRight = Math.max(0, adjustedGapRight - borderRight);
-        // Typically, "adjustedGapRight" is zero because the space available for the 'next page' button
-        // is wider than half of the column gap! (in other words, the right-most and left-most page margins are fully
-        // included in the strips reserved for the arrow buttons)
+        this.nextSpreadExists = function () {
+            if (!_currentSpineItem) {
+                return false;
+            }
 
-        // Note that "availableWidth" does not contain "borderLeft" and "borderRight" (.width() excludes the padding
-        // and border and margin in the CSS box model of div#epub-reader-frame)
-        var availableWidth = _$viewport.width();
+            if (_paginationInfo.currentSpreadIndex + 1 < _paginationInfo.spreadCount) {
+                return true;
+            } else {
+                return !!_spine.nextItem(_currentSpineItem);
+            }
+        };
 
-        // ...So, we substract the page margins and button spacing to obtain the width available for actual text:
-        var textWidth = availableWidth - adjustedGapLeft - adjustedGapRight;
+        function updatePagination() {
+            // ### tss: exit if iframe is not ready
+            if (!_$epubHtml) {
+                return;
+            }
 
-        // ...and if we have 2 pages / columns, then we split the text width in half:
-        if (isDoublePageSyntheticSpread) {
-            textWidth = (textWidth - _paginationInfo.columnGap) * 0.5;
-        }
+            // At 100% font-size = 16px (on HTML, not body or descendant markup!)
+            var MAXW = _paginationInfo.columnMaxWidth;
+            var MINW = _paginationInfo.columnMinWidth;
 
-        var filler = 0;
+            var isDoublePageSyntheticSpread = Helpers.deduceSyntheticSpread(_$viewport, _currentSpineItem, _viewSettings);
+            var forced = isDoublePageSyntheticSpread === false || isDoublePageSyntheticSpread === true;
+            // excludes 0 and 1 falsy/truthy values which denote non-forced result
 
-        // Now, if the resulting width actually available for document content is greater than the maximum allowed value,
-        // we create even more left+right blank space to "compress" the horizontal run of text.
+            if (isDoublePageSyntheticSpread === 0) {
+                isDoublePageSyntheticSpread = 1; // try double page, will shrink if doesn't fit
+                // console.debug("TRYING SPREAD INSTEAD OF SINGLE...");
+            }
 
-        if (textWidth > MAXW) {
-            var eachPageColumnReduction = textWidth - MAXW;
+            _paginationInfo.visibleColumnCount = isDoublePageSyntheticSpread ? 2 : 1;
 
-            // if we have a 2-page synthetic spread, then we "trim" left and right sides by adding "eachPageColumnReduction" blank space.
-            // if we have a single page / column, then this loss of text real estate is shared between right and left sides
-            filler = Math.floor(eachPageColumnReduction * (isDoublePageSyntheticSpread ? 1 : 0.5));
-        } else if (!forced && textWidth < MINW && isDoublePageSyntheticSpread) {
-            // Let's check whether a narrow two-page synthetic spread (impeded reabability) can be reduced down to a single page / column:
+            if (_htmlBodyIsVerticalWritingMode) {
+                MAXW *= 2;
+                isDoublePageSyntheticSpread = false;
+                forced = true;
+                _paginationInfo.visibleColumnCount = 1;
+                // console.debug("Vertical Writing Mode => single CSS column, but behaves as if two-page spread");
+            }
 
-            isDoublePageSyntheticSpread = false;
-            _paginationInfo.visibleColumnCount = 1;
+            hideBook();
 
-            textWidth = availableWidth - adjustedGapLeft - adjustedGapRight;
+            // "borderLeft" is the blank vertical strip (e.g. 40px wide) where the left-arrow button resides, i.e. previous page command
+            var borderLeft = parseInt(_$viewport.css("border-left-width"), 10);
+            // The "columnGap" separates two consecutive columns in a 2-page synthetic spread (e.g. 60px wide).
+            // This middle gap (blank vertical strip) actually corresponds to the left page's right-most margin,
+            // combined with the right page's left-most margin.
+            // So, "adjustedGapLeft" is half of the center strip...
+            var adjustedGapLeft = _paginationInfo.columnGap / 2;
+            // ...but we include the "borderLeft" strip to avoid wasting valuable rendering real-estate:
+            adjustedGapLeft = Math.max(0, adjustedGapLeft - borderLeft);
+            // Typically, "adjustedGapLeft" is zero because the space available for the 'previous page' button
+            // is wider than half of the column gap!
+
+            // "borderRight" is the blank vertical strip (e.g. 40px wide) where the right-arrow button resides, i.e. next page command
+            var borderRight = parseInt(_$viewport.css("border-right-width"), 10);
+            // The "columnGap" separates two consecutive columns in a 2-page synthetic spread (e.g. 60px wide).
+            // This middle gap (blank vertical strip) actually corresponds to the left page's right-most margin,
+            // combined with the right page's left-most margin.
+            // So, "adjustedGapRight" is half of the center strip...
+            var adjustedGapRight = _paginationInfo.columnGap / 2;
+            // ...but we include the "borderRight" strip to avoid wasting valuable rendering real-estate:
+            adjustedGapRight = Math.max(0, adjustedGapRight - borderRight);
+            // Typically, "adjustedGapRight" is zero because the space available for the 'next page' button
+            // is wider than half of the column gap! (in other words, the right-most and left-most page margins are fully
+            // included in the strips reserved for the arrow buttons)
+
+            // Note that "availableWidth" does not contain "borderLeft" and "borderRight" (.width() excludes the padding
+            // and border and margin in the CSS box model of div#epub-reader-frame)
+            var availableWidth = _$viewport.width();
+
+            // ...So, we substract the page margins and button spacing to obtain the width available for actual text:
+            var textWidth = availableWidth - adjustedGapLeft - adjustedGapRight;
+
+            // ...and if we have 2 pages / columns, then we split the text width in half:
+            if (isDoublePageSyntheticSpread) {
+                textWidth = (textWidth - _paginationInfo.columnGap) * 0.5;
+            }
+
+            var filler = 0;
+
+            // Now, if the resulting width actually available for document content is greater than the maximum allowed value,
+            // we create even more left+right blank space to "compress" the horizontal run of text.
+
             if (textWidth > MAXW) {
-                filler = Math.floor((textWidth - MAXW) * 0.5);
+                var eachPageColumnReduction = textWidth - MAXW;
+
+                // if we have a 2-page synthetic spread, then we "trim" left and right sides by adding "eachPageColumnReduction" blank space.
+                // if we have a single page / column, then this loss of text real estate is shared between right and left sides
+                filler = Math.floor(eachPageColumnReduction * (isDoublePageSyntheticSpread ? 1 : 0.5));
+            } else if (!forced && textWidth < MINW && isDoublePageSyntheticSpread) {
+                // Let's check whether a narrow two-page synthetic spread (impeded reabability) can be reduced down to a single page / column:
+
+                isDoublePageSyntheticSpread = false;
+                _paginationInfo.visibleColumnCount = 1;
+
+                textWidth = availableWidth - adjustedGapLeft - adjustedGapRight;
+                if (textWidth > MAXW) {
+                    filler = Math.floor((textWidth - MAXW) * 0.5);
+                }
             }
-        }
 
-        _$el.css({"left": filler + adjustedGapLeft + "px", "right": filler + adjustedGapRight + "px"});
+            _$el.css({"left": filler + adjustedGapLeft + "px", "right": filler + adjustedGapRight + "px"});
 
-        // ### tss: updateViewportSize now called only on onload and resize events. Is it required here?
-        updateViewportSize(); //_$contentFrame ==> _lastViewPortSize
+            // ### tss: updateViewportSize now called only on onload and resize events. Is it required here?
+            updateViewportSize(); //_$contentFrame ==> _lastViewPortSize
 
-        var resultingColumnWidth = _$el.width();
-        if (isDoublePageSyntheticSpread) {
-            resultingColumnWidth = (resultingColumnWidth - _paginationInfo.columnGap) / 2;
-        }
-        resultingColumnWidth = Math.floor(resultingColumnWidth);
-        if (debugMode) {
-            if (resultingColumnWidth - 1 > MAXW) {
-                console.debug("resultingColumnWidth > MAXW ! " + resultingColumnWidth + " > " + MAXW);
+            var resultingColumnWidth = _$el.width();
+            if (isDoublePageSyntheticSpread) {
+                resultingColumnWidth = (resultingColumnWidth - _paginationInfo.columnGap) / 2;
             }
-        }
+            resultingColumnWidth = Math.floor(resultingColumnWidth);
+            if (debugMode) {
+                if (resultingColumnWidth - 1 > MAXW) {
+                    console.debug("resultingColumnWidth > MAXW ! " + resultingColumnWidth + " > " + MAXW);
+                }
+            }
 
-        _paginationInfo.rightToLeft = _spine.isRightToLeft();
+            _paginationInfo.rightToLeft = _spine.isRightToLeft();
 
-        _paginationInfo.columnWidth = Math.round(((_htmlBodyIsVerticalWritingMode ? _lastViewPortSize.height : _lastViewPortSize.width) -
+            _paginationInfo.columnWidth = Math.round(((_htmlBodyIsVerticalWritingMode ? _lastViewPortSize.height : _lastViewPortSize.width) -
                 _paginationInfo.columnGap * (_paginationInfo.visibleColumnCount - 1)) / _paginationInfo.visibleColumnCount);
 
-        // column-count == 1 does not work in Chrome, and is not needed anyway
-        // (HTML width is full viewport width, no Firefox video flickering)
-        var useColumnCountNotWidth = _paginationInfo.visibleColumnCount > 1;
-        if (useColumnCountNotWidth) {
-            // ### tss: combined styles set
+            // column-count == 1 does not work in Chrome, and is not needed anyway
+            // (HTML width is full viewport width, no Firefox video flickering)
+            var useColumnCountNotWidth = _paginationInfo.visibleColumnCount > 1;
+            if (useColumnCountNotWidth) {
+                // ### tss: combined styles set
+                _$epubHtml.css({
+                    width: _lastViewPortSize.width,
+                    "column-width": "auto",
+                    "column-count": _paginationInfo.visibleColumnCount
+                });
+            } else {
+                // ### tss: combined styles set
+                _$epubHtml.css({
+                    width: _htmlBodyIsVerticalWritingMode ? _lastViewPortSize.width : _paginationInfo.columnWidth,
+                    "column-count": "auto",
+                    "column-width": _paginationInfo.columnWidth
+                });
+            }
+
+            // ### tss: setting common styles for _$epubHtml and _$htmlBody moved to applyIFrameLoad
+
+            // ### tss: required for correct calculations in findPageBySingleRectangle
             _$epubHtml.css({
-                width: _lastViewPortSize.width,
-                "column-width": "auto",
-                "column-count": _paginationInfo.visibleColumnCount
+                left: 0,
+                right: 0,
+                top: 0
             });
-        } else {
-            // ### tss: combined styles set
-            _$epubHtml.css({
-                width: _htmlBodyIsVerticalWritingMode ? _lastViewPortSize.width : _paginationInfo.columnWidth,
-                "column-count": "auto",
-                "column-width": _paginationInfo.columnWidth
-            });
-        }
 
-        // ### tss: setting common styles for _$epubHtml and _$htmlBody moved to applyIFrameLoad
+            // leads to breaking-in-the-middle lines on iOS
+            if (reader.needsTriggerLayoutWorkaround()) {
+                Helpers.triggerLayout(_$iframe);
+            }
 
-        // ### tss: required for correct calculations in findPageBySingleRectangle
-        _$epubHtml.css({
-            left: 0,
-            right: 0,
-            top: 0
-        });
-
-        // leads to breaking-in-the-middle lines on iOS
-        if (reader.needsTriggerLayoutWorkaround()) {
-            Helpers.triggerLayout(_$iframe);
-        }
-
-        _paginationInfo.columnCount = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) +
+            _paginationInfo.columnCount = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) +
                 _paginationInfo.columnGap) / (_paginationInfo.columnWidth + _paginationInfo.columnGap);
-        _paginationInfo.columnCount = Math.round(_paginationInfo.columnCount);
+            _paginationInfo.columnCount = Math.round(_paginationInfo.columnCount);
 
-        var totalGaps = (_paginationInfo.columnCount - 1) * _paginationInfo.columnGap;
-        var colWidthCheck = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) - totalGaps) /
+            var totalGaps = (_paginationInfo.columnCount - 1) * _paginationInfo.columnGap;
+            var colWidthCheck = ((_htmlBodyIsVerticalWritingMode ? _$epubHtml[0].scrollHeight : _$epubHtml[0].scrollWidth) - totalGaps) /
                 _paginationInfo.columnCount;
-        colWidthCheck = Math.round(colWidthCheck);
+            colWidthCheck = Math.round(colWidthCheck);
 
-        if (colWidthCheck > _paginationInfo.columnWidth) {
-            if (debugMode) {
-                console.debug("ADJUST COLUMN");
-                console.log(_paginationInfo.columnWidth);
-                console.log(colWidthCheck);
+            if (colWidthCheck > _paginationInfo.columnWidth) {
+                if (debugMode) {
+                    console.debug("ADJUST COLUMN");
+                    console.log(_paginationInfo.columnWidth);
+                    console.log(colWidthCheck);
+                }
+
+                _paginationInfo.columnWidth = colWidthCheck;
             }
 
-            _paginationInfo.columnWidth = colWidthCheck;
+            _paginationInfo.spreadCount = Math.ceil(_paginationInfo.columnCount / _paginationInfo.visibleColumnCount);
+
+            if (_paginationInfo.currentSpreadIndex >= _paginationInfo.spreadCount) {
+                _paginationInfo.currentSpreadIndex = _paginationInfo.spreadCount - 1;
+            }
+
+            if (_deferredPageRequest) {
+                //if there is a request for specific page we get here
+                openDeferredElement();
+            } else {
+                //we get here on resizing the viewport
+                if (_lastPageRequest) {
+                    // Make sure we stay on the same page after the content or the viewport
+                    // has been resized
+                    self.restoreCurrentPosition();
+                } else {
+                    onPaginationChanged(self); // => redraw() => showBook(), so the trick below is not needed
+                }
+
+                //onPaginationChanged(self); // => redraw() => showBook(), so the trick below is not needed
+
+                // //We do this to force re-rendering of the document in the iframe.
+                // //There is a bug in WebView control with right to left columns layout - after resizing the window html document
+                // //is shifted in side the containing div. Hiding and showing the html element puts document in place.
+                // _$epubHtml.hide();
+                // setTimeout(function() {
+                //     _$epubHtml.show();
+                //     onPaginationChanged(self); // => redraw() => showBook()
+                // }, 50);
+            }
         }
 
-        _paginationInfo.spreadCount =  Math.ceil(_paginationInfo.columnCount / _paginationInfo.visibleColumnCount);
+        function hideBook() {
+            if (_currentOpacity !== -1) {
+                return; // already hidden
+            }
 
-        if (_paginationInfo.currentSpreadIndex >= _paginationInfo.spreadCount) {
-            _paginationInfo.currentSpreadIndex = _paginationInfo.spreadCount - 1;
+            // css('opacity') produces invalid result in Firefox, when iframes are involved and when is called
+            // directly after set, i.e. after showBook(), see: https://github.com/jquery/jquery/issues/2622
+            //_currentOpacity = $epubHtml.css('opacity');
+            _currentOpacity = _$epubHtml[0].style.opacity;
+            _$epubHtml.css('opacity', "0");
         }
 
-        if (_deferredPageRequest) {
-            //if there is a request for specific page we get here
-            openDeferredElement();
-        } else {
-            //we get here on resizing the viewport
-
-            onPaginationChanged(self); // => redraw() => showBook(), so the trick below is not needed
-
-            // //We do this to force re-rendering of the document in the iframe.
-            // //There is a bug in WebView control with right to left columns layout - after resizing the window html document
-            // //is shifted in side the containing div. Hiding and showing the html element puts document in place.
-            // _$epubHtml.hide();
-            // setTimeout(function() {
-            //     _$epubHtml.show();
-            //     onPaginationChanged(self); // => redraw() => showBook()
-            // }, 50);
-        }
-    }
-
-    function hideBook() {
-        if (_currentOpacity !== -1) {
-            return; // already hidden
+        function showBook() {
+            if (_currentOpacity !== -1) {
+                _$epubHtml.css('opacity', _currentOpacity);
+            }
+            _currentOpacity = -1;
         }
 
-        _currentOpacity = _$epubHtml.css('opacity');
-        _$epubHtml.css('opacity', "0");
-    }
+        //### tss: new method for getting first visible cfi on second spread in case of double-page view
+        this.getSecondSpreadFirstVisibleCfi = function () {
+            var visibleContentOffsets = _navigationLogic.getVisibleContentOffsets();
+            var frameDimensions = _navigationLogic.getFrameDimensions();
+            var singleWidth = (frameDimensions.width - _paginationInfo.columnGap) / 2;
+            visibleContentOffsets.left -= singleWidth + _paginationInfo.columnGap;
+            frameDimensions.width = singleWidth;
+            return _navigationLogic.getFirstVisibleCfi(visibleContentOffsets, frameDimensions);
+        };
 
-    function showBook() {
-        if (_currentOpacity !== -1) {
-            _$epubHtml.css('opacity', _currentOpacity);
-        }
-        _currentOpacity = -1;
-    }
+        this.getPaginationInfo = function () {
+            var paginationInfo = new CurrentPagesInfo(_spine, false);
+            if (!_currentSpineItem) {
+                return paginationInfo;
+            }
 
-    //### tss: new method for getting first visible cfi on second spread in case of double-page view
-    this.getSecondSpreadFirstVisibleCfi = function () {
-        var visibleContentOffsets = _navigationLogic.getVisibleContentOffsets();
-        var frameDimensions = _navigationLogic.getFrameDimensions();
-        var singleWidth = (frameDimensions.width - _paginationInfo.columnGap) / 2;
-        visibleContentOffsets.left -= singleWidth + _paginationInfo.columnGap;
-        frameDimensions.width = singleWidth;
-        return _navigationLogic.getFirstVisibleCfi(visibleContentOffsets, frameDimensions);
-    };
+            var pageIndexes = getOpenPageIndexes();
+            for (var i = 0, count = pageIndexes.length; i < count; i++) {
+                paginationInfo.addOpenPage(pageIndexes[i], _paginationInfo.columnCount, _currentSpineItem.idref, _currentSpineItem.index);
+            }
 
-    this.getPaginationInfo = function () {
-        var paginationInfo = new CurrentPagesInfo(_spine, false);
-        if (!_currentSpineItem) {
             return paginationInfo;
+        };
+
+        function getOpenPageIndexes() {
+            var indexes = [];
+            var currentPage = _paginationInfo.currentSpreadIndex * _paginationInfo.visibleColumnCount;
+            for (var i = 0; i < _paginationInfo.visibleColumnCount && currentPage + i < _paginationInfo.columnCount; i++) {
+                indexes.push(currentPage + i);
+            }
+            return indexes;
         }
 
-        var pageIndexes = getOpenPageIndexes();
-        for (var i = 0, count = pageIndexes.length; i < count; i++) {
-            paginationInfo.addOpenPage(pageIndexes[i], _paginationInfo.columnCount, _currentSpineItem.idref, _currentSpineItem.index);
-        }
-
-        return paginationInfo;
-    };
-
-    function getOpenPageIndexes() {
-        var indexes = [];
-        var currentPage = _paginationInfo.currentSpreadIndex * _paginationInfo.visibleColumnCount;
-        for (var i = 0; i < _paginationInfo.visibleColumnCount && currentPage + i < _paginationInfo.columnCount; i++) {
-            indexes.push(currentPage + i);
-        }
-        return indexes;
-    }
-
-    //we need this styles for css columnizer not to chop big images
-    function resizeImages() {
-        if (!_$epubHtml) {
-            return;
-        }
-
-        $('img, svg', _$epubHtml).each(function () {
-            var $elem = $(this);
-
-            // if we set max-width/max-height to 100% columnizing engine chops images embedded in the text
-            // (but not if we set it to 99-98%) go figure.
-            // TODO: CSS min-w/h is content-box, not border-box (does not take into account padding + border)? => images may still overrun?
-            $elem.css('max-width', '98%');
-            $elem.css('max-height', '98%');
-
-            if (!$elem.css('height')) {
-                $elem.css('height', 'auto');
+        //we need this styles for css columnizer not to chop big images
+        function resizeImages() {
+            if (!_$epubHtml) {
+                return;
             }
 
-            if (!$elem.css('width')) {
-                $elem.css('width', 'auto');
+            $('img, svg', _$epubHtml).each(function () {
+                var $elem = $(this);
+
+                // if we set max-width/max-height to 100% columnizing engine chops images embedded in the text
+                // (but not if we set it to 99-98%) go figure.
+                // TODO: CSS min-w/h is content-box, not border-box (does not take into account padding + border)? => images may still overrun?
+                $elem.css('max-width', '98%');
+                $elem.css('max-height', '98%');
+
+                if (!$elem.css('height')) {
+                    $elem.css('height', 'auto');
+                }
+
+                if (!$elem.css('width')) {
+                    $elem.css('width', 'auto');
+                }
+            });
+        }
+
+        this.bookmarkCurrentPage = function () {
+            return !_currentSpineItem ? undefined : self.getFirstVisibleCfi();
+        };
+
+        this.getLoadedSpineItems = function () {
+            return [_currentSpineItem];
+        };
+
+        this.getElementByCfi = function (spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
+            if (spineItemIdref !== _currentSpineItem.idref) {
+                console.warn("spine item is not loaded");
+                return undefined;
             }
-        });
-    }
 
-    this.bookmarkCurrentPage = function () {
-        return !_currentSpineItem ? undefined : self.getFirstVisibleCfi();
-    };
+            return _navigationLogic.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
+        };
 
-    this.getLoadedSpineItems = function () {
-        return [_currentSpineItem];
-    };
+        this.getElementById = function (spineItemIdref, id) {
+            if (spineItemIdref !== _currentSpineItem.idref) {
+                console.error("spine item is not loaded");
+                return undefined;
+            }
 
-    this.getElementByCfi = function (spineItemIdref, cfi, classBlacklist, elementBlacklist, idBlacklist) {
-        if (spineItemIdref !== _currentSpineItem.idref) {
-            console.warn("spine item is not loaded");
-            return undefined;
+            return _navigationLogic.getElementById(id);
+        };
+
+        this.getElement = function (spineItemIdref, selector) {
+            if (spineItemIdref !== _currentSpineItem.idref) {
+                console.warn("spine item is not loaded");
+                return undefined;
+            }
+
+            return _navigationLogic.getElement(selector);
+        };
+
+        this.getFirstVisibleMediaOverlayElement = function () {
+            return _navigationLogic.getFirstVisibleMediaOverlayElement();
+        };
+
+        this.insureElementVisibility = function (spineItemId, element, initiator) {
+            var $element = $(element);
+            if (_navigationLogic.isElementVisible($element)) {
+                return;
+            }
+
+            var page = _navigationLogic.getPageForElement($element);
+            if (page === -1) {
+                return;
+            }
+
+            var openPageRequest = new PageOpenRequest(_currentSpineItem, initiator);
+            openPageRequest.setPageIndex(page);
+
+            var id = element.id;
+            if (!id) {
+                id = element.getAttribute("id");
+            }
+
+            if (id) {
+                openPageRequest.setElementId(id);
+            }
+
+            self.openPage(openPageRequest);
+        };
+
+        this.getVisibleElementsWithFilter = function (filterFunction, includeSpineItem) {
+            var elements = _navigationLogic.getVisibleElementsWithFilter(null, filterFunction);
+            return includeSpineItem ? [{elements: elements, spineItem: _currentSpineItem}] : elements;
+        };
+
+        this.getVisibleElements = function (selector, includeSpineItem) {
+            var elements = _navigationLogic.getAllVisibleElementsWithSelector(selector);
+            return includeSpineItem ? [{elements: elements, spineItem: _currentSpineItem}] : elements;
+        };
+
+        this.isElementVisible = function ($element) {
+            return _navigationLogic.isElementVisible($element);
+        };
+
+        this.getElements = function (spineItemIdref, selector) {
+            if (spineItemIdref !== _currentSpineItem.idref) {
+                console.warn("spine item is not loaded");
+                return undefined;
+            }
+
+            return _navigationLogic.getElements(selector);
+        };
+
+        this.isNodeFromRangeCfiVisible = function (spineItemIdref, partialCfi) {
+            if (spineItemIdref !== _currentSpineItem.idref) {
+                console.warn("spine item is not loaded");
+                return undefined;
+            }
+
+            return _navigationLogic.isNodeFromRangeCfiVisible(partialCfi);
+        };
+
+        this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
+            if (_navigationLogic.isRangeCfi(partialCfi)) {
+                return this.isNodeFromRangeCfiVisible(spineIdRef, partialCfi);
+            }
+            var $elementFromCfi = this.getElementByCfi(spineIdRef, partialCfi);
+            return $elementFromCfi && this.isElementVisible($elementFromCfi);
+        };
+
+        this.getNodeRangeInfoFromCfi = function (spineIdRef, partialCfi) {
+            if (spineIdRef !== _currentSpineItem.idref) {
+                console.warn("spine item is not loaded");
+                return undefined;
+            }
+
+            return _navigationLogic.getNodeRangeInfoFromCfi(partialCfi);
+        };
+
+        function createBookmarkFromCfi(cfi) {
+            return new BookmarkData(_currentSpineItem.idref, cfi);
         }
 
-        return _navigationLogic.getElementByCfi(cfi, classBlacklist, elementBlacklist, idBlacklist);
-    };
+        this.getFirstVisibleCfi = function () {
+            return createBookmarkFromCfi(_navigationLogic.getFirstVisibleCfi());
+        };
 
-    this.getElementById = function (spineItemIdref, id) {
-        if (spineItemIdref !== _currentSpineItem.idref) {
-            console.error("spine item is not loaded");
-            return undefined;
-        }
+        this.getLastVisibleCfi = function () {
+            return createBookmarkFromCfi(_navigationLogic.getLastVisibleCfi());
+        };
 
-        return _navigationLogic.getElementById(id);
-    };
+        this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
+            if (rangeCfi2 && rangeCfi.idref !== rangeCfi2.idref) {
+                console.error("getDomRangeFromRangeCfi: both CFIs must be scoped under the same spineitem idref");
+                return undefined;
+            }
+            return _navigationLogic.getDomRangeFromRangeCfi(rangeCfi.contentCFI, rangeCfi2 ? rangeCfi2.contentCFI : null, inclusive);
+        };
 
-    this.getElement = function (spineItemIdref, selector) {
-        if (spineItemIdref !==  _currentSpineItem.idref) {
-            console.warn("spine item is not loaded");
-            return undefined;
-        }
+        this.getRangeCfiFromDomRange = function (domRange) {
+            return createBookmarkFromCfi(_navigationLogic.getRangeCfiFromDomRange(domRange));
+        };
 
-        return _navigationLogic.getElement(selector);
-    };
+        this.getCfiForElement = function (element) {
+            return createBookmarkFromCfi(_navigationLogic.getCfiForElement(element));
+        };
 
-    this.getFirstVisibleMediaOverlayElement = function () {
-        return _navigationLogic.getFirstVisibleMediaOverlayElement();
-    };
-
-    this.insureElementVisibility = function (spineItemId, element, initiator) {
-        var $element = $(element);
-        if (_navigationLogic.isElementVisible($element)) {
-            return;
-        }
-
-        var page = _navigationLogic.getPageForElement($element);
-        if (page === -1) {
-            return;
-        }
-
-        var openPageRequest = new PageOpenRequest(_currentSpineItem, initiator);
-        openPageRequest.setPageIndex(page);
-
-        var id = element.id;
-        if (!id) {
-            id = element.getAttribute("id");
-        }
-
-        if (id) {
-            openPageRequest.setElementId(id);
-        }
-
-        self.openPage(openPageRequest);
-    };
-
-    this.getVisibleElementsWithFilter = function (filterFunction, includeSpineItem) {
-        var elements = _navigationLogic.getVisibleElementsWithFilter(null, filterFunction);
-        return includeSpineItem ? [{elements: elements, spineItem: _currentSpineItem}] : elements;
-    };
-
-    this.getVisibleElements = function (selector, includeSpineItem) {
-        var elements = _navigationLogic.getAllVisibleElementsWithSelector(selector);
-        return includeSpineItem ? [{elements: elements, spineItem: _currentSpineItem}] : elements;
-    };
-
-    this.isElementVisible = function ($element) {
-        return _navigationLogic.isElementVisible($element);
-    };
-
-    this.getElements = function (spineItemIdref, selector) {
-        if (spineItemIdref !== _currentSpineItem.idref) {
-            console.warn("spine item is not loaded");
-            return undefined;
-        }
-
-        return _navigationLogic.getElements(selector);
-    };
-
-    this.isNodeFromRangeCfiVisible = function (spineItemIdref, partialCfi) {
-        if (spineItemIdref !== _currentSpineItem.idref) {
-            console.warn("spine item is not loaded");
-            return undefined;
-        }
-
-        return _navigationLogic.isNodeFromRangeCfiVisible(partialCfi);
-    };
-
-    this.isVisibleSpineItemElementCfi = function (spineIdRef, partialCfi) {
-        if (_navigationLogic.isRangeCfi(partialCfi)) {
-            return this.isNodeFromRangeCfiVisible(spineIdRef, partialCfi);
-        }
-        var $elementFromCfi = this.getElementByCfi(spineIdRef, partialCfi);
-        return $elementFromCfi && this.isElementVisible($elementFromCfi);
-    };
-
-    this.getNodeRangeInfoFromCfi = function (spineIdRef, partialCfi) {
-        if (spineIdRef !== _currentSpineItem.idref) {
-            console.warn("spine item is not loaded");
-            return undefined;
-        }
-
-        return _navigationLogic.getNodeRangeInfoFromCfi(partialCfi);
-    };
-
-    function createBookmarkFromCfi(cfi) {
-        return new BookmarkData(_currentSpineItem.idref, cfi);
-    }
-
-    this.getFirstVisibleCfi = function () {
-        return createBookmarkFromCfi(_navigationLogic.getFirstVisibleCfi());
-    };
-
-    this.getLastVisibleCfi = function () {
-        return createBookmarkFromCfi(_navigationLogic.getLastVisibleCfi());
-    };
-
-    this.getDomRangeFromRangeCfi = function (rangeCfi, rangeCfi2, inclusive) {
-        if (rangeCfi2 && rangeCfi.idref !== rangeCfi2.idref) {
-            console.error("getDomRangeFromRangeCfi: both CFIs must be scoped under the same spineitem idref");
-            return undefined;
-        }
-        return _navigationLogic.getDomRangeFromRangeCfi(rangeCfi.contentCFI, rangeCfi2 ? rangeCfi2.contentCFI : null, inclusive);
-    };
-
-    this.getRangeCfiFromDomRange = function (domRange) {
-        return createBookmarkFromCfi(_navigationLogic.getRangeCfiFromDomRange(domRange));
-    };
-
-    this.getCfiForElement = function(element) {
-        return createBookmarkFromCfi(_navigationLogic.getCfiForElement(element));
-    };
-
-    this.getElementFromPoint = function (x, y) {
-        return _navigationLogic.getElementFromPoint(x, y);
+        this.getElementFromPoint = function (x, y) {
+            return _navigationLogic.getElementFromPoint(x, y);
+        };
     };
 };
 });
