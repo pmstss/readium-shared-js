@@ -151,6 +151,7 @@ return function () {
         _iframe = iframe;
 
         var doc = iframe.contentDocument || iframe.contentWindow.document;
+        this.removeDocumentComments(doc);
 
         $('svg', doc).load(function () {
             console.log('SVG loaded');
@@ -204,6 +205,22 @@ return function () {
             //window.setTimeout(mathJaxCallback, 8000);
         } else {
             callback();
+        }
+    };
+
+    this.removeDocumentComments = function (doc) {
+        try {
+            var nodeIterator = doc.createNodeIterator(doc.documentElement, NodeFilter.SHOW_COMMENT, null, true);
+            var node;
+            var parents = [];
+            while (!!(node = nodeIterator.nextNode())) {
+                node.parentNode.removeChild(node);
+                parents.push(node.parentNode);
+            }
+
+            doc.documentElement.normalize();
+        } catch (e) {
+            console.log('Exception on removing document nodes: %o', e);
         }
     };
 };
